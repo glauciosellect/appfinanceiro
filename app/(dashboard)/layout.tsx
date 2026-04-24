@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { VoiceButton } from '@/components/voice/voice-button'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -21,6 +22,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+      <VoiceButton />
     </div>
   )
 }

@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.SyntheticEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
@@ -31,10 +31,14 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError('Email ou senha inválidos. Tente novamente.')
+      if (error.message.includes('Email not confirmed')) {
+        setError('Email ainda não confirmado. Verifique sua caixa de entrada (e a pasta de Spam) e clique no link de confirmação.')
+      } else {
+        setError('Email ou senha inválidos. Tente novamente.')
+      }
       setLoading(false)
     } else {
-      router.push('/')
+      router.push('/dashboard')
       router.refresh()
     }
   }

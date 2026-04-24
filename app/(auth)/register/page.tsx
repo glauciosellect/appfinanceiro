@@ -3,7 +3,6 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
@@ -14,8 +13,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function RegisterPage() {
-  const router = useRouter()
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -24,7 +21,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  async function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.SyntheticEvent) {
     e.preventDefault()
     setError('')
 
@@ -42,7 +39,7 @@ export default function RegisterPage() {
     const { error } = await supabase.auth.signUp({ email, password })
 
     if (error) {
-      setError('Erro ao criar conta. Verifique seus dados.')
+      setError(`Erro ao criar conta: ${error.message}`)
       setLoading(false)
     } else {
       setSuccess(true)
@@ -59,10 +56,17 @@ export default function RegisterPage() {
         <Card className="shadow-xl border-0">
           <CardContent className="pt-6 text-center space-y-4">
             <div className="text-5xl">✅</div>
-            <h2 className="text-xl font-semibold text-gray-900">Conta criada!</h2>
-            <p className="text-gray-500 text-sm">
-              Verifique seu e-mail para confirmar o cadastro e depois faça login.
-            </p>
+            <h2 className="text-xl font-semibold text-gray-900">Conta criada com sucesso!</h2>
+            <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-4 text-left space-y-2">
+              <p className="text-blue-800 font-semibold text-sm">📧 Confirme seu e-mail para continuar</p>
+              <p className="text-blue-700 text-sm">
+                Enviamos um link de confirmação para <strong>{email}</strong>.
+                Abra sua caixa de entrada e clique no link antes de fazer login.
+              </p>
+              <p className="text-blue-600 text-xs">
+                Não encontrou? Verifique a pasta de <strong>Spam</strong> ou <strong>Lixo eletrônico</strong>.
+              </p>
+            </div>
             <Button asChild className="w-full mt-4">
               <Link href="/login">Ir para o login</Link>
             </Button>
