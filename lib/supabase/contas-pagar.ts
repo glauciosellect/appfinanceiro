@@ -198,7 +198,7 @@ export async function registrarPagamento(
 
   // Pagar via cartão de crédito
   if (dados.cartao_id) {
-    const cartao = await getCartaoById(dados.cartao_id)
+    const cartao = await getCartaoById(userId, dados.cartao_id)
     if (cartao) {
       const dataCompra = new Date(dados.data_pagamento)
       const mesFatura = calcularMesFatura(cartao, dataCompra)

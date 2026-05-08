@@ -14,12 +14,13 @@ export async function getContasCorrentes(userId: string): Promise<ContaCorrente[
   return (data ?? []) as ContaCorrente[]
 }
 
-export async function getContaById(id: string): Promise<ContaCorrente | null> {
+export async function getContaById(userId: string, id: string): Promise<ContaCorrente | null> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('contas_correntes')
     .select('*')
     .eq('id', id)
+    .eq('user_id', userId)
     .single()
   if (error) return null
   return data as ContaCorrente
@@ -115,8 +116,8 @@ export async function transferirEntreContas(
   descricao: string
 ): Promise<void> {
   const supabase = createClient()
-  const origem = await getContaById(origemId)
-  const destino = await getContaById(destinoId)
+  const origem = await getContaById(userId, origemId)
+  const destino = await getContaById(userId, destinoId)
   if (!origem || !destino) throw new Error('Conta não encontrada')
   if (origem.saldo_atual < valor) throw new Error('Saldo insuficiente')
 

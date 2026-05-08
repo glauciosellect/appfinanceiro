@@ -26,12 +26,13 @@ export async function getClientes(
   return (data ?? []) as Cliente[]
 }
 
-export async function getClienteById(id: string): Promise<Cliente | null> {
+export async function getClienteById(userId: string, id: string): Promise<Cliente | null> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('clientes')
     .select('*')
     .eq('id', id)
+    .eq('user_id', userId)
     .single()
   if (error) return null
   return data as Cliente
@@ -55,7 +56,7 @@ export async function updateCliente(
   formData: Partial<ClienteFormData>
 ): Promise<Cliente> {
   const supabase = createClient()
-  const anterior = await getClienteById(id)
+  const anterior = await getClienteById(userId, id)
   const { data, error } = await supabase
     .from('clientes')
     .update(formData)
@@ -70,7 +71,7 @@ export async function updateCliente(
 
 export async function deleteCliente(userId: string, id: string): Promise<void> {
   const supabase = createClient()
-  const anterior = await getClienteById(id)
+  const anterior = await getClienteById(userId, id)
   const { error } = await supabase
     .from('clientes')
     .update({ deleted_at: new Date().toISOString(), ativo: false })

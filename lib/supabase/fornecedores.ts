@@ -27,12 +27,13 @@ export async function getFornecedores(
   return (data ?? []) as Fornecedor[]
 }
 
-export async function getFornecedorById(id: string): Promise<Fornecedor | null> {
+export async function getFornecedorById(userId: string, id: string): Promise<Fornecedor | null> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('fornecedores')
     .select('*')
     .eq('id', id)
+    .eq('user_id', userId)
     .single()
   if (error) return null
   return data as Fornecedor
@@ -59,7 +60,7 @@ export async function updateFornecedor(
   formData: Partial<FornecedorFormData>
 ): Promise<Fornecedor> {
   const supabase = createClient()
-  const anterior = await getFornecedorById(id)
+  const anterior = await getFornecedorById(userId, id)
   const { data, error } = await supabase
     .from('fornecedores')
     .update(formData)
@@ -74,7 +75,7 @@ export async function updateFornecedor(
 
 export async function deleteFornecedor(userId: string, id: string): Promise<void> {
   const supabase = createClient()
-  const anterior = await getFornecedorById(id)
+  const anterior = await getFornecedorById(userId, id)
   const { error } = await supabase
     .from('fornecedores')
     .update({ deleted_at: new Date().toISOString(), ativo: false })

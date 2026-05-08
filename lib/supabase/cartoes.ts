@@ -14,12 +14,13 @@ export async function getCartoes(userId: string): Promise<Cartao[]> {
   return (data ?? []) as Cartao[]
 }
 
-export async function getCartaoById(id: string): Promise<Cartao | null> {
+export async function getCartaoById(userId: string, id: string): Promise<Cartao | null> {
   const supabase = createClient()
   const { data, error } = await supabase
     .from('cartoes')
     .select('*')
     .eq('id', id)
+    .eq('user_id', userId)
     .single()
   if (error) return null
   return data as Cartao
