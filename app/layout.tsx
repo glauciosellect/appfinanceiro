@@ -17,13 +17,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Minhas Finanças',
-  description: 'Controle suas finanças pessoais de forma simples e visual.',
+  title: 'SyncroMoney',
+  description: 'Controle Financeiro Inteligente.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Minhas Finanças',
+    title: 'SyncroMoney',
   },
   icons: {
     icon: '/icon-192x192.png',
