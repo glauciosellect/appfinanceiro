@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Menu, LogOut, User } from 'lucide-react'
+import { Menu, LogOut, User, Sun, Moon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useTheme } from '@/components/theme/theme-provider'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -20,6 +21,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, userEmail }: HeaderProps) {
   const router = useRouter()
+  const { theme, toggleTheme } = useTheme()
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -29,7 +31,7 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
   }
 
   return (
-    <header className="h-16 border-b border-gray-100 bg-white flex items-center justify-between px-4 lg:px-6">
+    <header className="h-16 border-b border-gray-100 bg-white dark:bg-gray-900 dark:border-gray-800 flex items-center justify-between px-4 lg:px-6">
       <button
         onClick={onMenuClick}
         className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -51,8 +53,16 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
               </span>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={toggleTheme} className="gap-2 cursor-pointer">
+              {theme === 'dark' ? (
+                <><Sun className="h-4 w-4 text-amber-500" />Tema Claro</>
+              ) : (
+                <><Moon className="h-4 w-4 text-indigo-500" />Tema Escuro</>
+              )}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600 focus:bg-red-50 gap-2">
               <LogOut className="h-4 w-4" />

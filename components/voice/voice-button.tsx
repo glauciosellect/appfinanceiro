@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mic, MicOff, X, Check, Loader2, Volume2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -36,14 +36,16 @@ export function VoiceButton() {
   const recognitionRef = useRef<any>(null)
   const finalTextRef = useRef('')
 
-  const isSupported =
-    typeof window !== 'undefined' &&
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+  const [isSupported, setIsSupported] = useState(false)
+  const [unsupportedMessage, setUnsupportedMessage] = useState('Use Chrome ou Edge para reconhecimento de voz.')
 
-  const unsupportedMessage =
-    typeof window !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent)
-      ? 'No iPhone/iPad use o Safari para reconhecimento de voz.'
-      : 'Use Chrome ou Edge para reconhecimento de voz.'
+  useEffect(() => {
+    const supported = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
+    setIsSupported(supported)
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+      setUnsupportedMessage('No iPhone/iPad use o Safari para reconhecimento de voz.')
+    }
+  }, [])
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop()
@@ -166,7 +168,7 @@ export function VoiceButton() {
 
   return (
     <>
-      {/* Floating mic button */}
+      {/* Floating mic button — só renderizado após hydration quando isSupported=true */}
       <button
         onClick={voiceState === 'listening' ? stopListening : startListening}
         disabled={voiceState === 'processing'}

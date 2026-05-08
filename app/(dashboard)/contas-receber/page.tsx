@@ -1,0 +1,645 @@
+'use client'
+
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, TrendingUp, CheckCircle, AlertCircle, Clock, DollarSign, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import {
+  getContasReceber,
+  getParcelasReceber,
+  createContaReceber,
+  updateContaReceber,
+  cancelarContaReceber,
+  registrarRecebimento,
+  getResumoReceber,
+  atualizarParcelasAtrasadas,
+} from '@/lib/supabase/contas-receber'
+import { getClientes } from '@/lib/supabase/clientes'
+import { getContasCorrentes } from '@/lib/supabase/contas-correntes'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useToast } from '@/components/ui/toast'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import type { ContaReceber, ParcelaReceber, Cliente, ContaCorrente } from '@/types'
+
+// ─── Schema do formulário de nova conta ────────────────────────────
+const schemaContaReceber = z.object({
+  cliente_id: z.string().min(1, 'Selecione o cliente'),
+  descricao: z.string().min(3, 'Mínimo 3 caracteres'),
+  valor_total: z.number().positive('Valor inválido'),
+  valor_entrada: z.number().min(0),
+  num_parcelas: z.number().int().min(1).max(60),
+  juros_percentual: z.number().min(0),
+  desconto_valor: z.number().min(0),
+  data_primeira_parcela: z.string().min(1, 'Informe a data'),
+  forma_pagamento_id: z.string().optional(),
+  conta_corrente_id: z.string().optional(),
+  observacoes: z.string().optional(),
+})
+type ContaReceberForm = z.infer<typeof schemaContaReceber>
+
+// ─── Schema do formulário de edição ────────────────────────────────
+const schemaEditarReceber = z.object({
+  cliente_id: z.string().min(1, 'Selecione o cliente'),
+  descricao: z.string().min(3, 'Mínimo 3 caracteres'),
+  observacoes: z.string().optional(),
+  conta_corrente_id: z.string().optional(),
+})
+type EditarReceberForm = z.infer<typeof schemaEditarReceber>
+
+// ─── Schema do formulário de recebimento ───────────────────────────
+const schemaReceber = z.object({
+  valor_recebido: z.number().positive('Valor inválido'),
+  juros: z.number().min(0),
+  multa: z.number().min(0),
+  desconto: z.number().min(0),
+  conta_corrente_id: z.string().optional(),
+  data_recebimento: z.string().min(1, 'Informe a data'),
+  observacoes: z.string().optional(),
+})
+type ReceberForm = z.infer<typeof schemaReceber>
+
+// ─── Cores e labels por status ─────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  aberto:   { label: 'Aberto',   color: 'text-blue-700',  bg: 'bg-blue-50'  },
+  recebido: { label: 'Recebido', color: 'text-green-700', bg: 'bg-green-50' },
+  atrasado: { label: 'Atrasado', color: 'text-red-700',   bg: 'bg-red-50'   },
+  cancelado:{ label: 'Cancelado',color: 'text-gray-500',  bg: 'bg-gray-50'  },
+  entrada:  { label: 'Entrada',  color: 'text-purple-700',bg: 'bg-purple-50'},
+  parcial:  { label: 'Parcial',  color: 'text-amber-700', bg: 'bg-amber-50' },
+  quitado:  { label: 'Quitado',  color: 'text-green-700', bg: 'bg-green-50' },
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG['aberto']
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color} ${cfg.bg}`}>
+      {cfg.label}
+    </span>
+  )
+}
+
+export default function ContasReceberPage() {
+  const [aba, setAba] = useState<'contas' | 'parcelas'>('parcelas')
+  const [contas, setContas] = useState<ContaReceber[]>([])
+  const [parcelas, setParcelas] = useState<(ParcelaReceber & { cliente_nome?: string; conta_descricao?: string })[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [contasCorrente, setContasCorrente] = useState<ContaCorrente[]>([])
+  const [resumo, setResumo] = useState({ totalAberto: 0, totalAtrasado: 0, totalRecebidoMes: 0, qtdVenceHoje: 0 })
+  const [loading, setLoading] = useState(true)
+  const [dialogNova, setDialogNova] = useState(false)
+  const [contaEditando, setContaEditando] = useState<ContaReceber | null>(null)
+  const [parcelaSelecionada, setParcelaSelecionada] = useState<ParcelaReceber | null>(null)
+  const [filtroStatus, setFiltroStatus] = useState('todos')
+  const [userId, setUserId] = useState('')
+  const { toast: _toast } = useToast()
+
+  const formNova = useForm<ContaReceberForm>({
+    resolver: zodResolver(schemaContaReceber),
+    defaultValues: { num_parcelas: 1, juros_percentual: 0, desconto_valor: 0, valor_entrada: 0 },
+  })
+  const formEditar = useForm<EditarReceberForm>({ resolver: zodResolver(schemaEditarReceber) })
+
+  const formReceber = useForm<ReceberForm>({
+    resolver: zodResolver(schemaReceber),
+    defaultValues: { data_recebimento: new Date().toISOString().split('T')[0], juros: 0, multa: 0, desconto: 0 },
+  })
+
+  // Cálculo automático de parcela
+  const valorTotal = formNova.watch('valor_total') || 0
+  const valorEntrada = formNova.watch('valor_entrada') || 0
+  const numParcelas = formNova.watch('num_parcelas') || 1
+  const juros = formNova.watch('juros_percentual') || 0
+  const base = valorTotal - valorEntrada
+  const totalComJuros = base * (1 + juros / 100)
+  const valorParcela = numParcelas > 0 ? totalComJuros / numParcelas : 0
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id)
+    })
+  }, [])
+
+  const fetchTudo = useCallback(async () => {
+    if (!userId) return
+    setLoading(true)
+    try {
+      await atualizarParcelasAtrasadas(userId)
+      const [_contas, _parcelas, _clientes, _contas_cc, _resumo] = await Promise.all([
+        getContasReceber(userId, filtroStatus !== 'todos' ? { status: filtroStatus } : undefined),
+        getParcelasReceber(userId, filtroStatus !== 'todos' ? { status: filtroStatus } : undefined),
+        getClientes(userId, { ativo: true }),
+        getContasCorrentes(userId),
+        getResumoReceber(userId),
+      ])
+      setContas(_contas)
+      setParcelas(_parcelas)
+      setClientes(_clientes)
+      setContasCorrente(_contas_cc)
+      setResumo(_resumo)
+    } catch {
+      _toast('Erro ao carregar dados', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, filtroStatus, _toast])
+
+  useEffect(() => { fetchTudo() }, [fetchTudo])
+
+  async function handleCriarConta(values: ContaReceberForm) {
+    try {
+      await createContaReceber(userId, {
+        ...values,
+        categoria_id: undefined,
+        multa_percentual: 0,
+      })
+      _toast('Conta a receber criada!', 'success')
+      setDialogNova(false)
+      formNova.reset({ num_parcelas: 1, juros_percentual: 0, desconto_valor: 0, valor_entrada: 0 })
+      fetchTudo()
+    } catch {
+      _toast('Erro ao criar conta', 'error')
+    }
+  }
+
+  async function handleRegistrarRecebimento(values: ReceberForm) {
+    if (!parcelaSelecionada) return
+    try {
+      await registrarRecebimento(userId, parcelaSelecionada.id, values)
+      _toast('Recebimento registrado!', 'success')
+      setParcelaSelecionada(null)
+      formReceber.reset({ data_recebimento: new Date().toISOString().split('T')[0], juros: 0, multa: 0, desconto: 0 })
+      fetchTudo()
+    } catch {
+      _toast('Erro ao registrar recebimento', 'error')
+    }
+  }
+
+  function abrirEdicao(c: ContaReceber) {
+    setContaEditando(c)
+    formEditar.reset({
+      cliente_id: c.cliente_id ?? '',
+      descricao: c.descricao,
+      observacoes: c.observacoes ?? '',
+      conta_corrente_id: c.conta_corrente_id ?? '',
+    })
+  }
+
+  async function handleEditarConta(values: EditarReceberForm) {
+    if (!contaEditando) return
+    try {
+      await updateContaReceber(userId, contaEditando.id, {
+        cliente_id: values.cliente_id || undefined,
+        descricao: values.descricao,
+        observacoes: values.observacoes || undefined,
+        conta_corrente_id: values.conta_corrente_id || undefined,
+      })
+      _toast('Conta atualizada!', 'success')
+      setContaEditando(null)
+      fetchTudo()
+    } catch {
+      _toast('Erro ao atualizar conta', 'error')
+    }
+  }
+
+  function abrirRecebimento(p: ParcelaReceber) {
+    setParcelaSelecionada(p)
+    formReceber.setValue('valor_recebido', p.valor)
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Contas a Receber</h1>
+          <p className="text-sm text-gray-500">Gestão de recebimentos e cobranças</p>
+        </div>
+        <Button onClick={() => setDialogNova(true)} className="bg-green-600 hover:bg-green-700">
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Conta a Receber
+        </Button>
+      </div>
+
+      {/* Cards KPI */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-xl"><DollarSign className="h-5 w-5 text-blue-600" /></div>
+              <div>
+                <p className="text-xs text-gray-500">Em Aberto</p>
+                <p className="font-bold text-gray-900">{formatCurrency(resumo.totalAberto)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-50 rounded-xl"><AlertCircle className="h-5 w-5 text-red-600" /></div>
+              <div>
+                <p className="text-xs text-gray-500">Atrasado</p>
+                <p className="font-bold text-red-600">{formatCurrency(resumo.totalAtrasado)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-xl"><CheckCircle className="h-5 w-5 text-green-600" /></div>
+              <div>
+                <p className="text-xs text-gray-500">Recebido (mês)</p>
+                <p className="font-bold text-green-600">{formatCurrency(resumo.totalRecebidoMes)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-50 rounded-xl"><Clock className="h-5 w-5 text-amber-600" /></div>
+              <div>
+                <p className="text-xs text-gray-500">Vence Hoje</p>
+                <p className="font-bold text-amber-600">{resumo.qtdVenceHoje} parcelas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Abas + Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+          {(['parcelas', 'contas'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setAba(tab)}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                aba === tab
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {tab === 'parcelas' ? 'Parcelas' : 'Contas'}
+            </button>
+          ))}
+        </div>
+        <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="aberto">Aberto</SelectItem>
+            <SelectItem value="atrasado">Atrasado</SelectItem>
+            <SelectItem value="recebido">Recebido</SelectItem>
+            <SelectItem value="cancelado">Cancelado</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Tabela */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-green-600" />
+            {aba === 'parcelas' ? 'Parcelas a Receber' : 'Contas a Receber'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-6 space-y-3">
+              {[1,2,3,4].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}
+            </div>
+          ) : aba === 'parcelas' ? (
+            parcelas.length === 0 ? (
+              <div className="py-16 text-center text-gray-400">
+                <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">Nenhuma parcela encontrada</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide border-b border-gray-100">
+                      <th className="text-left px-6 py-3">Cliente</th>
+                      <th className="text-left px-4 py-3 hidden md:table-cell">Descrição</th>
+                      <th className="text-center px-4 py-3">Parcela</th>
+                      <th className="text-left px-4 py-3">Vencimento</th>
+                      <th className="text-right px-4 py-3">Valor</th>
+                      <th className="text-center px-4 py-3">Status</th>
+                      <th className="text-right px-6 py-3">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {parcelas.map((p) => (
+                      <tr key={p.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-3 font-medium text-gray-900">{p.cliente_nome ?? '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.conta_descricao ?? '—'}</td>
+                        <td className="px-4 py-3 text-center text-gray-500">
+                          {p.status === 'entrada' ? 'Entrada' : `${p.numero_parcela}/${p.total_parcelas}`}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{formatDate(p.data_vencimento)}</td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(p.valor)}</td>
+                        <td className="px-4 py-3 text-center"><StatusBadge status={p.status} /></td>
+                        <td className="px-6 py-3 text-right">
+                          {(p.status === 'aberto' || p.status === 'atrasado' || p.status === 'entrada') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-200 hover:bg-green-50"
+                              onClick={() => abrirRecebimento(p)}
+                            >
+                              Receber
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            contas.length === 0 ? (
+              <div className="py-16 text-center text-gray-400">
+                <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">Nenhuma conta encontrada</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide border-b border-gray-100">
+                      <th className="text-left px-6 py-3">Cliente</th>
+                      <th className="text-left px-4 py-3">Descrição</th>
+                      <th className="text-right px-4 py-3">Total</th>
+                      <th className="text-center px-4 py-3">Parcelas</th>
+                      <th className="text-center px-4 py-3">Status</th>
+                      <th className="text-right px-6 py-3">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {contas.map((c) => (
+                      <tr key={c.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-3 font-medium text-gray-900">{c.clientes?.nome ?? '—'}</td>
+                        <td className="px-4 py-3 text-gray-700">{c.descricao}</td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(c.valor_total)}</td>
+                        <td className="px-4 py-3 text-center text-gray-500">{c.num_parcelas}x</td>
+                        <td className="px-4 py-3 text-center"><StatusBadge status={c.status} /></td>
+                        <td className="px-6 py-3 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            {c.status !== 'cancelado' && c.status !== 'quitado' && (
+                              <button onClick={() => abrirEdicao(c)}
+                                className="text-xs text-blue-500 hover:underline">Editar</button>
+                            )}
+                            {c.status === 'aberto' && (
+                              <button
+                                onClick={() => cancelarContaReceber(userId, c.id).then(() => { _toast('Cancelado', 'success'); fetchTudo() })}
+                                className="text-xs text-red-500 hover:underline"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog: Nova Conta a Receber */}
+      <Dialog open={dialogNova} onOpenChange={setDialogNova}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nova Conta a Receber</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={formNova.handleSubmit(handleCriarConta)} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Label>Cliente</Label>
+                <Select
+                  value={formNova.watch('cliente_id') ?? ''}
+                  onValueChange={(v) => formNova.setValue('cliente_id', v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                  <SelectContent>
+                    {clientes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formNova.formState.errors.cliente_id && (
+                  <p className="text-xs text-red-500 mt-1">{formNova.formState.errors.cliente_id.message}</p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2">
+                <Label>Descrição</Label>
+                <Input {...formNova.register('descricao')} placeholder="Descrição do recebimento" />
+              </div>
+
+              <div>
+                <Label>Valor Total (R$)</Label>
+                <Input {...formNova.register('valor_total', { valueAsNumber: true })} type="number" step="0.01" min="0.01" placeholder="0,00" />
+              </div>
+              <div>
+                <Label>Entrada (R$)</Label>
+                <Input {...formNova.register('valor_entrada', { valueAsNumber: true })} type="number" step="0.01" min="0" placeholder="0,00" />
+              </div>
+
+              <div>
+                <Label>Nº de Parcelas</Label>
+                <Input {...formNova.register('num_parcelas', { valueAsNumber: true })} type="number" min="1" max="60" />
+              </div>
+              <div>
+                <Label>Juros (%)</Label>
+                <Input {...formNova.register('juros_percentual', { valueAsNumber: true })} type="number" step="0.01" min="0" placeholder="0" />
+              </div>
+            </div>
+
+            {/* Preview do valor da parcela */}
+            {valorTotal > 0 && numParcelas > 0 && (
+              <div className="bg-green-50 rounded-xl p-3 text-sm">
+                <span className="text-green-700 font-medium">
+                  {numParcelas}x de {formatCurrency(valorParcela)}
+                  {valorEntrada > 0 && ` + entrada de ${formatCurrency(valorEntrada)}`}
+                </span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Data da 1ª Parcela</Label>
+                <Input {...formNova.register('data_primeira_parcela')} type="date" />
+              </div>
+              <div>
+                <Label>Conta Destino</Label>
+                <Select
+                  value={formNova.watch('conta_corrente_id') ?? ''}
+                  onValueChange={(v) => formNova.setValue('conta_corrente_id', v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {contasCorrente.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nome_apelido}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Observações</Label>
+              <textarea
+                {...formNova.register('observacoes')}
+                rows={2}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setDialogNova(false)} className="flex-1">Cancelar</Button>
+              <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">Criar Conta</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Editar Conta a Receber */}
+      <Dialog open={!!contaEditando} onOpenChange={(o) => !o && setContaEditando(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Editar Conta a Receber</DialogTitle></DialogHeader>
+          {contaEditando && (
+            <div className="mb-3 p-3 bg-gray-50 rounded-xl text-sm text-gray-500">
+              Total: <strong className="text-gray-900">{formatCurrency(contaEditando.valor_total)}</strong>
+              {' · '}{contaEditando.num_parcelas}x
+              {' · '}Vence em <strong className="text-gray-900">{formatDate(contaEditando.data_primeira_parcela)}</strong>
+              <p className="text-xs mt-1 text-amber-600">Valor, parcelas e datas só podem ser alterados cancelando e recriando.</p>
+            </div>
+          )}
+          <form onSubmit={formEditar.handleSubmit(handleEditarConta)} className="space-y-4">
+            <div>
+              <Label>Cliente</Label>
+              <Select value={formEditar.watch('cliente_id') ?? ''} onValueChange={(v) => formEditar.setValue('cliente_id', v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                <SelectContent>
+                  {clientes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {formEditar.formState.errors.cliente_id && (
+                <p className="text-xs text-red-500 mt-1">{formEditar.formState.errors.cliente_id.message}</p>
+              )}
+            </div>
+            <div>
+              <Label>Descrição</Label>
+              <Input {...formEditar.register('descricao')} placeholder="Descrição do recebimento" />
+              {formEditar.formState.errors.descricao && (
+                <p className="text-xs text-red-500 mt-1">{formEditar.formState.errors.descricao.message}</p>
+              )}
+            </div>
+            <div>
+              <Label>Conta Destino</Label>
+              <Select
+                value={formEditar.watch('conta_corrente_id') ?? '__none__'}
+                onValueChange={(v) => formEditar.setValue('conta_corrente_id', v === '__none__' ? undefined : v)}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nenhuma —</SelectItem>
+                  {contasCorrente.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome_apelido}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <Input {...formEditar.register('observacoes')} placeholder="Opcional" />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setContaEditando(null)} className="flex-1">Cancelar</Button>
+              <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">Salvar Alterações</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Registrar Recebimento */}
+      <Dialog open={!!parcelaSelecionada} onOpenChange={(o) => !o && setParcelaSelecionada(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar Recebimento</DialogTitle>
+          </DialogHeader>
+          {parcelaSelecionada && (
+            <div className="mb-4 p-3 bg-gray-50 rounded-xl text-sm space-y-1">
+              <p><span className="text-gray-500">Cliente:</span> <strong>{(parcelaSelecionada as ParcelaReceber & { cliente_nome?: string }).cliente_nome ?? '—'}</strong></p>
+              <p><span className="text-gray-500">Parcela:</span> <strong>{parcelaSelecionada.status === 'entrada' ? 'Entrada' : `${parcelaSelecionada.numero_parcela}/${parcelaSelecionada.total_parcelas}`}</strong></p>
+              <p><span className="text-gray-500">Vencimento:</span> <strong>{formatDate(parcelaSelecionada.data_vencimento)}</strong></p>
+              <p><span className="text-gray-500">Valor:</span> <strong className="text-green-600">{formatCurrency(parcelaSelecionada.valor)}</strong></p>
+            </div>
+          )}
+          <form onSubmit={formReceber.handleSubmit(handleRegistrarRecebimento)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Valor Recebido (R$)</Label>
+                <Input {...formReceber.register('valor_recebido', { valueAsNumber: true })} type="number" step="0.01" min="0.01" />
+              </div>
+              <div>
+                <Label>Data do Recebimento</Label>
+                <Input {...formReceber.register('data_recebimento')} type="date" />
+              </div>
+              <div>
+                <Label>Juros (R$)</Label>
+                <Input {...formReceber.register('juros', { valueAsNumber: true })} type="number" step="0.01" min="0" placeholder="0,00" />
+              </div>
+              <div>
+                <Label>Desconto (R$)</Label>
+                <Input {...formReceber.register('desconto', { valueAsNumber: true })} type="number" step="0.01" min="0" placeholder="0,00" />
+              </div>
+            </div>
+            <div>
+              <Label>Conta Destino</Label>
+              <Select
+                value={formReceber.watch('conta_corrente_id') ?? ''}
+                onValueChange={(v) => formReceber.setValue('conta_corrente_id', v)}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecione a conta..." /></SelectTrigger>
+                <SelectContent>
+                  {contasCorrente.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome_apelido} — {formatCurrency(c.saldo_atual)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <Input {...formReceber.register('observacoes')} placeholder="Opcional" />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setParcelaSelecionada(null)} className="flex-1">Cancelar</Button>
+              <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Confirmar Recebimento
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

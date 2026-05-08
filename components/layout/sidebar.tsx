@@ -2,14 +2,78 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, List, X } from 'lucide-react'
+import {
+  LayoutDashboard,
+  List,
+  X,
+  TrendingUp,
+  TrendingDown,
+  ArrowLeftRight,
+  Landmark,
+  CreditCard,
+  Users,
+  Building2,
+  BarChart3,
+  Settings,
+} from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Transações', icon: List },
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ElementType
+  color?: string
+}
+
+interface NavSection {
+  title: string
+  items: NavItem[]
+}
+
+const navSections: NavSection[] = [
+  {
+    title: 'PRINCIPAL',
+    items: [
+      { href: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+      { href: '/fluxo-caixa',  label: 'Fluxo de Caixa', icon: ArrowLeftRight },
+      { href: '/transactions', label: 'Transações',   icon: List },
+    ],
+  },
+  {
+    title: 'FINANCEIRO',
+    items: [
+      { href: '/contas-receber', label: 'Contas a Receber', icon: TrendingUp,   color: 'green' },
+      { href: '/contas-pagar',   label: 'Contas a Pagar',   icon: TrendingDown, color: 'red'   },
+    ],
+  },
+  {
+    title: 'CADASTROS',
+    items: [
+      { href: '/contas-correntes', label: 'Contas Correntes', icon: Landmark  },
+      { href: '/cartoes',          label: 'Cartões',          icon: CreditCard },
+      { href: '/clientes',         label: 'Clientes',         icon: Users      },
+      { href: '/fornecedores',     label: 'Fornecedores',     icon: Building2  },
+    ],
+  },
+  {
+    title: 'ANÁLISES',
+    items: [
+      { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+    ],
+  },
+  {
+    title: 'SISTEMA',
+    items: [
+      { href: '/configuracoes', label: 'Configurações', icon: Settings },
+    ],
+  },
 ]
+
+const iconColorMap: Record<string, string> = {
+  green: 'text-green-500',
+  red:   'text-red-500',
+}
 
 interface SidebarProps {
   open: boolean
@@ -36,6 +100,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           open ? 'translate-x-0' : '-translate-x-full'
         )}
       >
+        {/* Logo */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <Logo size="md" />
           <button
@@ -46,30 +111,46 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
-            const active = pathname === item.href
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                  active
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                )}
-              >
-                <item.icon className={cn('h-5 w-5', active ? 'text-blue-600' : 'text-gray-400')} />
-                {item.label}
-              </Link>
-            )
-          })}
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-4">
+          {navSections.map((section) => (
+            <div key={section.title}>
+              <p className="px-3 mb-1 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
+                {section.title}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(item.href + '/')
+                  const iconColor = item.color
+                    ? (active ? iconColorMap[item.color] : iconColorMap[item.color] + '/70')
+                    : active
+                      ? 'text-blue-600'
+                      : 'text-gray-400'
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                        active
+                          ? 'bg-blue-50 text-blue-600'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      )}
+                    >
+                      <item.icon className={cn('h-4 w-4 shrink-0', iconColor)} />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="p-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400 text-center">Minhas Finanças © 2024</p>
+          <p className="text-xs text-gray-400 text-center">Minhas Finanças © 2025</p>
         </div>
       </aside>
     </>
