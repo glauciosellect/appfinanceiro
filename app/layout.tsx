@@ -13,13 +13,21 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  themeColor: '#2563eb',
 }
 
 export const metadata: Metadata = {
   title: 'Minhas Finanças',
   description: 'Controle suas finanças pessoais de forma simples e visual.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Minhas Finanças',
+  },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/icon-192x192.png',
+    apple: '/icon-192x192.png',
   },
 }
 
