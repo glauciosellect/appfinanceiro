@@ -2,34 +2,22 @@ import { cn } from '@/lib/utils'
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg'
-  showText?: boolean
   className?: string
 }
 
-export function Logo({ size = 'md', showText = true, className }: LogoProps) {
-  const sizes = {
-    sm: { icon: 28, text: 'text-sm', gap: 'gap-2' },
-    md: { icon: 36, text: 'text-xl', gap: 'gap-2.5' },
-    lg: { icon: 48, text: 'text-2xl', gap: 'gap-3' },
-  }
-  const s = sizes[size]
+export function Logo({ size = 'md', className }: LogoProps) {
+  const heights = { sm: 32, md: 44, lg: 56 }
+  const h = heights[size]
 
   return (
-    <div className={cn('flex items-center', s.gap, className)}>
+    <div className={cn('flex items-center', className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/icon-96x96.png"
+        src="/Icone_SyncroMoney_sem fundo.png"
         alt="SyncroMoney"
-        width={s.icon}
-        height={s.icon}
-        style={{ borderRadius: '22%' }}
+        height={h}
+        style={{ height: h, width: 'auto', objectFit: 'contain' }}
       />
-
-      {showText && (
-        <span className={cn('font-bold tracking-tight text-gray-900 dark:text-white', s.text)}>
-          Syncro<span className="text-green-500">Money</span>
-        </span>
-      )}
     </div>
   )
 }
