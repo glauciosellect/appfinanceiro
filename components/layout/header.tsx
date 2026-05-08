@@ -34,7 +34,7 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
     <header className="h-16 border-b border-gray-100 bg-white dark:bg-gray-900 dark:border-gray-800 flex items-center justify-between px-4 lg:px-6">
       <button
         onClick={onMenuClick}
-        className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+        className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -44,11 +44,11 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
       <div className="flex items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
+            <button className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
                 <User className="h-4 w-4 text-blue-600" />
               </div>
-              <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[160px] truncate">
+              <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[160px] truncate">
                 {userEmail}
               </span>
             </button>

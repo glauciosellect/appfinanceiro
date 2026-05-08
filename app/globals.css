@@ -25,57 +25,121 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ── Dark mode global ── */
+/* ═══════════════════════════════════════
+   DARK MODE — SyncroMoney
+   Base: #0f172a  Surface: #1e293b  Elevated: #293548  Border: #334155
+   ═══════════════════════════════════════ */
+
 .dark body {
   background-color: #0f172a;
   color: #f1f5f9;
 }
 
-/* Fundo das páginas dentro do dashboard */
-.dark .bg-gray-50 { background-color: #1e293b !important; }
-.dark .bg-white   { background-color: #1e293b !important; }
-.dark .bg-gray-100 { background-color: #334155 !important; }
+/* ── Fundos ── */
+.dark .bg-white        { background-color: #1e293b !important; }
+.dark .bg-gray-50      { background-color: #1a2333 !important; }
+.dark .bg-gray-100     { background-color: #293548 !important; }
+.dark .bg-gray-200     { background-color: #334155 !important; }
 
-/* Textos */
-.dark .text-gray-900 { color: #f1f5f9 !important; }
-.dark .text-gray-800 { color: #e2e8f0 !important; }
-.dark .text-gray-700 { color: #cbd5e1 !important; }
-.dark .text-gray-600 { color: #94a3b8 !important; }
-.dark .text-gray-500 { color: #64748b !important; }
-.dark .text-gray-400 { color: #475569 !important; }
+/* ── Textos ── */
+.dark .text-gray-900   { color: #f1f5f9 !important; }
+.dark .text-gray-800   { color: #e2e8f0 !important; }
+.dark .text-gray-700   { color: #cbd5e1 !important; }
+.dark .text-gray-600   { color: #94a3b8 !important; }
+.dark .text-gray-500   { color: #64748b !important; }
+.dark .text-gray-400   { color: #475569 !important; }
+.dark .text-gray-300   { color: #3d4f63 !important; }
 
-/* Bordas */
+/* ── Bordas ── */
+.dark .border-gray-50  { border-color: #293548 !important; }
 .dark .border-gray-100 { border-color: #334155 !important; }
-.dark .border-gray-200 { border-color: #334155 !important; }
-.dark .divide-gray-50  > * + * { border-color: #334155 !important; }
+.dark .border-gray-200 { border-color: #3d5068 !important; }
+.dark .border-gray-300 { border-color: #475569 !important; }
+.dark .divide-gray-50  > * + * { border-color: #293548 !important; }
 .dark .divide-gray-100 > * + * { border-color: #334155 !important; }
 
-/* Cards e superfícies */
-.dark [class*="rounded"] { --tw-ring-color: #334155; }
-.dark .hover\:bg-gray-50:hover { background-color: #334155 !important; }
+/* ── Hover ── */
+.dark .hover\:bg-gray-50:hover  { background-color: #293548 !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #334155 !important; }
 
-/* Inputs e selects */
-.dark input, .dark textarea, .dark select {
-  background-color: #1e293b !important;
+/* ── KPI cards coloridos (manter cor, escurecer fundo) ── */
+.dark .bg-blue-50    { background-color: #1e3a5f !important; }
+.dark .bg-green-50   { background-color: #14372a !important; }
+.dark .bg-red-50     { background-color: #3b1a1a !important; }
+.dark .bg-amber-50   { background-color: #3b2a0a !important; }
+.dark .bg-purple-50  { background-color: #2d1a4a !important; }
+.dark .bg-orange-50  { background-color: #3b2010 !important; }
+
+/* ── Tabelas ── */
+.dark thead tr,
+.dark .bg-gray-50 th { background-color: #1a2333 !important; }
+.dark tbody tr:hover  { background-color: #293548 !important; }
+.dark tfoot tr        { background-color: #1a2333 !important; }
+
+/* ── Inputs / Textarea / Select nativo ── */
+.dark input:not([type="radio"]):not([type="checkbox"]),
+.dark textarea,
+.dark select {
+  background-color: #293548 !important;
   color: #f1f5f9 !important;
   border-color: #475569 !important;
 }
-.dark input::placeholder, .dark textarea::placeholder {
-  color: #64748b !important;
+.dark input::placeholder,
+.dark textarea::placeholder { color: #64748b !important; }
+.dark input:focus,
+.dark textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.2) !important;
 }
 
-/* Dropdown / Popover (Radix UI) */
-.dark [data-radix-popper-content-wrapper] > div,
-.dark [role="menu"],
-.dark [role="listbox"],
-.dark [role="dialog"] > div {
+/* ── Radix UI: Dialog, Dropdown, Select, Popover ── */
+.dark [data-radix-popper-content-wrapper] > div { background-color: #1e293b !important; border-color: #334155 !important; }
+.dark [role="dialog"]                           { background-color: #1e293b !important; }
+.dark [role="menu"]                             { background-color: #1e293b !important; border-color: #334155 !important; }
+.dark [role="listbox"]                          { background-color: #1e293b !important; border-color: #334155 !important; }
+.dark [role="option"]:hover,
+.dark [data-highlighted]                        { background-color: #293548 !important; }
+.dark [role="separator"]                        { background-color: #334155 !important; }
+
+/* Dialog overlay */
+.dark [data-state="open"][role="dialog"] ~ [data-overlay] { background-color: rgba(0,0,0,0.7) !important; }
+
+/* ── Badges ── */
+.dark .bg-gray-100.text-gray-600 { background-color: #334155 !important; color: #cbd5e1 !important; }
+
+/* ── Botão outline ── */
+.dark button[class*="variant-outline"],
+.dark .border.border-gray-200 { border-color: #475569 !important; }
+
+/* ── Cards de status coloridos (atrasado, pago, etc.) ── */
+.dark .bg-blue-50.text-blue-700   { background-color: #1e3a5f !important; color: #93c5fd !important; }
+.dark .bg-green-50.text-green-700 { background-color: #14372a !important; color: #86efac !important; }
+.dark .bg-red-50.text-red-700     { background-color: #3b1a1a !important; color: #fca5a5 !important; }
+.dark .bg-amber-50.text-amber-700 { background-color: #3b2a0a !important; color: #fcd34d !important; }
+
+/* ── Alertas e blocos informativos ── */
+.dark .bg-red-50   { background-color: #3b1a1a !important; }
+.dark .bg-amber-50 { background-color: #3b2a0a !important; }
+.dark .bg-green-50 { background-color: #14372a !important; }
+.dark .bg-blue-50  { background-color: #1e3a5f !important; }
+
+/* ── Progress bar e skeletons ── */
+.dark .animate-pulse { background-color: #293548 !important; }
+.dark .bg-white\/20  { background-color: rgba(255,255,255,0.12) !important; }
+
+/* ── Gráfico Recharts ── */
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line { stroke: #334155; }
+.dark .recharts-text { fill: #94a3b8 !important; }
+.dark .recharts-legend-item-text { color: #94a3b8 !important; }
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
   background-color: #1e293b !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
 
-/* Scrollbar dark */
-.dark ::-webkit-scrollbar-thumb { background: #475569; }
+/* ── Scrollbar dark ── */
+.dark ::-webkit-scrollbar-thumb       { background: #475569; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
 /* Animate in/out utilities for Radix UI */

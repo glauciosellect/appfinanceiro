@@ -96,16 +96,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-100 flex flex-col transition-transform duration-300 lg:relative lg:translate-x-0 lg:z-auto',
+          'fixed top-0 left-0 z-50 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col transition-transform duration-300 lg:relative lg:translate-x-0 lg:z-auto',
           open ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
           <Logo size="md" />
           <button
             onClick={onClose}
-            className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -115,7 +115,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto p-3 space-y-4">
           {navSections.map((section) => (
             <div key={section.title}>
-              <p className="px-3 mb-1 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
+              <p className="px-3 mb-1 text-[10px] font-semibold tracking-widest text-gray-400 dark:text-gray-600 uppercase">
                 {section.title}
               </p>
               <div className="space-y-0.5">
@@ -124,8 +124,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   const iconColor = item.color
                     ? (active ? iconColorMap[item.color] : iconColorMap[item.color] + '/70')
                     : active
-                      ? 'text-blue-600'
-                      : 'text-gray-400'
+                      ? 'text-blue-500'
+                      : 'text-gray-400 dark:text-gray-500'
 
                   return (
                     <Link
@@ -135,8 +135,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                         active
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                       )}
                     >
                       <item.icon className={cn('h-4 w-4 shrink-0', iconColor)} />
@@ -149,8 +149,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400 text-center">Minhas Finanças © 2025</p>
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-xs text-gray-400 dark:text-gray-600 text-center">SyncroMoney © 2025</p>
         </div>
       </aside>
     </>
