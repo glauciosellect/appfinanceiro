@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { assinaturaAtiva, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
-import { Loader2, Lock, AlertTriangle } from 'lucide-react'
+import { Loader2, Lock, AlertTriangle, LogOut } from 'lucide-react'
 import { Logo } from '@/components/logo'
 
 interface Props {
@@ -79,6 +79,17 @@ export function SubscriptionGuard({ children }: Props) {
             className="w-full text-slate-400 hover:text-white text-sm transition-colors py-2"
           >
             Gerenciar assinatura existente
+          </button>
+          <button
+            onClick={async () => {
+              const supabase = createClient()
+              await supabase.auth.signOut()
+              router.push('/login')
+            }}
+            className="w-full text-slate-500 hover:text-slate-300 text-sm transition-colors py-2 flex items-center justify-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Sair e usar outra conta
           </button>
         </div>
       </div>
