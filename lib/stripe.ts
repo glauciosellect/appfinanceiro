@@ -9,16 +9,16 @@ export function getStripe() {
 export const PLANS = {
   monthly: {
     name: 'Mensal',
-    price: 'R$ 29,90',
+    price: 'R$ 39,90',
     interval: 'mês',
     priceId: process.env.STRIPE_PRICE_MONTHLY!,
   },
   yearly: {
     name: 'Anual',
-    price: 'R$ 299,00',
+    price: 'R$ 358,80',
     interval: 'ano',
     priceId: process.env.STRIPE_PRICE_YEARLY!,
-    savings: 'Economize R$ 59,80',
+    savings: 'Economize R$ 120,00/ano — R$ 29,90/mês',
   },
 } as const
 
