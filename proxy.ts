@@ -29,10 +29,10 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const PUBLIC_PATHS = ['/login', '/register', '/instalar', '/assinar', '/auth/confirm', '/auth/bem-vindo', '/auth/erro-confirmacao', '/api/stripe/webhook']
+  const PUBLIC_PATHS = ['/', '/login', '/register', '/instalar', '/assinar', '/auth/confirm', '/auth/bem-vindo', '/auth/erro-confirmacao', '/api/stripe/webhook']
 
   if (!user && !PUBLIC_PATHS.includes(pathname)) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   if (user && (pathname === '/login' || pathname === '/register')) {

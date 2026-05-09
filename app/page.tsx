@@ -7,7 +7,6 @@ export default async function RootPage() {
 
   if (session) {
     redirect('/dashboard')
-  } else {
-    redirect('/login')
   }
+  // usuário não logado cai na landing page (marketing)/page.tsx
 }
