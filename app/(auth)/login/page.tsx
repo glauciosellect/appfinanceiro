@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -11,7 +11,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Download } from 'lucide-react'
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -21,6 +26,32 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+  const [instalando, setInstalando] = useState(false)
+
+  useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+      return
+    }
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function handleInstall() {
+    if (!deferredPrompt) return
+    setInstalando(true)
+    await deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === 'accepted') setIsInstalled(true)
+    setInstalando(false)
+    setDeferredPrompt(null)
+  }
 
   async function handleLogin(e: React.SyntheticEvent) {
     e.preventDefault()
@@ -45,8 +76,15 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="flex justify-center mb-8">
-        <Logo size="lg" />
+      <div className="flex flex-col items-center mb-8 gap-3">
+        <div className="flex items-center gap-3">
+          <Logo size="lg" />
+          <span className="text-3xl font-bold tracking-tight">
+            <span className="text-gray-900">Syncro</span>
+            <span className="text-blue-600">Money</span>
+          </span>
+        </div>
+        <p className="text-sm text-gray-500">Controle Financeiro Inteligente</p>
       </div>
 
       <Card className="shadow-xl border-0">
@@ -113,6 +151,28 @@ export default function LoginPage() {
                 Cadastre-se
               </Link>
             </p>
+
+            {!isInstalled && deferredPrompt && (
+              <button
+                type="button"
+                onClick={handleInstall}
+                disabled={instalando}
+                className="flex items-center justify-center gap-2 w-full text-sm text-blue-600 font-medium hover:text-blue-700 transition-colors py-1 disabled:opacity-60"
+              >
+                <Download className="h-4 w-4" />
+                {instalando ? 'Instalando...' : 'Instalar SyncroMoney'}
+              </button>
+            )}
+
+            {!isInstalled && !deferredPrompt && (
+              <Link
+                href="/instalar"
+                className="flex items-center justify-center gap-2 w-full text-sm text-blue-600 font-medium hover:text-blue-700 transition-colors py-1"
+              >
+                <Download className="h-4 w-4" />
+                Instalar SyncroMoney
+              </Link>
+            )}
           </CardFooter>
         </form>
       </Card>
