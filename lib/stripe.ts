@@ -11,13 +11,13 @@ export const PLANS = {
     name: 'Mensal',
     price: 'R$ 39,90',
     interval: 'mês',
-    priceId: process.env.STRIPE_PRICE_MONTHLY!,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_MONTHLY!,
   },
   yearly: {
     name: 'Anual',
     price: 'R$ 358,80',
     interval: 'ano',
-    priceId: process.env.STRIPE_PRICE_YEARLY!,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY!,
     savings: 'Economize R$ 120,00/ano — R$ 29,90/mês',
   },
 } as const
