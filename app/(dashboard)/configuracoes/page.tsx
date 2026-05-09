@@ -306,7 +306,18 @@ export default function ConfiguracoesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-bold text-gray-900 text-lg">SyncroMoney Pro</p>
-                  <p className="text-sm text-gray-500">R$ 29,90/mês</p>
+                  <p className="text-sm text-gray-500">
+                    {assinatura?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY
+                      ? 'R$ 358,80/ano (R$ 29,90/mês)'
+                      : 'R$ 39,90/mês'}
+                  </p>
+                  {assinatura?.current_period_end && (
+                    <p className="text-xs text-amber-600 mt-1 font-medium">
+                      {assinatura.status === 'active'
+                        ? `Válido até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`
+                        : `Acesso até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`}
+                    </p>
+                  )}
                 </div>
                 <Crown className="h-8 w-8 text-blue-600" />
               </div>
