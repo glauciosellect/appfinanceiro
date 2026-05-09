@@ -9,7 +9,7 @@ interface MarketingLogoProps {
 }
 
 export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
-  const heights = { sm: 100, md: 160, lg: 200 }
+  const heights = { sm: 120, md: 240, lg: 300 }
   const h = heights[size]
 
   return (
