@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 interface LogoProps {
@@ -6,17 +7,18 @@ interface LogoProps {
 }
 
 export function Logo({ size = 'md', className }: LogoProps) {
-  const heights = { sm: 32, md: 44, lg: 56 }
+  const heights: Record<string, number> = { sm: 36, md: 48, lg: 64 }
   const h = heights[size]
 
   return (
     <div className={cn('flex items-center', className)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/Icone_SyncroMoney_sem fundo.png"
+      <Image
+        src="/Syncromoney_sem fundo_branco.png"
         alt="SyncroMoney"
+        width={h * 3}
         height={h}
         style={{ height: h, width: 'auto', objectFit: 'contain' }}
+        priority
       />
     </div>
   )

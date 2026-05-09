@@ -51,13 +51,7 @@ export default function RegisterPage() {
     return (
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8 gap-3">
-          <div className="flex items-center gap-3">
-            <Logo size="lg" />
-            <span className="text-3xl font-bold tracking-tight">
-              <span className="text-gray-900">Syncro</span>
-              <span className="text-blue-600">Money</span>
-            </span>
-          </div>
+          <Logo size="lg" />
         </div>
         <Card className="shadow-xl border-0">
           <CardContent className="pt-6 text-center space-y-4">
@@ -85,14 +79,7 @@ export default function RegisterPage() {
   return (
     <div className="w-full max-w-md">
       <div className="flex flex-col items-center mb-8 gap-3">
-        <div className="flex items-center gap-3">
-          <Logo size="lg" />
-          <span className="text-3xl font-bold tracking-tight">
-            <span className="text-gray-900">Syncro</span>
-            <span className="text-blue-600">Money</span>
-          </span>
-        </div>
-        <p className="text-sm text-gray-500">Controle Financeiro Inteligente</p>
+        <Logo size="lg" />
       </div>
 
       <Card className="shadow-xl border-0">

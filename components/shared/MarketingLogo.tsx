@@ -7,24 +7,19 @@ interface MarketingLogoProps {
 }
 
 export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
-  const heights = { sm: 32, md: 40, lg: 52 }
+  const heights: Record<string, number> = { sm: 36, md: 44, lg: 56 }
   const h = heights[size]
-  const textSizes = { sm: 'text-lg', md: 'text-xl', lg: 'text-2xl' }
 
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
+    <div className={cn('flex items-center', className)}>
       <Image
-        src="/Icone_SyncroMoney_sem fundo.png"
+        src="/Syncromoney_sem fundo_branco.png"
         alt="SyncroMoney"
-        width={h}
+        width={h * 3}
         height={h}
-        style={{ width: 'auto', height: h }}
+        style={{ height: h, width: 'auto', objectFit: 'contain' }}
         priority
       />
-      <span className={cn('font-extrabold tracking-tight', textSizes[size])}>
-        <span className="text-[#111827]">Syncro</span>
-        <span className="text-[#2563EB]">Money</span>
-      </span>
     </div>
   )
 }

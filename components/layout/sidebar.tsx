@@ -102,12 +102,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center">
             <Logo size="sm" />
-            <span className="text-xl font-bold tracking-tight">
-              <span className="text-gray-900 dark:text-white">Syncro</span>
-              <span className="text-blue-600">Money</span>
-            </span>
           </div>
           <button
             onClick={onClose}
