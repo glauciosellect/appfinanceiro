@@ -3,6 +3,7 @@ import { Geist } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/ui/toast'
 import { ThemeProvider } from '@/components/theme/theme-provider'
+import { InstallPrompt } from '@/components/pwa/install-prompt'
 
 const geist = Geist({
   variable: '--font-geist-sans',
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="h-full">
         <ThemeProvider>
           <ToastProvider>{children}</ToastProvider>
+          <InstallPrompt />
         </ThemeProvider>
       </body>
     </html>
