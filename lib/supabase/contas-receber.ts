@@ -173,6 +173,12 @@ export async function cancelarContaReceber(userId: string, id: string): Promise<
     .eq('user_id', userId)
 }
 
+export async function excluirContaReceber(userId: string, id: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('parcelas_receber').delete().eq('conta_receber_id', id)
+  await supabase.from('contas_receber').delete().eq('id', id).eq('user_id', userId)
+}
+
 export async function registrarRecebimento(
   userId: string,
   parcelaId: string,

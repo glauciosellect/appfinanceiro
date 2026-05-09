@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, TrendingUp, CheckCircle, AlertCircle, Clock, DollarSign, Loader2 } from 'lucide-react'
+import { Plus, TrendingUp, CheckCircle, AlertCircle, Clock, DollarSign, Loader2, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getContasReceber,
@@ -11,6 +11,7 @@ import {
   createContaReceber,
   updateContaReceber,
   cancelarContaReceber,
+  excluirContaReceber,
   registrarRecebimento,
   getResumoReceber,
   atualizarParcelasAtrasadas,
@@ -404,12 +405,28 @@ export default function ContasReceberPage() {
                               <button onClick={() => abrirEdicao(c)}
                                 className="text-xs text-blue-500 hover:underline">Editar</button>
                             )}
-                            {c.status === 'aberto' && (
+                            {(c.status === 'aberto' || c.status === 'parcial') && (
                               <button
-                                onClick={() => cancelarContaReceber(userId, c.id).then(() => { _toast('Cancelado', 'success'); fetchTudo() })}
-                                className="text-xs text-red-500 hover:underline"
+                                onClick={() => {
+                                  if (confirm('Cancelar esta conta? As parcelas em aberto serão marcadas como canceladas.')) {
+                                    cancelarContaReceber(userId, c.id).then(() => { _toast('Conta cancelada', 'success'); fetchTudo() })
+                                  }
+                                }}
+                                className="text-xs text-amber-600 hover:underline"
                               >
                                 Cancelar
+                              </button>
+                            )}
+                            {c.status === 'cancelado' && (
+                              <button
+                                onClick={() => {
+                                  if (confirm('EXCLUIR permanentemente esta conta e todas as suas parcelas? Esta ação não pode ser desfeita.')) {
+                                    excluirContaReceber(userId, c.id).then(() => { _toast('Conta excluída', 'success'); fetchTudo() })
+                                  }
+                                }}
+                                className="text-xs text-red-500 hover:underline flex items-center gap-1"
+                              >
+                                <Trash2 className="h-3 w-3" />Excluir
                               </button>
                             )}
                           </div>
