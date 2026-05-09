@@ -33,7 +33,7 @@ export default function AssinarPage() {
 
     const priceId = PLANS[planoSelecionado].priceId
 
-    if (!priceId || priceId.startsWith('price_COLOQUE')) {
+    if (!priceId || priceId === 'price_placeholder' || priceId.startsWith('price_COLOQUE')) {
       setErro('Plano ainda não configurado. Entre em contato com o suporte.')
       setLoading(false)
       return
@@ -155,7 +155,7 @@ export default function AssinarPage() {
           {loading ? (
             <><Loader2 className="h-5 w-5 animate-spin" /> Aguarde...</>
           ) : (
-            `Começar 7 dias grátis — ${PLANS[planoSelecionado].price}/${PLANS[planoSelecionado].interval}`
+            `Assinar agora — ${PLANS[planoSelecionado].price}/${PLANS[planoSelecionado].interval}`
           )}
         </button>
 
