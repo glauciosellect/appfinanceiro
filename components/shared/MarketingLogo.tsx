@@ -1,3 +1,5 @@
+'use client'
+
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
@@ -6,15 +8,9 @@ interface MarketingLogoProps {
   className?: string
 }
 
-// sm → footer
-// md → navbar (sticky)
-// lg → hero landing page
 export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
-  const cls = {
-    sm: 'h-10 sm:h-12',
-    md: 'h-10 sm:h-12 md:h-14',
-    lg: 'h-14 sm:h-18 md:h-24',
-  }[size]
+  const heights = { sm: 48, md: 64, lg: 96 }
+  const h = heights[size]
 
   return (
     <div className={cn('flex items-center', className)}>
@@ -23,7 +19,7 @@ export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
         alt="SyncroMoney"
         width={600}
         height={200}
-        className={cn('w-auto object-contain', cls)}
+        style={{ height: h, width: 'auto', objectFit: 'contain' }}
         priority
       />
     </div>
