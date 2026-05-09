@@ -15,8 +15,9 @@ import { useToast } from '@/components/ui/toast'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon } from 'lucide-react'
+import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
 import type { Categoria, TipoCategoria } from '@/types'
+import { assinaturaAtiva, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
 
 const schemaCategoria = z.object({
   nome: z.string().min(2, 'Mínimo 2 caracteres'),
@@ -39,13 +40,15 @@ const EMOJIS_RAPIDOS = ['💰','💵','💳','🏦','📊','📈','📉','🛒',
 const CORES_RAPIDAS = ['#22c55e','#3b82f6','#f97316','#ef4444','#8b5cf6','#ec4899','#f59e0b','#6366f1','#14b8a6','#64748b']
 
 export default function ConfiguracoesPage() {
-  const [aba, setAba] = useState<'categorias' | 'perfil' | 'senha'>('categorias')
+  const [aba, setAba] = useState<'categorias' | 'perfil' | 'senha' | 'assinatura'>('categorias')
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogCat, setDialogCat] = useState(false)
   const [editandoCat, setEditandoCat] = useState<Categoria | undefined>()
   const [userId, setUserId] = useState('')
   const [userEmail, setUserEmail] = useState('')
+  const [assinatura, setAssinatura] = useState<Assinatura | null>(null)
+  const [loadingPortal, setLoadingPortal] = useState(false)
   const { toast: _toast } = useToast()
 
   const formCat = useForm<CategoriaForm>({
@@ -55,10 +58,12 @@ export default function ConfiguracoesPage() {
   const formSenha = useForm<AlterarSenhaForm>({ resolver: zodResolver(schemaAlterarSenha) })
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => {
+    createClient().auth.getUser().then(async ({ data }) => {
       if (data.user) {
         setUserId(data.user.id)
         setUserEmail(data.user.email ?? '')
+        const { data: ass } = await createClient().from('assinaturas').select('*').eq('user_id', data.user.id).single()
+        setAssinatura(ass as Assinatura | null)
       }
     })
   }, [])
@@ -133,11 +138,12 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Abas */}
-      <div className="flex rounded-xl border border-gray-200 overflow-hidden w-fit">
+      <div className="flex flex-wrap rounded-xl border border-gray-200 overflow-hidden w-fit">
         {([
           ['categorias', 'Categorias', Tag],
           ['perfil', 'Perfil', Settings],
           ['senha', 'Alterar Senha', CardIcon],
+          ['assinatura', 'Assinatura', Crown],
         ] as const).map(([tab, label, Icon]) => (
           <button key={tab} onClick={() => setAba(tab)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${aba === tab ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
@@ -243,6 +249,97 @@ export default function ConfiguracoesPage() {
               </div>
               <Button type="submit">Alterar Senha</Button>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Aba: Assinatura */}
+      {aba === 'assinatura' && (
+        <Card>
+          <CardHeader><CardTitle>Minha Assinatura</CardTitle></CardHeader>
+          <CardContent className="space-y-6">
+            {/* Status atual */}
+            <div className={`rounded-2xl p-4 flex items-center gap-4 ${
+              assinatura?.status === 'active' ? 'bg-green-50 border border-green-200' :
+              assinatura?.status === 'trialing' ? 'bg-blue-50 border border-blue-200' :
+              'bg-red-50 border border-red-200'
+            }`}>
+              {assinatura?.status === 'active' && <CheckCircle className="h-8 w-8 text-green-600 shrink-0" />}
+              {assinatura?.status === 'trialing' && <Clock className="h-8 w-8 text-blue-600 shrink-0" />}
+              {(!assinatura || assinatura.status === 'canceled' || assinatura.status === 'past_due') && <AlertTriangle className="h-8 w-8 text-red-600 shrink-0" />}
+              <div>
+                {assinatura?.status === 'active' && (
+                  <>
+                    <p className="font-bold text-green-800">Assinatura ativa</p>
+                    <p className="text-sm text-green-700">
+                      {assinatura.current_period_end
+                        ? `Próxima renovação: ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`
+                        : 'Plano SyncroMoney Pro'}
+                    </p>
+                  </>
+                )}
+                {assinatura?.status === 'trialing' && (
+                  <>
+                    <p className="font-bold text-blue-800">Período de teste</p>
+                    <p className="text-sm text-blue-700">
+                      {diasRestantesTrial(assinatura)} dia(s) restante(s) — aproveite todos os recursos!
+                    </p>
+                  </>
+                )}
+                {(!assinatura || assinatura.status === 'canceled') && (
+                  <>
+                    <p className="font-bold text-red-800">Sem assinatura ativa</p>
+                    <p className="text-sm text-red-700">Assine para continuar usando o SyncroMoney</p>
+                  </>
+                )}
+                {assinatura?.status === 'past_due' && (
+                  <>
+                    <p className="font-bold text-red-800">Pagamento pendente</p>
+                    <p className="text-sm text-red-700">Atualize seu método de pagamento para continuar</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Plano */}
+            <div className="rounded-2xl border border-gray-200 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-gray-900 text-lg">SyncroMoney Pro</p>
+                  <p className="text-sm text-gray-500">R$ 29,90/mês</p>
+                </div>
+                <Crown className="h-8 w-8 text-blue-600" />
+              </div>
+              <ul className="text-sm text-gray-600 space-y-1">
+                {['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios'].map(f => (
+                  <li key={f} className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Botões */}
+            {!assinaturaAtiva(assinatura) || assinatura?.status === 'trialing' ? (
+              <Button className="w-full" onClick={() => window.location.href = '/assinar'}>
+                <Crown className="h-4 w-4 mr-2" />
+                {assinatura?.status === 'trialing' ? 'Assinar agora' : 'Ver planos e assinar'}
+              </Button>
+            ) : null}
+
+            {assinatura?.stripe_customer_id && (
+              <Button variant="outline" className="w-full" disabled={loadingPortal}
+                onClick={async () => {
+                  setLoadingPortal(true)
+                  const res = await fetch('/api/stripe/portal', { method: 'POST' })
+                  const json = await res.json()
+                  if (json.url) window.location.href = json.url
+                  setLoadingPortal(false)
+                }}>
+                {loadingPortal ? 'Abrindo...' : 'Gerenciar assinatura'}
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
