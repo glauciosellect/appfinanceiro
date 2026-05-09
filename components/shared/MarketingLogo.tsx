@@ -6,18 +6,24 @@ interface MarketingLogoProps {
   className?: string
 }
 
+// sm → footer
+// md → navbar (sticky)
+// lg → hero landing page
 export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
-  const heights: Record<string, number> = { sm: 36, md: 44, lg: 56 }
-  const h = heights[size]
+  const cls = {
+    sm: 'h-10 sm:h-12',
+    md: 'h-10 sm:h-12 md:h-14',
+    lg: 'h-14 sm:h-18 md:h-24',
+  }[size]
 
   return (
     <div className={cn('flex items-center', className)}>
       <Image
         src="/Syncromoney_sem fundo_branco.png"
         alt="SyncroMoney"
-        width={h * 3}
-        height={h}
-        style={{ height: h, width: 'auto', objectFit: 'contain' }}
+        width={600}
+        height={200}
+        className={cn('w-auto object-contain', cls)}
         priority
       />
     </div>
