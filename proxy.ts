@@ -29,7 +29,9 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && pathname !== '/login' && pathname !== '/register') {
+  const PUBLIC_PATHS = ['/login', '/register', '/instalar', '/auth/confirm', '/auth/bem-vindo', '/auth/erro-confirmacao']
+
+  if (!user && !PUBLIC_PATHS.includes(pathname)) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
