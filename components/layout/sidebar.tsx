@@ -102,7 +102,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-          <Logo size="md" />
+          <div className="flex items-center gap-2">
+            <Logo size="lg" />
+            <span className="text-xl font-bold tracking-tight">
+              <span className="text-gray-900 dark:text-white">Syncro</span>
+              <span className="text-blue-600">Money</span>
+            </span>
+          </div>
           <button
             onClick={onClose}
             className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
