@@ -22,8 +22,8 @@ export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
         alt="SyncroMoney"
         width={600}
         height={200}
-        className={cn('w-auto object-contain', sizeClasses[size])}
-        style={{ mixBlendMode: 'multiply' }}
+        className={cn('w-auto object-contain logo-img', sizeClasses[size])}
+        style={{  }}
         priority
       />
     </div>

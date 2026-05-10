@@ -42,13 +42,18 @@ body {
 .dark .bg-gray-200     { background-color: #334155 !important; }
 
 /* ── Textos ── */
-.dark .text-gray-900   { color: #f1f5f9 !important; }
-.dark .text-gray-800   { color: #e2e8f0 !important; }
-.dark .text-gray-700   { color: #cbd5e1 !important; }
-.dark .text-gray-600   { color: #94a3b8 !important; }
-.dark .text-gray-500   { color: #64748b !important; }
-.dark .text-gray-400   { color: #475569 !important; }
-.dark .text-gray-300   { color: #3d4f63 !important; }
+.dark .text-gray-900   { color: #ffffff !important; }
+.dark .text-gray-800   { color: #f1f5f9 !important; }
+.dark .text-gray-700   { color: #e2e8f0 !important; }
+.dark .text-gray-600   { color: #cbd5e1 !important; }
+.dark .text-gray-500   { color: #94a3b8 !important; }
+.dark .text-gray-400   { color: #64748b !important; }
+.dark .text-gray-300   { color: #475569 !important; }
+
+/* ── Textos vermelhos sem negrito no dark ── */
+.dark .text-red-600    { font-weight: 400 !important; }
+.dark .text-red-500    { font-weight: 400 !important; }
+.dark .text-red-700    { font-weight: 400 !important; }
 
 /* ── Bordas ── */
 .dark .border-gray-50  { border-color: #293548 !important; }
@@ -191,6 +196,15 @@ body {
 .zoom-out-95 { animation-name: zoom-out-95; }
 .slide-in-from-right-full { animation-name: slide-in-from-right; }
 .slide-in-from-left-1\/2 { animation-name: slide-in-from-left-half; }
+
+/* ── Logo blend mode ── */
+.logo-img {
+  mix-blend-mode: multiply; /* fundo branco some no fundo claro */
+}
+.dark .logo-img {
+  mix-blend-mode: screen;   /* fundo escuro some no fundo escuro */
+  filter: brightness(1.2);
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar {
