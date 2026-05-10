@@ -245,7 +245,7 @@ export function LandingPageContent() {
   return (
     <>
       {/* ── HERO ──────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-white py-16 sm:py-20">
+      <section className="relative overflow-hidden bg-white py-10 sm:py-14">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.025]"

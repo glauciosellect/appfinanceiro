@@ -8,18 +8,21 @@ interface MarketingLogoProps {
   className?: string
 }
 
-export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
-  const heights = { sm: 48, md: 240, lg: 300 }
-  const h = heights[size]
+const sizeClasses = {
+  sm: 'h-8',
+  md: 'h-10',
+  lg: 'h-14',
+}
 
+export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
   return (
     <div className={cn('flex items-center', className)}>
       <Image
         src="/Syncromoney_sem fundo_branco.png"
         alt="SyncroMoney"
-        width={600}
-        height={200}
-        style={{ height: h, width: 'auto', objectFit: 'contain' }}
+        width={300}
+        height={100}
+        className={cn('w-auto object-contain', sizeClasses[size])}
         priority
       />
     </div>
