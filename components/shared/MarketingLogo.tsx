@@ -9,20 +9,20 @@ interface MarketingLogoProps {
 }
 
 const sizeClasses = {
-  sm: 'h-8',
-  md: 'h-14',
-  lg: 'h-20',
+  sm: 'h-10',
+  md: 'h-16',
+  lg: 'h-24',
 }
 
 export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
   return (
-    <div className={cn('flex items-center overflow-hidden', className)}>
+    <div className={cn('flex items-center', className)}>
       <Image
         src="/Syncromoney_sem fundo_branco.png"
         alt="SyncroMoney"
         width={300}
         height={100}
-        className={cn('w-auto object-contain scale-[2.2] origin-center', sizeClasses[size])}
+        className={cn('w-auto object-contain', sizeClasses[size])}
         priority
       />
     </div>
