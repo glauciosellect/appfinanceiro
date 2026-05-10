@@ -6,18 +6,22 @@ interface LogoProps {
   className?: string
 }
 
-export function Logo({ size = 'md', className }: LogoProps) {
-  const heights = { sm: 52, md: 72, lg: 96 }
-  const h = heights[size]
+const sizeClasses = {
+  sm: 'h-16',
+  md: 'h-20',
+  lg: 'h-28',
+}
 
+export function Logo({ size = 'md', className }: LogoProps) {
   return (
     <div className={cn('flex items-center', className)}>
       <Image
-        src="/Syncromoney_sem fundo_branco.png"
+        src="/logo-transparente.png"
         alt="SyncroMoney"
         width={600}
         height={200}
-        style={{ height: h, width: 'auto', objectFit: 'contain' }}
+        className={cn('w-auto object-contain', sizeClasses[size])}
+        style={{ mixBlendMode: 'multiply' }}
         priority
       />
     </div>
