@@ -8,8 +8,15 @@ import { LandingPageContent } from '@/components/marketing/landing-page'
 function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-1">
-        <MarketingLogo />
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3 relative">
+        {/* Logo absoluta — não afeta a altura do cabeçalho */}
+        <div className="absolute left-5 top-1/2 -translate-y-1/2">
+          <MarketingLogo />
+        </div>
+        {/* Espaço reservado para empurrar o nav para a direita */}
+        <div className="invisible">
+          <MarketingLogo />
+        </div>
         <nav className="hidden items-center gap-7 md:flex">
           <Link href="#features" className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors">Funcionalidades</Link>
           <Link href="#pricing" className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors">Preços</Link>

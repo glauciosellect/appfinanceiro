@@ -9,9 +9,9 @@ interface MarketingLogoProps {
 }
 
 const sizeClasses = {
-  sm: 'h-32',
-  md: 'h-40',
-  lg: 'h-56',
+  sm: 'h-40',
+  md: 'h-56',
+  lg: 'h-72',
 }
 
 export function MarketingLogo({ size = 'md', className }: MarketingLogoProps) {
