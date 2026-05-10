@@ -50,10 +50,10 @@ body {
 .dark .text-gray-400   { color: #64748b !important; }
 .dark .text-gray-300   { color: #475569 !important; }
 
-/* ── Textos vermelhos sem negrito no dark ── */
-.dark .text-red-600    { font-weight: 400 !important; }
-.dark .text-red-500    { font-weight: 400 !important; }
-.dark .text-red-700    { font-weight: 400 !important; }
+/* ── Textos vermelhos mais suaves no dark ── */
+.dark .text-red-600    { color: #fca5a5 !important; font-weight: 400 !important; }
+.dark .text-red-500    { color: #fca5a5 !important; font-weight: 400 !important; }
+.dark .text-red-700    { color: #fca5a5 !important; font-weight: 400 !important; }
 
 /* ── Bordas ── */
 .dark .border-gray-50  { border-color: #293548 !important; }
