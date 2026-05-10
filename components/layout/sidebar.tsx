@@ -15,6 +15,7 @@ import {
   Building2,
   BarChart3,
   Settings,
+  BookOpen,
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
@@ -65,7 +66,8 @@ const navSections: NavSection[] = [
   {
     title: 'SISTEMA',
     items: [
-      { href: '/configuracoes', label: 'Configurações', icon: Settings },
+      { href: '/tutorial',      label: 'Tutorial',      icon: BookOpen  },
+      { href: '/configuracoes', label: 'Configurações', icon: Settings  },
     ],
   },
 ]
