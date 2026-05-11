@@ -16,6 +16,12 @@ import {
   BarChart3,
   Settings,
   BookOpen,
+  FileText,
+  Receipt,
+  Package,
+  Wrench,
+  ShoppingCart,
+  Zap,
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
@@ -30,6 +36,7 @@ interface NavItem {
 interface NavSection {
   title: string
   items: NavItem[]
+  premium?: boolean
 }
 
 const navSections: NavSection[] = [
@@ -62,6 +69,18 @@ const navSections: NavSection[] = [
     items: [
       { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
     ],
+  },
+  {
+    title: 'FISCAL — PREMIUM',
+    items: [
+      { href: '/nfe',              label: 'NF-e (Produtos)',   icon: FileText  },
+      { href: '/nfse',             label: 'NFS-e (Serviços)',  icon: Receipt   },
+      { href: '/estoque',          label: 'Estoque',           icon: Package   },
+      { href: '/fiscal-produtos',  label: 'Produtos',          icon: ShoppingCart },
+      { href: '/fiscal-servicos',  label: 'Serviços',          icon: Wrench    },
+      { href: '/nfe-entradas',     label: 'NF-e de Entrada',   icon: TrendingUp, color: 'green' },
+    ],
+    premium: true,
   },
   {
     title: 'SISTEMA',
@@ -119,9 +138,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto p-3 space-y-4">
           {navSections.map((section) => (
             <div key={section.title}>
-              <p className="px-3 mb-1 text-[10px] font-semibold tracking-widest text-gray-400 dark:text-gray-600 uppercase">
-                {section.title}
-              </p>
+              <div className="px-3 mb-1 flex items-center gap-2">
+                <p className="text-[10px] font-semibold tracking-widest text-gray-400 dark:text-gray-600 uppercase">
+                  {section.title}
+                </p>
+                {section.premium && (
+                  <span className="flex items-center gap-0.5 text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+                    <Zap className="w-2.5 h-2.5" />
+                    Premium
+                  </span>
+                )}
+              </div>
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const active = pathname === item.href || pathname.startsWith(item.href + '/')
