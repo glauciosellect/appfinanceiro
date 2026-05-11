@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,10 +26,12 @@ export default function NovaNFSePage() {
   ])
   const [buscaIdx, setBuscaIdx] = useState<number | null>(null)
   const [termoBusca, setTermoBusca] = useState('')
+  const [issRetidoFonte, setIssRetidoFonte] = useState(false)
 
   const totalServicos = itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0)
   const aliquota = itens[0]?.servico?.aliquotaIss ?? 2
   const valorIss = (totalServicos * aliquota) / 100
+  // Quando retido na fonte: tomador paga o ISS à prefeitura, prestador recebe valor bruto menos ISS
   const valorLiquido = totalServicos - valorIss
 
   function addItem() {
@@ -63,7 +65,10 @@ export default function NovaNFSePage() {
           <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-semibold">Número:</span> 00003</p>
           <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-semibold">Código Verificação:</span> DEF54321</p>
           <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-semibold">Valor Serviços:</span> {formatCurrency(totalServicos)}</p>
-          <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-semibold">ISS ({aliquota}%):</span> {formatCurrency(valorIss)}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-semibold">ISS ({aliquota}%):</span> {formatCurrency(valorIss)}
+            {issRetidoFonte && <span className="ml-2 text-xs font-semibold text-orange-600 dark:text-orange-400">(Retido na Fonte)</span>}
+          </p>
           <p className="text-sm font-bold text-gray-900 dark:text-white"><span className="font-semibold">Valor Líquido:</span> {formatCurrency(valorLiquido)}</p>
           <p className="text-sm"><span className="font-semibold text-gray-700 dark:text-gray-300">Status:</span>{' '}
             <span className="text-green-600 font-semibold">Autorizada — Prefeitura JF</span>
@@ -181,20 +186,63 @@ export default function NovaNFSePage() {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Step n={3} color="green" />Resumo Fiscal</CardTitle></CardHeader>
         <CardContent className="space-y-4">
+          {/* Toggle ISS retido na fonte */}
+          <div
+            onClick={() => setIssRetidoFonte(!issRetidoFonte)}
+            className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none ${
+              issRetidoFonte
+                ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-600'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+              issRetidoFonte ? 'bg-orange-500 border-orange-500' : 'border-2 border-gray-300 dark:border-gray-600'
+            }`}>
+              {issRetidoFonte && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-semibold ${issRetidoFonte ? 'text-orange-800 dark:text-orange-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                ISS retido na fonte pelo tomador
+              </p>
+              <p className={`text-xs mt-0.5 ${issRetidoFonte ? 'text-orange-700 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                O tomador do serviço é responsável por recolher o ISS diretamente à Prefeitura de JF
+              </p>
+            </div>
+            <Info className={`h-4 w-4 shrink-0 mt-0.5 ${issRetidoFonte ? 'text-orange-500' : 'text-gray-400'}`} />
+          </div>
+
+          {/* Resumo de valores */}
           <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Valor dos Serviços</span>
               <span className="font-medium text-gray-800 dark:text-gray-200">{formatCurrency(totalServicos)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">ISS ({aliquota}%) — Prefeitura JF</span>
-              <span className="font-medium text-red-600">- {formatCurrency(valorIss)}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 dark:text-gray-400">ISS ({aliquota}%) — Prefeitura JF</span>
+                {issRetidoFonte && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400">
+                    Retido na fonte
+                  </span>
+                )}
+              </div>
+              <span className="font-medium text-red-600 dark:text-red-400">- {formatCurrency(valorIss)}</span>
             </div>
             <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-600">
               <span className="text-gray-900 dark:text-white">Valor Líquido</span>
               <span className="text-green-700 dark:text-green-400">{formatCurrency(valorLiquido)}</span>
             </div>
+            {issRetidoFonte && (
+              <p className="text-xs text-orange-600 dark:text-orange-400 pt-1 border-t border-orange-200 dark:border-orange-800">
+                ⚠️ O tomador reterá {formatCurrency(valorIss)} e recolherá à Prefeitura. Você receberá {formatCurrency(valorLiquido)}.
+              </p>
+            )}
           </div>
+
           <div className="flex gap-3 justify-end">
             <Button variant="outline"><Save className="h-4 w-4" />Salvar Rascunho</Button>
             <Button variant="success" onClick={() => setStep('success')}><Send className="h-4 w-4" />Transmitir à Prefeitura JF</Button>
