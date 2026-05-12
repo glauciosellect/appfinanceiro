@@ -22,6 +22,7 @@ import {
   Wrench,
   ShoppingCart,
   Zap,
+  Truck,
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
@@ -60,8 +61,9 @@ const navSections: NavSection[] = [
     items: [
       { href: '/contas-correntes', label: 'Contas Correntes', icon: Landmark  },
       { href: '/cartoes',          label: 'Cartões',          icon: CreditCard },
-      { href: '/clientes',         label: 'Clientes',         icon: Users      },
-      { href: '/fornecedores',     label: 'Fornecedores',     icon: Building2  },
+      { href: '/clientes',          label: 'Clientes',          icon: Users      },
+      { href: '/fornecedores',      label: 'Fornecedores',      icon: Building2  },
+      { href: '/transportadoras',   label: 'Transportadoras',   icon: Truck      },
     ],
   },
   {

@@ -89,6 +89,48 @@ export interface ClienteFormData {
 }
 
 // ============================================================
+// TRANSPORTADORAS
+// ============================================================
+export interface Transportadora {
+  id: string
+  user_id: string
+  razao_social: string
+  nome_fantasia?: string
+  cnpj?: string
+  ie?: string
+  rntrc?: string
+  cep?: string
+  endereco?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  cidade?: string
+  estado?: string
+  telefone?: string
+  email?: string
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface TransportadoraFormData {
+  razao_social: string
+  nome_fantasia?: string
+  cnpj?: string
+  ie?: string
+  rntrc?: string
+  cep?: string
+  endereco?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  cidade?: string
+  estado?: string
+  telefone?: string
+  email?: string
+}
+
+// ============================================================
 // FORNECEDORES
 // ============================================================
 export interface Fornecedor {
