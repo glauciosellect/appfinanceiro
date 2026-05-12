@@ -21,9 +21,16 @@ export default function NFeVisualizarPage() {
   const totalNota = itens.reduce((s, i) => s + i.total, 0)
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
+    <div className="max-w-4xl mx-auto space-y-4 print:max-w-none print:space-y-0">
+      <style>{`
+        @media print {
+          .print\\:hidden { display: none !important; }
+          #danfe { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+        }
+      `}</style>
+
       {/* Barra de ações */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/nfe"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Link>
         </Button>

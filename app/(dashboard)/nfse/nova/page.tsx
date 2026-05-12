@@ -31,8 +31,8 @@ export default function NovaNFSePage() {
   const totalServicos = itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0)
   const aliquota = itens[0]?.servico?.aliquotaIss ?? 2
   const valorIss = (totalServicos * aliquota) / 100
-  // Quando retido na fonte: tomador paga o ISS à prefeitura, prestador recebe valor bruto menos ISS
-  const valorLiquido = totalServicos - valorIss
+  // Deduz ISS do valor líquido apenas quando retido na fonte pelo tomador
+  const valorLiquido = issRetidoFonte ? totalServicos - valorIss : totalServicos
 
   function addItem() {
     setItens([...itens, { servico: null, descricao: '', quantidade: 1, valorUnitario: 0 }])
@@ -230,7 +230,9 @@ export default function NovaNFSePage() {
                   </span>
                 )}
               </div>
-              <span className="font-medium text-red-600 dark:text-red-400">- {formatCurrency(valorIss)}</span>
+              <span className={issRetidoFonte ? 'font-medium text-red-600 dark:text-red-400' : 'font-medium text-gray-500 dark:text-gray-400'}>
+                {issRetidoFonte ? `- ${formatCurrency(valorIss)}` : formatCurrency(valorIss)}
+              </span>
             </div>
             <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-600">
               <span className="text-gray-900 dark:text-white">Valor Líquido</span>
@@ -239,6 +241,11 @@ export default function NovaNFSePage() {
             {issRetidoFonte && (
               <p className="text-xs text-orange-600 dark:text-orange-400 pt-1 border-t border-orange-200 dark:border-orange-800">
                 ⚠️ O tomador reterá {formatCurrency(valorIss)} e recolherá à Prefeitura. Você receberá {formatCurrency(valorLiquido)}.
+              </p>
+            )}
+            {!issRetidoFonte && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-600">
+                Você recolhe o ISS de {formatCurrency(valorIss)} diretamente à Prefeitura no vencimento.
               </p>
             )}
           </div>
