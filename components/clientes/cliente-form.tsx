@@ -69,9 +69,17 @@ const ESTADOS_BR = [
   'RO','RR','RS','SC','SE','SP','TO',
 ]
 
+async function buscarCNPJ(cnpj: string) {
+  const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
 export function ClienteForm({ initial, onSubmit, onCancel }: ClienteFormProps) {
   const [loading, setLoading] = useState(false)
   const [buscandoCEP, setBuscandoCEP] = useState(false)
+  const [buscandoCNPJ, setBuscandoCNPJ] = useState(false)
+  const [cnpjErro, setCnpjErro] = useState<string | null>(null)
 
   const {
     register,
@@ -101,6 +109,38 @@ export function ClienteForm({ initial, onSubmit, onCancel }: ClienteFormProps) {
 
   const tipo = watch('tipo')
   const cepValue = watch('cep')
+  const cnpjValue = watch('cpf_cnpj')
+
+  useEffect(() => {
+    if (tipo !== 'pessoa_juridica') return
+    const digits = (cnpjValue ?? '').replace(/\D/g, '')
+    if (digits.length !== 14) return
+    setBuscandoCNPJ(true)
+    setCnpjErro(null)
+    buscarCNPJ(digits).then((data) => {
+      if (data) {
+        if (data.razao_social) setValue('nome', data.razao_social)
+        if (data.ddd_telefone_1) {
+          const tel = data.ddd_telefone_1.replace(/\D/g, '')
+          setValue('telefone', maskPhone(tel))
+        }
+        if (data.email) setValue('email', data.email.toLowerCase())
+        if (data.cep) setValue('cep', maskCEP(data.cep.replace(/\D/g, '')))
+        if (data.logradouro) setValue('endereco', data.logradouro)
+        if (data.numero) setValue('numero', data.numero)
+        if (data.complemento) setValue('complemento', data.complemento)
+        if (data.bairro) setValue('bairro', data.bairro)
+        if (data.municipio) setValue('cidade', data.municipio)
+        if (data.uf) setValue('estado', data.uf)
+      } else {
+        setCnpjErro('CNPJ não encontrado na Receita Federal')
+      }
+      setBuscandoCNPJ(false)
+    }).catch(() => {
+      setCnpjErro('Erro ao consultar CNPJ')
+      setBuscandoCNPJ(false)
+    })
+  }, [cnpjValue, tipo, setValue])
 
   useEffect(() => {
     const digits = (cepValue ?? '').replace(/\D/g, '')
@@ -162,18 +202,23 @@ export function ClienteForm({ initial, onSubmit, onCancel }: ClienteFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* CPF / CNPJ */}
         <div>
-          <Label htmlFor="cpf_cnpj">{tipo === 'pessoa_fisica' ? 'CPF' : 'CNPJ'}</Label>
+          <Label htmlFor="cpf_cnpj">
+            {tipo === 'pessoa_fisica' ? 'CPF' : 'CNPJ'}
+            {buscandoCNPJ && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
+          </Label>
           <Input
             {...register('cpf_cnpj')}
             id="cpf_cnpj"
             placeholder={tipo === 'pessoa_fisica' ? '000.000.000-00' : '00.000.000/0000-00'}
             onChange={(e) => {
+              setCnpjErro(null)
               const masked =
                 tipo === 'pessoa_fisica' ? maskCPF(e.target.value) : maskCNPJ(e.target.value)
               setValue('cpf_cnpj', masked)
             }}
           />
           {errors.cpf_cnpj && <p className="text-xs text-red-500 mt-1">{errors.cpf_cnpj.message}</p>}
+          {cnpjErro && <p className="text-xs text-red-500 mt-1">{cnpjErro}</p>}
         </div>
 
         {/* Telefone */}
