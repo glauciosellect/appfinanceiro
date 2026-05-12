@@ -274,10 +274,15 @@ export default function CartoesPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Banco</Label>
-                <Select value={formCartao.watch('banco') ?? ''} onValueChange={(v) => formCartao.setValue('banco', v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>{BANCOS_BR.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
-                </Select>
+                <Input
+                  list="bancos-list"
+                  placeholder="Digite ou selecione..."
+                  value={formCartao.watch('banco') ?? ''}
+                  onChange={(e) => formCartao.setValue('banco', e.target.value)}
+                />
+                <datalist id="bancos-list">
+                  {BANCOS_BR.map(b => <option key={b} value={b} />)}
+                </datalist>
               </div>
               <div>
                 <Label>Bandeira</Label>
