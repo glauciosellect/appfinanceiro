@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/toast'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle, Upload, Building2, Save, X } from 'lucide-react'
+import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle, Upload, Building2, Save, X, Zap } from 'lucide-react'
 import type { Categoria, TipoCategoria } from '@/types'
 import { assinaturaAtiva, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
 import {
@@ -503,6 +503,7 @@ export default function ConfiguracoesPage() {
         <Card>
           <CardHeader><CardTitle>Minha Assinatura</CardTitle></CardHeader>
           <CardContent className="space-y-6">
+
             {/* Status atual */}
             <div className={`rounded-2xl p-4 flex items-center gap-4 ${
               assinatura?.status === 'active' ? 'bg-green-50 border border-green-200' :
@@ -519,7 +520,7 @@ export default function ConfiguracoesPage() {
                     <p className="text-sm text-green-700">
                       {assinatura.current_period_end
                         ? `Próxima renovação: ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`
-                        : 'Plano SyncroMoney Pro'}
+                        : 'Plano SyncroMoney'}
                     </p>
                   </>
                 )}
@@ -546,37 +547,86 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
 
-            {/* Plano */}
-            <div className="rounded-2xl border border-gray-200 p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-gray-900 text-lg">SyncroMoney Pro</p>
-                  <p className="text-sm text-gray-500">
-                    {assinatura?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY
-                      ? 'R$ 358,80/ano (R$ 29,90/mês)'
-                      : 'R$ 39,90/mês'}
-                  </p>
-                  {assinatura?.current_period_end && (
-                    <p className="text-xs text-amber-600 mt-1 font-medium">
-                      {assinatura.status === 'active'
-                        ? `Válido até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`
-                        : `Acesso até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`}
-                    </p>
-                  )}
-                </div>
-                <Crown className="h-8 w-8 text-blue-600" />
-              </div>
-              <ul className="text-sm text-gray-600 space-y-1">
-                {['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios'].map(f => (
-                  <li key={f} className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Plano atual */}
+            {(() => {
+              const isPremium = assinatura?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
+              const isYearly  = assinatura?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY
+              const planName  = isPremium ? 'SyncroMoney Premium Fiscal' : isYearly ? 'SyncroMoney Essencial Anual' : 'SyncroMoney Essencial Mensal'
+              const planPrice = isPremium ? 'R$ 99,90/mês' : isYearly ? 'R$ 358,80/ano (R$ 29,90/mês)' : 'R$ 39,90/mês'
+              const features  = isPremium
+                ? ['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios', 'NF-e de Produtos (DANFE)', 'NFS-e de Serviços', 'Controle de Estoque', 'Transportadoras']
+                : ['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios']
 
-            {/* Botões */}
+              return (
+                <div className={`rounded-2xl border p-5 space-y-3 ${isPremium ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10' : 'border-gray-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-gray-900 text-lg">{planName}</p>
+                        {isPremium && (
+                          <Badge className="bg-amber-400 text-amber-900 text-[10px] font-bold">PREMIUM FISCAL</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">{planPrice}</p>
+                      {assinatura?.current_period_end && (
+                        <p className="text-xs text-amber-600 mt-1 font-medium">
+                          {assinatura.status === 'active'
+                            ? `Válido até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`
+                            : `Acesso até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`}
+                        </p>
+                      )}
+                    </div>
+                    <Crown className={`h-8 w-8 ${isPremium ? 'text-amber-500' : 'text-blue-600'}`} />
+                  </div>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {features.map(f => (
+                      <li key={f} className="flex items-center gap-2">
+                        <CheckCircle className={`h-4 w-4 shrink-0 ${isPremium ? 'text-amber-500' : 'text-green-500'}`} />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })()}
+
+            {/* Banner upgrade para Premium — só aparece se não for premium */}
+            {assinatura?.status === 'active' && assinatura?.stripe_price_id !== process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM && (
+              <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400">
+                    <Zap className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-amber-900 dark:text-amber-300">Ative o Módulo Fiscal Premium</p>
+                    <p className="text-sm text-amber-800 dark:text-amber-400 mt-1">
+                      Emita NF-e e NFS-e sem sair do Syncromoney. Controle de estoque, DANFE, ISS automático e muito mais.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {['NF-e (Produtos)', 'NFS-e (Serviços)', 'Estoque', 'Transportadoras'].map(f => (
+                        <span key={f} className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-800/40 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                          <CheckCircle className="h-3 w-3" />{f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs text-amber-600 font-medium">por apenas</p>
+                    <p className="text-xl font-bold text-amber-900 dark:text-amber-300">R$ 99,90</p>
+                    <p className="text-xs text-amber-600">/mês</p>
+                  </div>
+                </div>
+                <Button
+                  className="w-full mt-4 bg-amber-400 hover:bg-amber-500 text-amber-900 font-bold"
+                  onClick={() => window.location.href = '/assinar'}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Fazer upgrade para Premium Fiscal
+                </Button>
+              </div>
+            )}
+
+            {/* Botões de ação */}
             {!assinaturaAtiva(assinatura) || assinatura?.status === 'trialing' ? (
               <Button className="w-full" onClick={() => window.location.href = '/assinar'}>
                 <Crown className="h-4 w-4 mr-2" />
@@ -593,7 +643,7 @@ export default function ConfiguracoesPage() {
                   if (json.url) window.location.href = json.url
                   setLoadingPortal(false)
                 }}>
-                {loadingPortal ? 'Abrindo...' : 'Gerenciar assinatura'}
+                {loadingPortal ? 'Abrindo...' : 'Gerenciar assinatura no Stripe'}
               </Button>
             )}
           </CardContent>
