@@ -145,8 +145,8 @@ export default function NovaNFSePage() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">NFS-e transmitida!</h1>
         <p className="text-gray-500 mb-4">Prefeitura de Juiz de Fora / MG</p>
         <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left space-y-1.5">
-          {retorno.numero && <p className="text-sm"><span className="font-semibold">Número:</span> {String(retorno.numero)}</p>}
-          {retorno.codigo_verificacao && <p className="text-sm"><span className="font-semibold">Cód. Verificação:</span> {String(retorno.codigo_verificacao)}</p>}
+          {!!retorno.numero && <p className="text-sm"><span className="font-semibold">Número:</span> {String(retorno.numero)}</p>}
+          {!!retorno.codigo_verificacao && <p className="text-sm"><span className="font-semibold">Cód. Verificação:</span> {String(retorno.codigo_verificacao)}</p>}
           <p className="text-sm"><span className="font-semibold">Valor Serviços:</span> {formatCurrency(totalServicos)}</p>
           <p className="text-sm"><span className="font-semibold">ISS ({aliquotaPrincipal}%):</span> {formatCurrency(valorIss)}{issRetidoFonte && <span className="ml-2 text-xs text-orange-600 font-semibold">(Retido na Fonte)</span>}</p>
           <p className="text-sm font-bold"><span className="font-semibold">Valor Líquido:</span> {formatCurrency(valorLiquido)}</p>
@@ -161,7 +161,7 @@ export default function NovaNFSePage() {
           </p>
         </div>
         <div className="flex gap-3 justify-center">
-          {retorno.link_nfse_pdf && (
+          {!!retorno.link_nfse_pdf && (
             <a href={String(retorno.link_nfse_pdf)} target="_blank" rel="noreferrer">
               <Button variant="outline">Baixar PDF</Button>
             </a>
