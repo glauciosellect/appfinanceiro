@@ -229,7 +229,7 @@ export interface ContaCorrente {
 
 export interface ContaCorrenteFormData {
   nome_apelido: string
-  banco: string
+  banco?: string
   agencia?: string
   conta?: string
   digito?: string
