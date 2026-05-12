@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Mic, MicOff, X, Check, Loader2, Volume2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { parseVoiceTransactions, type ParsedTransaction } from '@/lib/voice/parse-transaction'
+import { registrarPagamento } from '@/lib/supabase/contas-pagar'
 import { getCategoriesByType } from '@/lib/categories'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
@@ -26,11 +27,62 @@ import { cn } from '@/lib/utils'
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'confirming' | 'saving'
 
+interface ParcelaAberta {
+  id: string
+  descricao: string
+  valor: number
+  data_vencimento: string
+  fornecedor_nome: string
+  status: 'aberto' | 'atrasado'
+}
+
+async function buscarParcelasAbertas(userId: string): Promise<ParcelaAberta[]> {
+  const supabase = createClient()
+  const { data: contas } = await supabase
+    .from('contas_pagar')
+    .select('id, fornecedores(nome)')
+    .eq('user_id', userId)
+  const contaIds = (contas ?? []).map((c: any) => c.id)
+  if (!contaIds.length) return []
+  const { data: parcelas } = await supabase
+    .from('parcelas_pagar')
+    .select('id, descricao, valor, data_vencimento, status, conta_pagar_id')
+    .in('conta_pagar_id', contaIds)
+    .in('status', ['aberto', 'atrasado'])
+    .order('data_vencimento', { ascending: true })
+  const contaMap = Object.fromEntries((contas ?? []).map((c: any) => [c.id, c]))
+  return (parcelas ?? []).map((p: any) => ({
+    id: p.id,
+    descricao: p.descricao ?? '',
+    valor: p.valor,
+    data_vencimento: p.data_vencimento,
+    fornecedor_nome: (contaMap[p.conta_pagar_id]?.fornecedores as any)?.nome ?? '',
+    status: p.status,
+  }))
+}
+
+function normalizar(str: string): string {
+  return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, '')
+}
+
+function matchParcelas(tx: ParsedTransaction, parcelas: ParcelaAberta[]): ParcelaAberta[] {
+  if (tx.type !== 'expense') return []
+  const palavras = normalizar(tx.description).split(/\s+/).filter(w => w.length > 2)
+  return parcelas.filter(p => {
+    const alvo = normalizar(p.fornecedor_nome + ' ' + p.descricao)
+    const porPalavra = palavras.some(w => alvo.includes(w))
+    const porValor = Math.abs(p.valor - tx.amount) / Math.max(p.valor, tx.amount) < 0.15
+    return porPalavra || porValor
+  }).slice(0, 3)
+}
+
 export function VoiceButton() {
   const router = useRouter()
   const { toast } = useToast()
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
   const [parsed, setParsed] = useState<ParsedTransaction[]>([])
+  const [parcelaMatches, setParcelaMatches] = useState<ParcelaAberta[][]>([])
+  const [parcelaLinks, setParcelaLinks] = useState<(string | null)[]>([])
   const [error, setError] = useState<string | null>(null)
   const [liveText, setLiveText] = useState('')
   const recognitionRef = useRef<any>(null)
@@ -100,7 +152,17 @@ export function VoiceButton() {
 
       if (transactions.length > 0) {
         setParsed(transactions)
+        setParcelaMatches(transactions.map(() => []))
+        setParcelaLinks(transactions.map(() => null))
         setVoiceState('confirming')
+        createClient().auth.getUser().then(({ data }) => {
+          if (!data.user) return
+          buscarParcelasAbertas(data.user.id).then((parcelas) => {
+            const matches = transactions.map((tx) => matchParcelas(tx, parcelas))
+            setParcelaMatches(matches)
+            setParcelaLinks(matches.map((m) => (m.length === 1 ? m[0].id : null)))
+          })
+        })
       } else {
         setError(
           'Não identifiquei transações. Dica: diga "receita, recebi 3000 de honorário" ou "despesa, paguei 340 no mercado"'
@@ -142,16 +204,36 @@ export function VoiceButton() {
     if (dbError) {
       toast('Erro ao salvar. Tente novamente.', 'error')
       setVoiceState('confirming')
-    } else {
-      const msg =
-        parsed.length === 1
-          ? 'Transação registrada por voz!'
-          : `${parsed.length} transações registradas por voz!`
-      toast(msg, 'success')
-      setParsed([])
-      setVoiceState('idle')
-      router.refresh()
+      return
     }
+
+    const baixas = parcelaLinks.filter(Boolean)
+    if (baixas.length > 0) {
+      await Promise.allSettled(
+        parcelaLinks.map((parcelaId, i) =>
+          parcelaId
+            ? registrarPagamento(user.id, parcelaId, {
+                valor_pago: parsed[i].amount,
+                juros: 0,
+                multa: 0,
+                desconto: 0,
+                data_pagamento: parsed[i].date,
+              })
+            : Promise.resolve()
+        )
+      )
+    }
+
+    const msg =
+      parsed.length === 1
+        ? `Transação registrada!${baixas.length ? ' Parcela baixada em Contas a Pagar.' : ''}`
+        : `${parsed.length} transações registradas!${baixas.length ? ` ${baixas.length} parcela(s) baixada(s).` : ''}`
+    toast(msg, 'success')
+    setParsed([])
+    setParcelaMatches([])
+    setParcelaLinks([])
+    setVoiceState('idle')
+    router.refresh()
   }
 
   function updateParsed(
@@ -239,6 +321,8 @@ export function VoiceButton() {
           if (voiceState !== 'saving') {
             setVoiceState('idle')
             setParsed([])
+            setParcelaMatches([])
+            setParcelaLinks([])
           }
         }}
       >
@@ -252,15 +336,64 @@ export function VoiceButton() {
 
           <div className="space-y-3 py-1">
             {parsed.map((tx, i) => (
-              <TransactionCard
-                key={i}
-                transaction={tx}
-                index={i}
-                onChange={updateParsed}
-                onRemove={() =>
-                  setParsed((prev) => prev.filter((_, idx) => idx !== i))
-                }
-              />
+              <div key={i}>
+                <TransactionCard
+                  transaction={tx}
+                  index={i}
+                  onChange={updateParsed}
+                  onRemove={() => {
+                    setParsed((prev) => prev.filter((_, idx) => idx !== i))
+                    setParcelaMatches((prev) => prev.filter((_, idx) => idx !== i))
+                    setParcelaLinks((prev) => prev.filter((_, idx) => idx !== i))
+                  }}
+                />
+                {parcelaMatches[i]?.length > 0 && tx.type === 'expense' && (
+                  <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-xs font-semibold text-amber-700 mb-2">
+                      💡 Parcela(s) em aberto encontrada(s) — dar baixa?
+                    </p>
+                    <div className="space-y-1.5">
+                      {parcelaMatches[i].map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() =>
+                            setParcelaLinks((prev) => {
+                              const next = [...prev]
+                              next[i] = next[i] === p.id ? null : p.id
+                              return next
+                            })
+                          }
+                          className={cn(
+                            'w-full text-left rounded-lg px-3 py-2 text-xs border transition-colors',
+                            parcelaLinks[i] === p.id
+                              ? 'bg-amber-200 border-amber-400 text-amber-900 font-semibold'
+                              : 'bg-white border-amber-200 text-gray-700 hover:bg-amber-100'
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{p.fornecedor_nome || p.descricao}</span>
+                            <span className={cn(
+                              'ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+                              p.status === 'atrasado' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                            )}>
+                              {p.status === 'atrasado' ? 'Atrasado' : 'Aberto'}
+                            </span>
+                          </div>
+                          {p.fornecedor_nome && p.descricao && (
+                            <p className="text-gray-500 mt-0.5 truncate">{p.descricao}</p>
+                          )}
+                          <p className="text-gray-500 mt-0.5">
+                            Venc: {new Date(p.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')}
+                            {' · '}R$ {p.valor.toFixed(2).replace('.', ',')}
+                            {parcelaLinks[i] === p.id && ' ✓'}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
 
             {parsed.length === 0 && (
@@ -276,6 +409,8 @@ export function VoiceButton() {
               onClick={() => {
                 setVoiceState('idle')
                 setParsed([])
+                setParcelaMatches([])
+                setParcelaLinks([])
               }}
               disabled={voiceState === 'saving'}
               className="flex-1"
