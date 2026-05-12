@@ -97,8 +97,8 @@ export default function DashboardPage() {
       rProxPagar,
       rContasPagar,
     ] = await Promise.all([
-      supabase.from('parcelas_receber').select('valor,status,data_vencimento').eq('user_id', userId),
-      supabase.from('parcelas_pagar').select('valor,status,data_vencimento').eq('user_id', userId),
+      supabase.from('parcelas_receber').select('valor,valor_recebido,status,data_vencimento,data_recebimento').eq('user_id', userId),
+      supabase.from('parcelas_pagar').select('valor,valor_pago,status,data_vencimento,data_pagamento').eq('user_id', userId),
       supabase.from('contas_correntes').select('id,nome_apelido,saldo_atual,tipo_conta').eq('user_id', userId).eq('ativo', true),
       supabase.from('movimentacoes_conta').select('data_movimentacao,valor,tipo').eq('user_id', userId).gte('data_movimentacao', inicio6m).order('data_movimentacao'),
       supabase.from('parcelas_receber').select('valor,data_vencimento,conta_receber_id,contas_receber(descricao,clientes(nome))').eq('user_id', userId).in('status',['aberto','atrasado']).lte('data_vencimento', em7dias).order('data_vencimento').limit(5),
@@ -111,10 +111,10 @@ export default function DashboardPage() {
 
     const totalReceberAberto  = precs.filter(p => p.status === 'aberto').reduce((s,p) => s + p.valor, 0)
     const totalReceberAtrasado = precs.filter(p => p.status === 'atrasado').reduce((s,p) => s + p.valor, 0)
-    const totalRecebidoMes    = precs.filter(p => p.status === 'recebido' && p.data_vencimento >= inicioMes).reduce((s,p) => s + p.valor, 0)
+    const totalRecebidoMes    = precs.filter(p => p.status === 'recebido' && (p.data_recebimento ?? p.data_vencimento) >= inicioMes).reduce((s,p) => s + (p.valor_recebido ?? p.valor), 0)
     const totalPagarAberto    = ppags.filter(p => p.status === 'aberto').reduce((s,p) => s + p.valor, 0)
     const totalPagarAtrasado  = ppags.filter(p => p.status === 'atrasado').reduce((s,p) => s + p.valor, 0)
-    const totalPagoMes        = ppags.filter(p => p.status === 'pago' && p.data_vencimento >= inicioMes).reduce((s,p) => s + p.valor, 0)
+    const totalPagoMes        = ppags.filter(p => p.status === 'pago' && (p.data_pagamento ?? p.data_vencimento) >= inicioMes).reduce((s,p) => s + (p.valor_pago ?? p.valor), 0)
     const qtdAlertasReceber   = precs.filter(p => p.status === 'aberto' && p.data_vencimento >= hoje && p.data_vencimento <= em7dias).length
     const qtdAlertasPagar     = ppags.filter(p => p.status === 'aberto' && p.data_vencimento >= hoje && p.data_vencimento <= em7dias).length
     const saldoContas         = (rContas.data ?? []).reduce((s,c) => s + c.saldo_atual, 0)

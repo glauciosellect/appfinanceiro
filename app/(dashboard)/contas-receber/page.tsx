@@ -255,12 +255,12 @@ export default function ContasReceberPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-green-400 transition-all" onClick={() => setFiltroStatus(filtroStatus === 'recebido' ? 'todos' : 'recebido')}>
           <CardContent className="pt-5">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-50 rounded-xl"><CheckCircle className="h-5 w-5 text-green-600" /></div>
               <div>
-                <p className="text-xs text-gray-500">Recebido (mês)</p>
+                <p className="text-xs text-gray-500">Recebido (mês){filtroStatus === 'recebido' ? ' ✓' : ''}</p>
                 <p className="font-bold text-green-600">{formatCurrency(resumo.totalRecebidoMes)}</p>
               </div>
             </div>
