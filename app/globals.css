@@ -206,6 +206,39 @@ body {
   filter: brightness(1.2);
 }
 
+/* ═══════════════════════════════════════
+   IMPRESSÃO — NF-e / NFS-e
+   ═══════════════════════════════════════ */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Oculta elementos de UI que não fazem parte do documento */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Remove limitações de overflow para que o documento caiba na página */
+  html, body, #__next, [data-nextjs-scroll-focus-boundary] {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Remove bordas e sombras dos cards do documento */
+  #danfe, #nfse-doc {
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

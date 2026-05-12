@@ -20,15 +20,15 @@ export default function NFeVisualizarPage() {
   const itens = nota.itens.length > 0 ? nota.itens : itensDemo
   const totalNota = itens.reduce((s, i) => s + i.total, 0)
 
+  function baixarPDF() {
+    const titulo = document.title
+    document.title = `NF-e-${nota.numero}`
+    window.print()
+    document.title = titulo
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-4 print:max-w-none print:space-y-0">
-      <style>{`
-        @media print {
-          .print\\:hidden { display: none !important; }
-          #danfe { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
-        }
-      `}</style>
-
       {/* Barra de ações */}
       <div className="flex items-center justify-between print:hidden">
         <Button variant="ghost" size="sm" asChild>
@@ -38,7 +38,7 @@ export default function NFeVisualizarPage() {
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4" />Imprimir
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={baixarPDF}>
             <Download className="h-4 w-4" />Baixar PDF
           </Button>
           {nota.status !== 'cancelada' && (

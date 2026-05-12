@@ -11,27 +11,25 @@ export default function NFSeVisualizarPage() {
   const { id } = useParams()
   const nota = notasDeServico.find((n) => n.id === id) ?? notasDeServico[0]
 
+  function baixarPDF() {
+    const titulo = document.title
+    document.title = `NFS-e-${nota.numero}`
+    window.print()
+    document.title = titulo
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-4 print:max-w-none print:space-y-0">
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          #nfse-print-root { display: block !important; }
-          .print\\:hidden { display: none !important; }
-          #nfse-doc { border: none !important; box-shadow: none !important; }
-        }
-      `}</style>
-
       {/* Barra de ações */}
       <div className="flex items-center justify-between print:hidden">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/nfse"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Link>
         </Button>
-        <div className="flex gap-2 print:hidden">
+        <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4" />Imprimir
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={baixarPDF}>
             <Download className="h-4 w-4" />Baixar PDF
           </Button>
           {nota.status !== 'cancelada' && (
