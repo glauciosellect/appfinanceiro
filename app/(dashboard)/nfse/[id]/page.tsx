@@ -3,12 +3,22 @@
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Download, XCircle, Printer, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Download, XCircle, Printer, CheckCircle2, Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { notasDeServico } from '@/lib/fiscal/mock-data'
 import { createClient } from '@/lib/supabase/client'
 import { getPerfilEmpresa, perfilVazio, type PerfilEmpresa } from '@/lib/supabase/perfil-empresa'
+
+/* ── helpers ── */
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <td className="border border-gray-400 p-1.5 align-top">
+      <p className="text-[8px] font-bold uppercase text-gray-500 leading-none mb-0.5">{label}</p>
+      <p className={`text-[11px] text-gray-900 leading-tight ${bold ? 'font-bold' : 'font-medium'}`}>{value}</p>
+    </td>
+  )
+}
 
 export default function NFSeVisualizarPage() {
   const { id } = useParams()
@@ -26,13 +36,15 @@ export default function NFSeVisualizarPage() {
 
   const nomeEmitente = perfil?.razao_social || perfil?.nome_fantasia || 'Empresa'
   const cnpjEmitente = perfil?.cnpj_cpf || '—'
-  const imEmitente = perfil?.inscricao_municipal || '—'
-  const enderecoEmitente = [
-    perfil?.logradouro, perfil?.numero, perfil?.bairro,
-  ].filter(Boolean).join(', ')
-  const cidadeUf = [perfil?.cidade, perfil?.uf].filter(Boolean).join(' / ')
-  const cepEmitente = perfil?.cep ? `CEP ${perfil.cep}` : ''
-  const linhaEndereco = [enderecoEmitente, cidadeUf, cepEmitente].filter(Boolean).join(' — ')
+  const imEmitente   = perfil?.inscricao_municipal || '—'
+  const endEmitente  = [perfil?.logradouro, perfil?.numero, perfil?.bairro, perfil?.cep].filter(Boolean).join(' - ')
+  const cidadeEmit   = perfil?.cidade || '—'
+  const ufEmit       = perfil?.uf || '—'
+
+  const aliquota     = nota.itens[0]?.servico?.aliquotaIss ?? 2
+  const issRetido    = nota.valorLiquido < nota.valorServicos
+  const horaEmissao  = '17:53' // campo futuro — placeholder até integração real
+  const serie        = '1'
 
   function baixarPDF() {
     const titulo = document.title
@@ -42,7 +54,8 @@ export default function NFSeVisualizarPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 print:max-w-none print:space-y-0">
+    <div className="max-w-3xl mx-auto space-y-3 print:max-w-none print:space-y-0">
+
       {/* Barra de ações */}
       <div className="flex items-center justify-between print:hidden">
         <Button variant="ghost" size="sm" asChild>
@@ -63,170 +76,191 @@ export default function NFSeVisualizarPage() {
         </div>
       </div>
 
-      {/* Documento NFS-e */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden" id="nfse-doc">
+      {/* ════════════════════════
+          DOCUMENTO NFS-e
+      ════════════════════════ */}
+      <div className="bg-white text-black border-2 border-gray-700 text-[11px]" id="nfse-doc">
 
-        {/* Cabeçalho */}
-        <div className="bg-green-700 text-white p-6 flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+        {/* ── CABEÇALHO ── */}
+        <div className="grid grid-cols-[1fr_180px] border-b-2 border-gray-700">
+
+          {/* Esquerda: logo prefeitura + título */}
+          <div className="p-3 border-r border-gray-700 flex items-center gap-3">
+            <div className="w-16 h-16 shrink-0 flex items-center justify-center border border-gray-300 rounded overflow-hidden">
               {perfil?.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={perfil.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
               ) : (
-                <span className="text-green-700 font-bold text-xl">
+                <div className="w-full h-full bg-blue-700 flex items-center justify-center text-white font-bold text-lg">
                   {nomeEmitente.slice(0, 2).toUpperCase()}
-                </span>
+                </div>
               )}
             </div>
-            <div>
-              <p className="font-bold text-lg leading-tight">{nomeEmitente}</p>
-              <p className="text-green-200 text-sm">CNPJ: {cnpjEmitente}</p>
-              {imEmitente !== '—' && (
-                <p className="text-green-200 text-sm">IM: {imEmitente} — {cidadeUf}</p>
-              )}
-              {linhaEndereco && (
-                <p className="text-green-200 text-xs mt-1">{linhaEndereco}</p>
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-green-200 text-xs uppercase tracking-widest font-semibold">Nota Fiscal de Serviços</p>
-            <p className="text-white font-bold text-xs">Eletrônica — NFS-e</p>
-            <p className="text-green-200 text-xs mt-1">Prefeitura de {cidadeUf || 'Juiz de Fora / MG'}</p>
-            <div className="mt-3 bg-white/20 rounded-lg px-4 py-2 text-center">
-              <p className="text-green-200 text-[10px] uppercase">Número</p>
-              <p className="text-white font-bold text-2xl">{nota.numero}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Status */}
-        {nota.status === 'emitida' && (
-          <div className="flex items-center gap-3 px-6 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800">
-            <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-            <div>
-              <p className="text-sm font-bold text-green-800 dark:text-green-300">NFS-e Autorizada — Prefeitura de {cidadeUf || 'Juiz de Fora'}</p>
-              <p className="text-xs text-green-700 dark:text-green-400">
-                Código de Verificação: <span className="font-mono font-bold">{nota.codigoVerificacao}</span>
-                {' '} — Emitida em {formatDate(nota.dataEmissao)}
+            <div className="text-center flex-1">
+              <p className="font-bold text-base text-gray-900 leading-tight">PREFEITURA DE {cidadeEmit.toUpperCase()}</p>
+              <p className="font-bold text-sm text-gray-800 leading-tight mt-0.5">NFS-E - NOTA FISCAL DE SERVIÇOS ELETRÔNICA</p>
+              <p className="text-[10px] text-gray-600 mt-1 italic">
+                Nota Nº {nota.numero} Série {serie}, emitido em {formatDate(nota.dataEmissao)}
               </p>
             </div>
           </div>
-        )}
 
-        {/* Tomador */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <div className="px-6 py-2 bg-gray-50 dark:bg-gray-800">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Tomador do Serviço</p>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-gray-200 dark:divide-gray-700">
-            <div className="p-4 col-span-2">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Razão Social / Nome</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{nota.tomador}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Av. Barão do Rio Branco, 2000 — Centro — Juiz de Fora / MG</p>
+          {/* Direita: número / data / código */}
+          <div className="divide-y divide-gray-700">
+            <div className="px-3 py-2">
+              <p className="text-[8px] text-gray-500 uppercase font-bold leading-none mb-0.5">Número da nota</p>
+              <p className="font-bold text-gray-900 text-sm">{nota.numero}</p>
             </div>
-            <div className="p-4">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">CNPJ / CPF</p>
-              <p className="text-sm font-mono font-semibold text-gray-900 dark:text-white">{nota.cnpjTomador}</p>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase mt-2 mb-1">Inscrição Municipal</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">—</p>
+            <div className="px-3 py-2">
+              <p className="text-[8px] text-gray-500 uppercase font-bold leading-none mb-0.5">Data e Hora da Emissão</p>
+              <p className="font-bold text-gray-900 text-sm">{formatDate(nota.dataEmissao)} {horaEmissao}</p>
+            </div>
+            <div className="px-3 py-2">
+              <p className="text-[8px] text-gray-500 uppercase font-bold leading-none mb-0.5">Código de Verificação</p>
+              <p className="font-bold text-gray-900 text-sm font-mono">{nota.codigoVerificacao ?? '—'}</p>
             </div>
           </div>
         </div>
 
-        {/* Discriminação dos serviços */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <div className="px-6 py-2 bg-gray-50 dark:bg-gray-800">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Discriminação dos Serviços</p>
+        {/* ── STATUS (autorizada) ── */}
+        {nota.status === 'emitida' && (
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-green-50 border-b border-green-300 print:hidden">
+            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+            <p className="text-xs text-green-800 font-semibold">
+              NFS-e Autorizada — Prefeitura de {cidadeEmit}
+            </p>
           </div>
-          <div className="p-6 space-y-4">
+        )}
+
+        {/* ── PRESTADOR DE SERVIÇOS ── */}
+        <div className="border-b border-gray-700">
+          <div className="bg-gray-100 px-4 py-1 border-b border-gray-400">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Prestador de Serviços</p>
+          </div>
+          <div className="p-3 flex items-start gap-3">
+            <div className="w-12 h-12 shrink-0 border border-gray-300 rounded overflow-hidden flex items-center justify-center">
+              {perfil?.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={perfil.logo_url} alt="Logo" className="w-full h-full object-contain p-0.5" />
+              ) : (
+                <div className="w-full h-full bg-blue-700 flex items-center justify-center text-white font-bold">
+                  {nomeEmitente.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="space-y-0.5 text-[11px]">
+              <p>Nome: <strong>{nomeEmitente}</strong></p>
+              <p>CNPJ: <strong>{cnpjEmitente}</strong>{imEmitente !== '—' && <> &nbsp; Inscrição Municipal: <strong>{imEmitente}</strong></>}</p>
+              {endEmitente && <p>Endereço: <strong>{endEmitente}</strong></p>}
+              <p>Município: <strong>{cidadeEmit}</strong> &nbsp; UF: <strong>{ufEmit}</strong></p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── TOMADOR DE SERVIÇOS ── */}
+        <div className="border-b border-gray-700">
+          <div className="bg-gray-100 px-4 py-1 border-b border-gray-400">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Tomador de Serviços</p>
+          </div>
+          <div className="p-3 space-y-0.5 text-[11px]">
+            <p>Razão Social: <strong>{nota.tomador}</strong></p>
+            <p>CNPJ: <strong>{nota.cnpjTomador}</strong></p>
+            <p>Endereço: <strong>—</strong></p>
+            <p>Município: <strong>—</strong> &nbsp; UF: <strong>—</strong> &nbsp; E-mail: <strong>—</strong></p>
+          </div>
+        </div>
+
+        {/* ── DISCRIMINAÇÃO DOS SERVIÇOS ── */}
+        <div className="border-b border-gray-700">
+          <div className="bg-gray-100 px-4 py-1 border-b border-gray-400">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Discriminação dos Serviços</p>
+          </div>
+          <div className="p-3 space-y-2">
+            <p className="text-[11px] text-gray-900 font-medium">{nota.discriminacao}</p>
             {nota.itens.map((item, i) => (
-              <div key={i} className="border border-gray-100 dark:border-gray-700 rounded-xl p-4">
-                <div className="grid grid-cols-4 gap-4 mb-3">
-                  <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase">Código LC 116</p>
-                    <p className="text-sm font-mono text-gray-700 dark:text-gray-300">{item.servico.codigoLc116}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase">Código Serviço</p>
-                    <p className="text-sm font-mono text-gray-700 dark:text-gray-300">{item.servico.codigo}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase">Quantidade</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{item.quantidade}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase">Valor Unitário</p>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(item.valorUnitario)}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Descrição</p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200">{item.descricao}</p>
-                </div>
+              <div key={i}>
+                <p className="text-[9px] font-bold uppercase text-gray-500 mt-2">Código do Serviço</p>
+                <p className="text-[11px] font-bold text-gray-900">
+                  {item.servico.codigoLc116} / {item.servico.descricao.toUpperCase()}
+                </p>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Valores fiscais */}
-        <div className="grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700">
-          <div className="p-6">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">Valores do ISS</p>
-            <div className="space-y-2 text-sm">
-              {[
-                ['Alíquota ISS', `${nota.itens[0]?.servico.aliquotaIss ?? 2}%`],
-                ['Base de Cálculo', formatCurrency(nota.valorServicos)],
-                ['Valor do ISS', formatCurrency(nota.valorIss)],
-                ['ISS Retido na Fonte', 'Não'],
-              ].map(([label, val]) => (
-                <div key={label} className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">{label}</span>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{val}</span>
-                </div>
-              ))}
+          {/* COD MUNICÍPIO + NATUREZA — linha 2 colunas */}
+          <div className="grid grid-cols-2 border-t border-gray-400">
+            <div className="px-3 py-1.5 border-r border-gray-400">
+              <p className="text-[8px] font-bold uppercase text-gray-500 leading-none mb-0.5">Cod/Município da Incidência do ISSQN:</p>
+              <p className="text-[11px] font-bold text-gray-900">3136702 / {cidadeEmit.toUpperCase()} ({ufEmit})</p>
             </div>
-          </div>
-          <div className="p-6">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">Deduções / Descontos</p>
-            <div className="space-y-2 text-sm">
-              {[
-                ['Valor dos Serviços', formatCurrency(nota.valorServicos)],
-                ['Deduções', formatCurrency(0)],
-                ['Descontos', formatCurrency(0)],
-                ['Outras Retenções', formatCurrency(0)],
-              ].map(([label, val]) => (
-                <div key={label} className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">{label}</span>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{val}</span>
-                </div>
-              ))}
+            <div className="px-3 py-1.5">
+              <p className="text-[8px] font-bold uppercase text-gray-500 leading-none mb-0.5">Natureza da Operação:</p>
+              <p className="text-[11px] font-bold text-gray-900">TRIBUTAÇÃO NO MUNICÍPIO</p>
             </div>
           </div>
         </div>
 
-        {/* Total */}
-        <div className="p-6 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Valor Total dos Serviços</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(nota.valorServicos)}</p>
+        {/* ── TABELA DE TRIBUTOS ── */}
+        <div className="border-b border-gray-700">
+          <table className="w-full border-collapse">
+            <tbody>
+              {/* Linha 1 */}
+              <tr>
+                <Row label="Deduções"    value={formatCurrency(0)} />
+                <Row label="Descontos"   value={formatCurrency(0)} />
+                <Row label="B. Cálculo"  value={formatCurrency(nota.valorServicos)} bold />
+                <Row label="ISS"         value={`${formatCurrency(nota.valorIss)} (${aliquota.toFixed(4)} %)`} bold />
+                <Row label="ISS Retido"  value={issRetido ? 'SIM' : 'NÃO'} bold />
+                <Row label="COFINS"      value={formatCurrency(0)} />
+              </tr>
+              {/* Linha 2 */}
+              <tr>
+                <Row label="PIS"         value={formatCurrency(0)} />
+                <Row label="CSLL"        value={formatCurrency(0)} />
+                <Row label="IR"          value={formatCurrency(0)} />
+                <Row label="INSS"        value={formatCurrency(0)} />
+                <td colSpan={2} className="border border-gray-400 p-1.5 align-top">
+                  <p className="text-[8px] font-bold uppercase text-gray-500 leading-none mb-0.5">Valor dos Serviços</p>
+                  <p className="text-[13px] font-bold text-gray-900">{formatCurrency(nota.valorServicos)}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── VALOR LÍQUIDO DA NOTA ── */}
+        <div className="border-b-2 border-gray-700 bg-gray-50 py-3 text-center">
+          <p className="text-sm font-bold text-gray-900 tracking-wide">
+            VALOR LÍQUIDO DA NOTA: <span className="text-base">{formatCurrency(nota.valorLiquido)}</span>
+          </p>
+        </div>
+
+        {/* ── CANHOTO DE RECIBO ── */}
+        <div className="border-t-2 border-dashed border-gray-500 mt-4 relative">
+          <div className="absolute -top-3 left-2 flex items-center gap-1 text-gray-400">
+            <Scissors className="h-4 w-4" />
+            <span className="text-[9px]">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</span>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">(-) ISS ({nota.itens[0]?.servico.aliquotaIss ?? 2}%)</p>
-            <p className="text-sm font-medium text-red-600">- {formatCurrency(nota.valorIss)}</p>
-          </div>
-          <div className="text-right border-l border-gray-300 dark:border-gray-600 pl-6">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Valor Líquido a Receber</p>
-            <p className="text-3xl font-bold text-green-700 dark:text-green-400">{formatCurrency(nota.valorLiquido)}</p>
+          <div className="p-4 space-y-2">
+            <p className="text-[11px] text-gray-800">
+              Recebi(emos) do Prestador: <strong>{nomeEmitente}</strong> &nbsp; CNPJ: <strong>{cnpjEmitente}</strong>
+            </p>
+            <p className="text-[11px] text-gray-800">
+              Os serviços constantes da Nota Fiscal de Serviços Eletrônica n.º <strong>{nota.numero}</strong> emitida em{' '}
+              <strong>{formatDate(nota.dataEmissao)} às {horaEmissao}</strong>
+            </p>
+            <div className="pt-4 pb-1 flex items-end gap-2">
+              <p className="text-[11px] text-gray-700">Ass:</p>
+              <div className="flex-1 border-b border-gray-700" />
+              <p className="text-[11px] text-gray-700 whitespace-nowrap">em ______/______/________,</p>
+            </div>
+            <p className="text-[10px] text-gray-500">Assinatura do Destinatário/Tomador dos Serviços</p>
+            <div className="flex justify-end pt-1">
+              <p className="text-[9px] text-gray-400 italic">Nota fiscal emitida no Syncromoney — syncromoney.com.br</p>
+            </div>
           </div>
         </div>
 
-        {/* Rodapé */}
-        <div className="p-6 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-          <p>Emitido pelo sistema Syncromoney PREMIUM — syncromoney.com.br</p>
-          <p>Prefeitura de {cidadeUf || 'Juiz de Fora / MG'} — ISS-Fácil</p>
-        </div>
       </div>
     </div>
   )
