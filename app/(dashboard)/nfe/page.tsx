@@ -165,9 +165,9 @@ function NFeLine({ nota }: { nota: NFe }) {
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-1">
-          <button title="Visualizar" className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+          <Link href={`/nfe/${nota.id}`} title="Visualizar" className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors inline-flex">
             <Eye className="h-4 w-4" />
-          </button>
+          </Link>
           {nota.status === 'rascunho' && (
             <button title="Transmitir para SEFAZ" className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors">
               <Send className="h-4 w-4" />

@@ -15,9 +15,13 @@ import { useToast } from '@/components/ui/toast'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
+import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle, Upload, Building2, Save, X } from 'lucide-react'
 import type { Categoria, TipoCategoria } from '@/types'
 import { assinaturaAtiva, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
+import {
+  getPerfilEmpresa, upsertPerfilEmpresa, uploadLogo, perfilVazio,
+  type PerfilEmpresa,
+} from '@/lib/supabase/perfil-empresa'
 
 const schemaCategoria = z.object({
   nome: z.string().min(2, 'Mínimo 2 caracteres'),
@@ -49,6 +53,9 @@ export default function ConfiguracoesPage() {
   const [userEmail, setUserEmail] = useState('')
   const [assinatura, setAssinatura] = useState<Assinatura | null>(null)
   const [loadingPortal, setLoadingPortal] = useState(false)
+  const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
+  const [savingPerfil, setSavingPerfil] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const { toast: _toast } = useToast()
 
   const formCat = useForm<CategoriaForm>({
@@ -64,6 +71,8 @@ export default function ConfiguracoesPage() {
         setUserEmail(data.user.email ?? '')
         const { data: ass } = await createClient().from('assinaturas').select('*').eq('user_id', data.user.id).single()
         setAssinatura(ass as Assinatura | null)
+        const p = await getPerfilEmpresa(data.user.id)
+        setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
       }
     })
   }, [])
@@ -125,6 +134,32 @@ export default function ConfiguracoesPage() {
     }
     _toast('Senha alterada com sucesso!', 'success')
     formSenha.reset()
+  }
+
+  async function handleSalvarPerfil() {
+    if (!perfil) return
+    setSavingPerfil(true)
+    const { error } = await upsertPerfilEmpresa(perfil)
+    if (error) _toast('Erro ao salvar: ' + error, 'error')
+    else _toast('Dados da empresa salvos!', 'success')
+    setSavingPerfil(false)
+  }
+
+  async function handleUploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !perfil) return
+    setUploadingLogo(true)
+    const { url, error } = await uploadLogo(perfil.user_id, file)
+    if (error) _toast('Erro no upload: ' + error, 'error')
+    else if (url) {
+      setPerfil({ ...perfil, logo_url: url })
+      _toast('Logo atualizada!', 'success')
+    }
+    setUploadingLogo(false)
+  }
+
+  function setP(field: keyof PerfilEmpresa, value: string) {
+    setPerfil((p) => p ? { ...p, [field]: value } : p)
   }
 
   const TIPO_LABEL: Record<TipoCategoria, string> = { receita: 'Receita', despesa: 'Despesa', ambos: 'Ambos' }
@@ -210,21 +245,209 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* Aba: Perfil */}
-      {aba === 'perfil' && (
-        <Card>
-          <CardHeader><CardTitle>Informações do Perfil</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>E-mail</Label>
-              <Input value={userEmail} disabled className="bg-gray-50" />
-              <p className="text-xs text-gray-400 mt-1">O e-mail não pode ser alterado aqui</p>
-            </div>
-            <div>
-              <Label>ID do Usuário</Label>
-              <Input value={userId} disabled className="bg-gray-50 font-mono text-xs" />
-            </div>
-          </CardContent>
-        </Card>
+      {aba === 'perfil' && perfil && (
+        <div className="space-y-4">
+          {/* Logomarca */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                Logomarca da Empresa
+              </CardTitle>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Aparecerá no cabeçalho das NF-e e NFS-e emitidas
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-6">
+                {/* Preview */}
+                <div className="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-800 shrink-0 overflow-hidden">
+                  {perfil.logo_url ? (
+                    <div className="relative w-full h-full group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={perfil.logo_url} alt="Logo" className="w-full h-full object-contain p-2" />
+                      <button
+                        onClick={() => setP('logo_url', '')}
+                        className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Building2 className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-1" />
+                      <p className="text-xs text-gray-400">Sem logo</p>
+                    </div>
+                  )}
+                </div>
+                {/* Upload */}
+                <div className="space-y-2">
+                  <label className="cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadLogo} disabled={uploadingLogo} />
+                    <div className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <Upload className="h-4 w-4" />
+                      {uploadingLogo ? 'Enviando...' : 'Escolher imagem'}
+                    </div>
+                  </label>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">PNG, JPG ou SVG — recomendado 300×100 px</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Tamanho máximo: 2 MB</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Acesso */}
+          <Card>
+            <CardHeader><CardTitle>Acesso</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>E-mail de acesso</Label>
+                <Input value={userEmail} disabled className="bg-gray-50 dark:bg-gray-700/50" />
+                <p className="text-xs text-gray-400 mt-1">Não pode ser alterado aqui</p>
+              </div>
+              <div>
+                <Label>ID do Usuário</Label>
+                <Input value={userId} disabled className="bg-gray-50 dark:bg-gray-700/50 font-mono text-xs" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Identificação */}
+          <Card>
+            <CardHeader><CardTitle>Identificação</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Tipo de Pessoa</Label>
+                  <select
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={perfil.tipo_pessoa}
+                    onChange={(e) => setP('tipo_pessoa', e.target.value)}
+                  >
+                    <option value="juridica">Pessoa Jurídica (CNPJ)</option>
+                    <option value="fisica">Pessoa Física (CPF)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>{perfil.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}</Label>
+                  <Input
+                    placeholder={perfil.tipo_pessoa === 'juridica' ? '00.000.000/0001-00' : '000.000.000-00'}
+                    value={perfil.cnpj_cpf}
+                    onChange={(e) => setP('cnpj_cpf', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Razão Social / Nome Completo</Label>
+                  <Input placeholder="Nome completo ou razão social" value={perfil.razao_social} onChange={(e) => setP('razao_social', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Nome Fantasia</Label>
+                  <Input placeholder="Nome fantasia (opcional)" value={perfil.nome_fantasia} onChange={(e) => setP('nome_fantasia', e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>{perfil.tipo_pessoa === 'juridica' ? 'Inscrição Estadual' : 'RG'}</Label>
+                  <Input
+                    placeholder={perfil.tipo_pessoa === 'juridica' ? 'IE ou ISENTO' : '00.000.000-0'}
+                    value={perfil.inscricao_estadual}
+                    onChange={(e) => setP('inscricao_estadual', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Inscrição Municipal</Label>
+                  <Input placeholder="Número IM" value={perfil.inscricao_municipal} onChange={(e) => setP('inscricao_municipal', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Regime Tributário</Label>
+                  <select
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={perfil.regime_tributario}
+                    onChange={(e) => setP('regime_tributario', e.target.value)}
+                  >
+                    <option value="simples">Simples Nacional</option>
+                    <option value="mei">MEI</option>
+                    <option value="lucro_presumido">Lucro Presumido</option>
+                    <option value="lucro_real">Lucro Real</option>
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Endereço */}
+          <Card>
+            <CardHeader><CardTitle>Endereço</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <Label>CEP</Label>
+                  <Input placeholder="00000-000" value={perfil.cep} onChange={(e) => setP('cep', e.target.value)} />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Logradouro (Rua / Av.)</Label>
+                  <Input placeholder="Rua das Flores" value={perfil.logradouro} onChange={(e) => setP('logradouro', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Número</Label>
+                  <Input placeholder="123" value={perfil.numero} onChange={(e) => setP('numero', e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Complemento</Label>
+                  <Input placeholder="Sala 10, Apto 2..." value={perfil.complemento} onChange={(e) => setP('complemento', e.target.value)} />
+                </div>
+                <div>
+                  <Label>Bairro</Label>
+                  <Input placeholder="Centro" value={perfil.bairro} onChange={(e) => setP('bairro', e.target.value)} />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <Label>Cidade</Label>
+                    <Input placeholder="Juiz de Fora" value={perfil.cidade} onChange={(e) => setP('cidade', e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>UF</Label>
+                    <Input placeholder="MG" maxLength={2} value={perfil.uf} onChange={(e) => setP('uf', e.target.value.toUpperCase())} />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contato */}
+          <Card>
+            <CardHeader><CardTitle>Contato</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Telefone / WhatsApp</Label>
+                <Input placeholder="(32) 99999-9999" value={perfil.telefone} onChange={(e) => setP('telefone', e.target.value)} />
+              </div>
+              <div>
+                <Label>E-mail Comercial</Label>
+                <Input type="email" placeholder="contato@empresa.com.br" value={perfil.email_comercial} onChange={(e) => setP('email_comercial', e.target.value)} />
+              </div>
+              <div>
+                <Label>Site</Label>
+                <Input placeholder="www.empresa.com.br" value={perfil.site} onChange={(e) => setP('site', e.target.value)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Salvar */}
+          <div className="flex justify-end">
+            <Button onClick={handleSalvarPerfil} disabled={savingPerfil} className="min-w-[180px]">
+              <Save className="h-4 w-4" />
+              {savingPerfil ? 'Salvando...' : 'Salvar Dados da Empresa'}
+            </Button>
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-right">
+            Estes dados serão usados como emissor em todas as NF-e e NFS-e emitidas.
+          </p>
+        </div>
       )}
 
       {/* Aba: Senha */}

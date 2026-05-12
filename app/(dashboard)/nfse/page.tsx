@@ -154,7 +154,7 @@ function NFSeLine({ nota }: { nota: NFSe }) {
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-1">
-          <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"><Eye className="h-4 w-4" /></button>
+          <Link href={`/nfse/${nota.id}`} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors inline-flex"><Eye className="h-4 w-4" /></Link>
           {nota.status === 'emitida' && (
             <>
               <button className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"><Download className="h-4 w-4" /></button>
