@@ -17,6 +17,10 @@ function Navbar() {
         <div className="w-56 shrink-0" />
         <nav className="hidden items-center gap-7 md:flex">
           <Link href="#features" className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors">Funcionalidades</Link>
+          <Link href="#fiscal" className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors flex items-center gap-1">
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#FBBF24]" />
+            Fiscal Premium
+          </Link>
           <Link href="#pricing" className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors">Preços</Link>
         </nav>
         <div className="flex items-center gap-2">
@@ -29,7 +33,7 @@ function Navbar() {
         </div>
       </div>
       <div className="flex items-center gap-1 overflow-x-auto border-t border-[#F3F4F6] bg-white px-5 py-2 md:hidden">
-        {[{ href: '#features', label: 'Funcionalidades' }, { href: '#pricing', label: 'Preços' }, { href: '/login', label: 'Entrar' }].map(({ href, label }) => (
+        {[{ href: '#features', label: 'Funcionalidades' }, { href: '#fiscal', label: '⚡ Fiscal' }, { href: '#pricing', label: 'Preços' }, { href: '/login', label: 'Entrar' }].map(({ href, label }) => (
           <Link key={href} href={href} className="shrink-0 rounded-full border border-[#E5E7EB] px-3 py-1 text-xs font-medium text-[#6B7280] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors">{label}</Link>
         ))}
       </div>

@@ -15,6 +15,14 @@ import {
   Zap,
   Clock,
   Sparkles,
+  FileText,
+  Receipt,
+  Package,
+  Truck,
+  ShoppingCart,
+  Wrench,
+  CheckCircle2,
+  Building2,
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────────
@@ -174,11 +182,12 @@ const FEATURES = [
 
 const PLANS = [
   {
-    name: 'Mensal',
+    name: 'Essencial',
     price: 'R$ 39,90',
     period: '/mês',
     description: 'Acesso completo sem compromisso de longo prazo',
     savings: null,
+    badge: null,
     features: [
       'Dashboard financeiro completo',
       'Contas a Pagar e Receber',
@@ -192,6 +201,7 @@ const PLANS = [
     cta: 'Começar 14 dias grátis',
     href: '/register',
     highlight: false,
+    premium: false,
   },
   {
     name: 'Anual',
@@ -199,8 +209,9 @@ const PLANS = [
     period: '/mês',
     description: 'Cobrado anualmente — R$ 358,80/ano',
     savings: 'Economize R$ 120,00 por ano',
+    badge: 'Mais popular',
     features: [
-      'Tudo do plano Mensal',
+      'Tudo do plano Essencial',
       'Prioridade no suporte',
       'Acesso antecipado a novidades',
       '2 meses grátis por ano',
@@ -208,6 +219,31 @@ const PLANS = [
     cta: 'Começar 14 dias grátis',
     href: '/register',
     highlight: true,
+    premium: false,
+  },
+  {
+    name: 'Premium Fiscal',
+    price: 'R$ 59,90',
+    period: '/mês',
+    description: 'Para empresas que emitem notas fiscais',
+    savings: null,
+    badge: 'Módulo Fiscal',
+    features: [
+      'Tudo do plano Anual',
+      'Emissão de NF-e (Produtos)',
+      'Emissão de NFS-e (Serviços)',
+      'NF-e de Entrada (Compras)',
+      'DANFE completo para impressão/PDF',
+      'Controle de Estoque integrado',
+      'Cadastro de Produtos com NCM/CFOP',
+      'Cadastro de Transportadoras (RNTRC)',
+      'Cálculo automático ICMS, IPI, ISS',
+      'ISS retido na fonte automático',
+    ],
+    cta: 'Ativar módulo fiscal',
+    href: '/register',
+    highlight: false,
+    premium: true,
   },
 ]
 
@@ -395,6 +431,206 @@ export function LandingPageContent() {
         </div>
       </section>
 
+      {/* ── PREMIUM FISCAL ────────────────────────────────────────────── */}
+      <section id="fiscal" className="relative overflow-hidden bg-[#0F172A] py-24">
+        {/* decoração de fundo */}
+        <div aria-hidden className="pointer-events-none absolute -top-40 right-0 h-[500px] w-[500px] rounded-full bg-[#2563EB] opacity-10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-40 left-0 h-[400px] w-[400px] rounded-full bg-[#7C3AED] opacity-10 blur-3xl" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(to right, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '40px 40px' }}
+        />
+
+        <div className="relative mx-auto max-w-6xl px-5">
+          {/* badge topo */}
+          <div className="mb-6 flex justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#FBBF24]/30 bg-[#FBBF24]/10 px-4 py-2">
+              <Zap className="h-3.5 w-3.5 text-[#FBBF24]" />
+              <span className="text-xs font-bold uppercase tracking-widest text-[#FBBF24]">Módulo Premium — Fiscal</span>
+            </div>
+          </div>
+
+          <div className="mb-4 text-center">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              Emita NF-e e NFS-e{' '}
+              <span className="text-[#60A5FA]">sem sair do sistema</span>
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-400 max-w-2xl mx-auto">
+              Chega de depender de sistemas separados. O Syncromoney Premium integra emissão fiscal
+              diretamente ao seu controle financeiro — tudo sincronizado, tudo em um lugar.
+            </p>
+          </div>
+
+          {/* grid principal */}
+          <div className="mt-14 grid gap-8 lg:grid-cols-2 lg:items-center">
+
+            {/* esquerda: cards de benefícios */}
+            <div className="space-y-4">
+              {[
+                {
+                  icon: FileText,
+                  color: '#60A5FA',
+                  bg: '#1E3A5F',
+                  title: 'NF-e de Produtos (DANFE)',
+                  desc: 'Emita notas fiscais de venda com DANFE completo — código de barras, chave de acesso, ICMS, IPI, transportador e volumes. Pronto para impressão e PDF.',
+                },
+                {
+                  icon: Receipt,
+                  color: '#34D399',
+                  bg: '#064E3B',
+                  title: 'NFS-e de Serviços',
+                  desc: 'Nota Fiscal de Serviços no padrão da Prefeitura. ISS calculado automaticamente com ou sem retenção na fonte, código LC 116 e natureza da operação.',
+                },
+                {
+                  icon: Package,
+                  color: '#A78BFA',
+                  bg: '#2E1065',
+                  title: 'Estoque Integrado',
+                  desc: 'Ao emitir uma NF-e de saída, o estoque baixa automaticamente. NF-e de entrada aumenta o saldo. Controle em tempo real sem retrabalho.',
+                },
+                {
+                  icon: Truck,
+                  color: '#FBBF24',
+                  bg: '#451A03',
+                  title: 'Transportadoras e Fretes',
+                  desc: 'Cadastro completo de transportadoras com RNTRC, placa e modalidade de frete (CIF/FOB). Informações do transporte direto na NF-e.',
+                },
+              ].map(({ icon: Icon, color, bg, title, desc }) => (
+                <div key={title} className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm hover:border-white/20 transition-colors">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: bg }}>
+                    <Icon className="h-5 w-5" style={{ color }} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-sm">{title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* direita: mini mockup DANFE + checklist */}
+            <div className="space-y-5">
+              {/* mini documento mockup */}
+              <div className="rounded-2xl border border-white/10 bg-white p-4 shadow-2xl shadow-black/40">
+                {/* header mockup */}
+                <div className="grid grid-cols-[1fr_120px] border-b-2 border-gray-700 pb-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-blue-700 rounded flex items-center justify-center text-white text-xs font-bold shrink-0">SM</div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-800 leading-tight">PREFEITURA DE JUIZ DE FORA</p>
+                      <p className="text-[8px] font-semibold text-gray-600">NFS-E · Nota Fiscal de Serviços</p>
+                      <p className="text-[7px] text-gray-400 italic">Nota Nº 228 Série 1 — 02/03/2026</p>
+                    </div>
+                  </div>
+                  <div className="border-l border-gray-300 pl-2 space-y-1">
+                    <div><p className="text-[7px] text-gray-400 uppercase font-bold">Número</p><p className="text-[10px] font-bold text-gray-900">228</p></div>
+                    <div><p className="text-[7px] text-gray-400 uppercase font-bold">Código</p><p className="text-[9px] font-bold text-gray-900 font-mono">CP2HN6GPR</p></div>
+                  </div>
+                </div>
+                {/* prestador / tomador */}
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="bg-gray-50 rounded p-2 border border-gray-200">
+                    <p className="text-[7px] font-bold uppercase text-gray-400 mb-1">Prestador</p>
+                    <p className="text-[9px] font-bold text-gray-800 leading-tight">Sellect Consultoria</p>
+                    <p className="text-[8px] text-gray-500">CNPJ: 37.815.890/0001-08</p>
+                    <p className="text-[8px] text-gray-500">IM: 180369008</p>
+                  </div>
+                  <div className="bg-gray-50 rounded p-2 border border-gray-200">
+                    <p className="text-[7px] font-bold uppercase text-gray-400 mb-1">Tomador</p>
+                    <p className="text-[9px] font-bold text-gray-800 leading-tight">Instituto HSVP</p>
+                    <p className="text-[8px] text-gray-500">CNPJ: 22.488.241/0003-26</p>
+                    <p className="text-[8px] text-gray-500">Juiz de Fora / MG</p>
+                  </div>
+                </div>
+                {/* tabela tributos */}
+                <div className="border border-gray-300 rounded">
+                  <div className="bg-gray-100 px-2 py-1 border-b border-gray-300">
+                    <p className="text-[7px] font-bold uppercase text-gray-500 text-center">Cálculo dos Tributos</p>
+                  </div>
+                  <div className="grid grid-cols-6 text-center">
+                    {['Deduções','Descontos','B. Cálculo','ISS','ISS Retido','COFINS'].map((h) => (
+                      <div key={h} className="border-r border-gray-200 last:border-0 px-1 py-1">
+                        <p className="text-[6px] font-bold text-gray-400 uppercase leading-none mb-0.5">{h}</p>
+                        <p className="text-[8px] font-bold text-gray-800">{h === 'B. Cálculo' ? 'R$6.500' : h === 'ISS' ? 'R$130' : h === 'ISS Retido' ? 'SIM' : 'R$0'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* valor liquido */}
+                <div className="mt-2 bg-gray-100 rounded py-1.5 text-center border border-gray-300">
+                  <p className="text-[9px] font-bold text-gray-900">VALOR LÍQUIDO DA NOTA: <span className="text-green-700">R$ 6.370,00</span></p>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                  <p className="text-[8px] text-green-700 font-semibold">NFS-e Autorizada — Prefeitura de Juiz de Fora</p>
+                </div>
+              </div>
+
+              {/* checklist de recursos */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">O que está incluso no Premium Fiscal</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                  {[
+                    'NF-e com DANFE oficial',
+                    'NFS-e modelo Prefeitura',
+                    'NF-e de Entrada (compras)',
+                    'Estoque automático',
+                    'Produtos com NCM/CFOP/CST',
+                    'Serviços com LC 116',
+                    'Transportadoras + RNTRC',
+                    'Frete CIF/FOB',
+                    'ICMS, IPI, ISS automático',
+                    'ISS retido na fonte',
+                    'Impressão / PDF oficial',
+                    'Clientes com IE',
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-2">
+                      <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#FBBF24]/20">
+                        <Check className="h-2.5 w-2.5 text-[#FBBF24]" />
+                      </div>
+                      <span className="text-xs text-slate-300">{item}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-bold text-xl">R$ 59,90<span className="text-slate-400 text-sm font-normal">/mês</span></p>
+                    <p className="text-slate-400 text-xs mt-0.5">Inclui todos os recursos do plano Anual</p>
+                  </div>
+                  <Button asChild size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold gap-1.5 shadow-lg shadow-[#FBBF24]/25">
+                    <Link href="/register">
+                      <Zap className="h-3.5 w-3.5" />
+                      Ativar Premium
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* linha de logos / tipos de empresa */}
+          <div className="mt-14 border-t border-white/10 pt-10">
+            <p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-500 mb-6">Ideal para quem é</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {[
+                { icon: Building2, label: 'MEI e ME' },
+                { icon: Users, label: 'Prestadores de Serviço' },
+                { icon: ShoppingCart, label: 'Comércio e Varejo' },
+                { icon: Wrench, label: 'Assistência Técnica' },
+                { icon: Truck, label: 'Transportadoras' },
+                { icon: BarChart3, label: 'Escritórios Contábeis' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
+                  <Icon className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="text-xs font-medium text-slate-300">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── DEPOIMENTOS ───────────────────────────────────────────────── */}
       <section className="bg-[#F9FAFB] py-20">
         <div className="mx-auto max-w-6xl px-5">
@@ -497,36 +733,42 @@ export function LandingPageContent() {
             </p>
           </div>
 
-          <div className="mx-auto grid max-w-3xl gap-6 pt-6 sm:grid-cols-2">
+          <div className="mx-auto grid max-w-5xl gap-6 pt-6 sm:grid-cols-3">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
                 className={`relative flex flex-col rounded-2xl p-7 ${
-                  plan.highlight
+                  plan.premium
+                    ? 'border-2 border-[#FBBF24] bg-[#0F172A] shadow-xl shadow-[#FBBF24]/10'
+                    : plan.highlight
                     ? 'border-2 border-[#2563EB] bg-white shadow-xl shadow-[#2563EB]/10'
                     : 'border border-[#E5E7EB] bg-[#F9FAFB]'
                 }`}
               >
-                {plan.highlight && (
+                {plan.badge && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#2563EB] px-4 py-1.5 text-xs font-bold text-white shadow-md">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold shadow-md ${
+                      plan.premium
+                        ? 'bg-[#FBBF24] text-[#111827]'
+                        : 'bg-[#2563EB] text-white'
+                    }`}>
                       <Zap className="h-3 w-3" />
-                      Mais popular
+                      {plan.badge}
                     </span>
                   </div>
                 )}
 
                 <div className="mb-5">
-                  <p className="text-sm font-bold uppercase tracking-wider text-[#6B7280]">
+                  <p className={`text-sm font-bold uppercase tracking-wider ${plan.premium ? 'text-[#FBBF24]' : 'text-[#6B7280]'}`}>
                     {plan.name}
                   </p>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold tracking-tight text-[#111827]">
+                    <span className={`text-4xl font-extrabold tracking-tight ${plan.premium ? 'text-white' : 'text-[#111827]'}`}>
                       {plan.price}
                     </span>
-                    <span className="text-sm text-[#6B7280]">{plan.period}</span>
+                    <span className={`text-sm ${plan.premium ? 'text-slate-400' : 'text-[#6B7280]'}`}>{plan.period}</span>
                   </div>
-                  <p className="mt-1.5 text-sm text-[#6B7280]">{plan.description}</p>
+                  <p className={`mt-1.5 text-sm ${plan.premium ? 'text-slate-400' : 'text-[#6B7280]'}`}>{plan.description}</p>
                   {plan.savings && (
                     <p className="mt-1 text-xs font-semibold text-[#16A34A]">{plan.savings}</p>
                   )}
@@ -534,10 +776,12 @@ export function LandingPageContent() {
 
                 <ul className="mb-7 flex-1 space-y-3">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2.5 text-sm text-[#374151]">
+                    <li key={feature} className={`flex items-center gap-2.5 text-sm ${plan.premium ? 'text-slate-300' : 'text-[#374151]'}`}>
                       <div
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
-                          plan.highlight
+                          plan.premium
+                            ? 'bg-[#FBBF24]/20 text-[#FBBF24]'
+                            : plan.highlight
                             ? 'bg-[#DBEAFE] text-[#2563EB]'
                             : 'bg-[#D1FAE5] text-[#16A34A]'
                         }`}
@@ -553,16 +797,18 @@ export function LandingPageContent() {
                   asChild
                   size="lg"
                   className={
-                    plan.highlight
+                    plan.premium
+                      ? 'w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold shadow-md shadow-[#FBBF24]/25'
+                      : plan.highlight
                       ? 'w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-md shadow-[#2563EB]/25'
                       : 'w-full'
                   }
-                  variant={plan.highlight ? 'default' : 'outline'}
+                  variant={plan.premium || plan.highlight ? 'default' : 'outline'}
                 >
                   <Link href={plan.href}>{plan.cta}</Link>
                 </Button>
 
-                <p className="mt-3 text-center text-xs text-[#9CA3AF]">
+                <p className={`mt-3 text-center text-xs ${plan.premium ? 'text-slate-500' : 'text-[#9CA3AF]'}`}>
                   14 dias grátis · Cancele quando quiser
                 </p>
               </div>
