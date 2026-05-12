@@ -22,6 +22,7 @@ import {
   getPerfilEmpresa, upsertPerfilEmpresa, uploadLogo, perfilVazio,
   type PerfilEmpresa,
 } from '@/lib/supabase/perfil-empresa'
+import { maskCEP, maskPhone, buscarCEP } from '@/lib/masks'
 
 const schemaCategoria = z.object({
   nome: z.string().min(2, 'Mínimo 2 caracteres'),
@@ -56,6 +57,8 @@ export default function ConfiguracoesPage() {
   const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
   const [savingPerfil, setSavingPerfil] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [buscandoCNPJ, setBuscandoCNPJ] = useState(false)
+  const [buscandoCEP, setBuscandoCEP] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const { toast: _toast } = useToast()
 
@@ -171,6 +174,47 @@ export default function ConfiguracoesPage() {
 
   function setP(field: keyof PerfilEmpresa, value: string) {
     setPerfil((p) => p ? { ...p, [field]: value } : p)
+  }
+
+  async function handleCNPJPerfil(val: string) {
+    setP('cnpj_cpf', val)
+    const digits = val.replace(/\D/g, '')
+    if (digits.length !== 14) return
+    setBuscandoCNPJ(true)
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.razao_social) setP('razao_social', data.razao_social)
+        if (data.nome_fantasia) setP('nome_fantasia', data.nome_fantasia)
+        if (data.telefone) setP('telefone', maskPhone(data.ddd_telefone_1?.replace(/\D/g, '') ?? ''))
+        if (data.email) setP('email_comercial', data.email.toLowerCase())
+        if (data.cep) { const cep = maskCEP(data.cep.replace(/\D/g, '')); setP('cep', cep); await handleCEPPerfil(cep) }
+        if (data.logradouro) setP('logradouro', data.logradouro)
+        if (data.numero) setP('numero', data.numero)
+        if (data.complemento) setP('complemento', data.complemento)
+        if (data.bairro) setP('bairro', data.bairro)
+        if (data.municipio) setP('cidade', data.municipio)
+        if (data.uf) setP('uf', data.uf)
+      }
+    } catch { /* silencioso */ }
+    setBuscandoCNPJ(false)
+  }
+
+  async function handleCEPPerfil(val: string) {
+    const masked = maskCEP(val)
+    setP('cep', masked)
+    const digits = masked.replace(/\D/g, '')
+    if (digits.length !== 8) return
+    setBuscandoCEP(true)
+    const addr = await buscarCEP(digits)
+    if (addr) {
+      setP('logradouro', addr.logradouro)
+      setP('bairro', addr.bairro)
+      setP('cidade', addr.localidade)
+      setP('uf', addr.uf)
+    }
+    setBuscandoCEP(false)
   }
 
   const TIPO_LABEL: Record<TipoCategoria, string> = { receita: 'Receita', despesa: 'Despesa', ambos: 'Ambos' }
@@ -351,11 +395,14 @@ export default function ConfiguracoesPage() {
                   </select>
                 </div>
                 <div>
-                  <Label>{perfil.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}</Label>
+                  <Label>
+                    {perfil.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'}
+                    {buscandoCNPJ && <span className="text-xs text-blue-500 ml-1">buscando...</span>}
+                  </Label>
                   <Input
                     placeholder={perfil.tipo_pessoa === 'juridica' ? '00.000.000/0001-00' : '000.000.000-00'}
                     value={perfil.cnpj_cpf}
-                    onChange={(e) => setP('cnpj_cpf', e.target.value)}
+                    onChange={(e) => perfil.tipo_pessoa === 'juridica' ? handleCNPJPerfil(e.target.value) : setP('cnpj_cpf', e.target.value)}
                   />
                 </div>
               </div>
@@ -405,8 +452,10 @@ export default function ConfiguracoesPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <Label>CEP</Label>
-                  <Input placeholder="00000-000" value={perfil.cep} onChange={(e) => setP('cep', e.target.value)} />
+                  <Label>
+                    CEP {buscandoCEP && <span className="text-xs text-blue-500 ml-1">buscando...</span>}
+                  </Label>
+                  <Input placeholder="00000-000" value={perfil.cep} onChange={(e) => handleCEPPerfil(e.target.value)} />
                 </div>
                 <div className="md:col-span-2">
                   <Label>Logradouro (Rua / Av.)</Label>

@@ -42,6 +42,7 @@ export default function TransportadorasPage() {
   const [form, setForm] = useState<TransportadoraFormData>(formVazio)
   const [salvando, setSalvando] = useState(false)
   const [buscandoCEP, setBuscandoCEP] = useState(false)
+  const [buscandoCNPJ, setBuscandoCNPJ] = useState(false)
   const [userId, setUserId] = useState('')
   const { toast } = useToast()
 
@@ -95,6 +96,32 @@ export default function TransportadorasPage() {
 
   function setF(field: keyof TransportadoraFormData, value: string) {
     setForm((f) => ({ ...f, [field]: value }))
+  }
+
+  async function handleCNPJ(val: string) {
+    const masked = maskCNPJ(val)
+    setF('cnpj', masked)
+    const digits = masked.replace(/\D/g, '')
+    if (digits.length !== 14) return
+    setBuscandoCNPJ(true)
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.razao_social) setF('razao_social', data.razao_social)
+        if (data.nome_fantasia) setF('nome_fantasia', data.nome_fantasia)
+        if (data.ddd_telefone_1) setF('telefone', maskPhone(data.ddd_telefone_1.replace(/\D/g, '')))
+        if (data.email) setF('email', data.email.toLowerCase())
+        if (data.cep) { const cep = maskCEP(data.cep.replace(/\D/g, '')); setF('cep', cep); await handleCEP(cep) }
+        if (data.logradouro) setF('endereco', data.logradouro)
+        if (data.numero) setF('numero', data.numero)
+        if (data.complemento) setF('complemento', data.complemento)
+        if (data.bairro) setF('bairro', data.bairro)
+        if (data.municipio) setF('cidade', data.municipio)
+        if (data.uf) setF('estado', data.uf)
+      }
+    } catch { /* silencioso */ }
+    setBuscandoCNPJ(false)
   }
 
   async function handleCEP(val: string) {
@@ -247,8 +274,8 @@ export default function TransportadorasPage() {
                 <Input placeholder="Nome Fantasia (opcional)" value={form.nome_fantasia} onChange={(e) => setF('nome_fantasia', e.target.value)} />
               </div>
               <div>
-                <Label>CNPJ</Label>
-                <Input placeholder="00.000.000/0001-00" value={form.cnpj} onChange={(e) => setF('cnpj', maskCNPJ(e.target.value))} />
+                <Label>CNPJ {buscandoCNPJ && <span className="text-xs text-blue-500 ml-1">buscando...</span>}</Label>
+                <Input placeholder="00.000.000/0001-00" value={form.cnpj} onChange={(e) => handleCNPJ(e.target.value)} />
               </div>
               <div>
                 <Label>Inscrição Estadual</Label>
