@@ -239,6 +239,7 @@ CREATE TABLE IF NOT EXISTS public.contas_correntes (
                 CHECK (tipo_conta IN ('corrente','poupanca','investimento','caixa')),
   saldo_inicial NUMERIC(15,2) NOT NULL DEFAULT 0,
   saldo_atual   NUMERIC(15,2) NOT NULL DEFAULT 0,
+  chave_pix     TEXT,
   ativo         BOOLEAN NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -221,6 +221,7 @@ export interface ContaCorrente {
   tipo_conta: TipoConta
   saldo_inicial: number
   saldo_atual: number
+  chave_pix?: string
   ativo: boolean
   created_at: string
   updated_at: string
@@ -235,6 +236,7 @@ export interface ContaCorrenteFormData {
   digito?: string
   tipo_conta: TipoConta
   saldo_inicial: number
+  chave_pix?: string
 }
 
 // ============================================================

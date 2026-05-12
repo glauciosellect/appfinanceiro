@@ -41,6 +41,7 @@ const schemaContaForm = z.object({
   digito: z.string().optional(),
   tipo_conta: z.enum(['corrente', 'poupanca', 'investimento', 'caixa']),
   saldo_inicial: z.number().min(0, 'Saldo não pode ser negativo'),
+  chave_pix: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.tipo_conta !== 'caixa' && !data.banco) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione o banco', path: ['banco'] })
@@ -176,6 +177,7 @@ export default function ContasCorrentesPage() {
       digito: c.digito ?? '',
       tipo_conta: c.tipo_conta,
       saldo_inicial: c.saldo_inicial,
+      chave_pix: c.chave_pix ?? '',
     })
     setDialogConta(true)
   }
@@ -245,9 +247,16 @@ export default function ContasCorrentesPage() {
                     <p className="font-semibold text-gray-900">{c.nome_apelido}</p>
                     <p className="text-xs text-gray-500">{c.banco}</p>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {TIPO_LABELS[c.tipo_conta]}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {TIPO_LABELS[c.tipo_conta]}
+                    </Badge>
+                    {c.chave_pix && (
+                      <span className="text-[10px] text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded-full max-w-[120px] truncate" title={c.chave_pix}>
+                        PIX: {c.chave_pix}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -419,6 +428,13 @@ export default function ContasCorrentesPage() {
                 step="0.01"
                 min="0"
                 placeholder="0,00"
+              />
+            </div>
+            <div>
+              <Label>Chave PIX</Label>
+              <Input
+                {...formConta.register('chave_pix')}
+                placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
               />
             </div>
             <div className="flex gap-3 pt-2">
