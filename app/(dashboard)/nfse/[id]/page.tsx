@@ -46,6 +46,16 @@ export default function NFSeVisualizarPage() {
   const horaEmissao  = '17:53' // campo futuro — placeholder até integração real
   const serie        = '1'
 
+  // Brasão da prefeitura por cidade (código IBGE → logo oficial)
+  const brasoesPrefeitura: Record<string, string> = {
+    'juiz de fora': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Brasao_juiz_de_fora.png/120px-Brasao_juiz_de_fora.png',
+    'belo horizonte': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Coat_of_arms_of_Belo_Horizonte.svg/120px-Coat_of_arms_of_Belo_Horizonte.svg.png',
+    'são paulo': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Coat_of_arms_of_S%C3%A3o_Paulo_city.svg/120px-Coat_of_arms_of_S%C3%A3o_Paulo_city.svg.png',
+    'rio de janeiro': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Bras%C3%A3o_do_Rio_de_Janeiro.svg/120px-Bras%C3%A3o_do_Rio_de_Janeiro.svg.png',
+  }
+  const cidadeKey     = cidadeEmit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const logoMunicipio = brasoesPrefeitura[cidadeKey] ?? null
+
   function baixarPDF() {
     const titulo = document.title
     document.title = `NFS-e-${nota.numero}`
@@ -84,15 +94,15 @@ export default function NFSeVisualizarPage() {
         {/* ── CABEÇALHO ── */}
         <div className="grid grid-cols-[1fr_180px] border-b-2 border-gray-700">
 
-          {/* Esquerda: logo prefeitura + título */}
+          {/* Esquerda: brasão da prefeitura + título */}
           <div className="p-3 border-r border-gray-700 flex items-center gap-3">
-            <div className="w-16 h-16 shrink-0 flex items-center justify-center border border-gray-300 rounded overflow-hidden">
-              {perfil?.logo_url ? (
+            <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+              {logoMunicipio ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={perfil.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+                <img src={logoMunicipio} alt={`Brasão ${cidadeEmit}`} className="w-16 h-16 object-contain" />
               ) : (
-                <div className="w-full h-full bg-blue-700 flex items-center justify-center text-white font-bold text-lg">
-                  {nomeEmitente.slice(0, 2).toUpperCase()}
+                <div className="w-16 h-16 bg-blue-900 rounded-full flex items-center justify-center text-white text-[9px] font-bold text-center leading-tight p-2">
+                  BRASÃO<br />{cidadeEmit.toUpperCase().slice(0, 6)}
                 </div>
               )}
             </div>
