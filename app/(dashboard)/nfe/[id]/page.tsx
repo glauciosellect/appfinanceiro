@@ -1,14 +1,15 @@
 'use client'
 
 import { useParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Download, XCircle, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { notasFiscaisEletronicas, produtosFiscais } from '@/lib/fiscal/mock-data'
+import { createClient } from '@/lib/supabase/client'
+import { getPerfilEmpresa, perfilVazio, type PerfilEmpresa } from '@/lib/supabase/perfil-empresa'
 
-// Nota de exemplo para visualização
-const notaDemo = notasFiscaisEletronicas[0]
 const itensDemo = [
   { produto: produtosFiscais[0], quantidade: 2, valorUnitario: 3200.0, desconto: 0, total: 6400.0 },
   { produto: produtosFiscais[2], quantidade: 1, valorUnitario: 249.0, desconto: 0, total: 249.0 },
@@ -19,6 +20,24 @@ export default function NFeVisualizarPage() {
   const nota = notasFiscaisEletronicas.find((n) => n.id === id) ?? notasFiscaisEletronicas[0]
   const itens = nota.itens.length > 0 ? nota.itens : itensDemo
   const totalNota = itens.reduce((s, i) => s + i.total, 0)
+  const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        const p = await getPerfilEmpresa(data.user.id)
+        setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
+      }
+    })
+  }, [])
+
+  const nomeEmitente = perfil?.razao_social || perfil?.nome_fantasia || 'Empresa'
+  const cnpjEmitente = perfil?.cnpj_cpf || '—'
+  const ieEmitente = perfil?.inscricao_estadual || '—'
+  const enderecoEmitente = [perfil?.logradouro, perfil?.numero].filter(Boolean).join(', ')
+  const cidadeEmitente = [perfil?.cidade, perfil?.uf].filter(Boolean).join(' / ')
+  const cepEmitente = perfil?.cep ? `CEP ${perfil.cep}` : ''
+  const telEmitente = perfil?.telefone || ''
 
   function baixarPDF() {
     const titulo = document.title
@@ -58,18 +77,23 @@ export default function NFeVisualizarPage() {
             {/* Emitente */}
             <div className="p-4">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
-                  SM
-                </div>
+                {perfil?.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={perfil.logo_url} alt="Logo" className="w-12 h-12 object-contain rounded-lg shrink-0" />
+                ) : (
+                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0">
+                    {nomeEmitente.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
                 <div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm">Empresa Exemplo Ltda</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">CNPJ: 12.345.678/0001-90</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">IE: 123.456.789/0001-40</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">{nomeEmitente}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">CNPJ: {cnpjEmitente}</p>
+                  {ieEmitente !== '—' && <p className="text-xs text-gray-500 dark:text-gray-400">IE: {ieEmitente}</p>}
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Rua das Flores, 123 — Centro</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Juiz de Fora / MG — CEP 36010-010</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Tel: (32) 99999-9999</p>
+              {enderecoEmitente && <p className="text-xs text-gray-500 dark:text-gray-400">{enderecoEmitente}</p>}
+              {cidadeEmitente && <p className="text-xs text-gray-500 dark:text-gray-400">{cidadeEmitente}{cepEmitente ? ` — ${cepEmitente}` : ''}</p>}
+              {telEmitente && <p className="text-xs text-gray-500 dark:text-gray-400">Tel: {telEmitente}</p>}
             </div>
 
             {/* Centro — título */}
@@ -243,7 +267,9 @@ export default function NFeVisualizarPage() {
         <div className="p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">Informações Complementares</p>
           <p className="text-xs text-gray-600 dark:text-gray-400">
-            Documento emitido por ME ou EPP optante pelo Simples Nacional. Não gera direito a crédito de ICMS, ISS, PIS e COFINS.
+            {perfil?.regime_tributario === 'simples' || perfil?.regime_tributario === 'mei'
+              ? 'Documento emitido por ME ou EPP optante pelo Simples Nacional. Não gera direito a crédito de ICMS, ISS, PIS e COFINS. '
+              : ''}
             Emitido pelo sistema Syncromoney PREMIUM — syncromoney.com.br
           </p>
         </div>

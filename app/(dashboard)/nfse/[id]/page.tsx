@@ -1,15 +1,38 @@
 'use client'
 
 import { useParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Download, XCircle, Printer, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { notasDeServico } from '@/lib/fiscal/mock-data'
+import { createClient } from '@/lib/supabase/client'
+import { getPerfilEmpresa, perfilVazio, type PerfilEmpresa } from '@/lib/supabase/perfil-empresa'
 
 export default function NFSeVisualizarPage() {
   const { id } = useParams()
   const nota = notasDeServico.find((n) => n.id === id) ?? notasDeServico[0]
+  const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        const p = await getPerfilEmpresa(data.user.id)
+        setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
+      }
+    })
+  }, [])
+
+  const nomeEmitente = perfil?.razao_social || perfil?.nome_fantasia || 'Empresa'
+  const cnpjEmitente = perfil?.cnpj_cpf || '—'
+  const imEmitente = perfil?.inscricao_municipal || '—'
+  const enderecoEmitente = [
+    perfil?.logradouro, perfil?.numero, perfil?.bairro,
+  ].filter(Boolean).join(', ')
+  const cidadeUf = [perfil?.cidade, perfil?.uf].filter(Boolean).join(' / ')
+  const cepEmitente = perfil?.cep ? `CEP ${perfil.cep}` : ''
+  const linhaEndereco = [enderecoEmitente, cidadeUf, cepEmitente].filter(Boolean).join(' — ')
 
   function baixarPDF() {
     const titulo = document.title
@@ -46,20 +69,31 @@ export default function NFSeVisualizarPage() {
         {/* Cabeçalho */}
         <div className="bg-green-700 text-white p-6 flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-green-700 font-bold text-xl shrink-0">
-              SM
+            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+              {perfil?.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={perfil.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+              ) : (
+                <span className="text-green-700 font-bold text-xl">
+                  {nomeEmitente.slice(0, 2).toUpperCase()}
+                </span>
+              )}
             </div>
             <div>
-              <p className="font-bold text-lg leading-tight">Empresa Exemplo Ltda</p>
-              <p className="text-green-200 text-sm">CNPJ: 12.345.678/0001-90</p>
-              <p className="text-green-200 text-sm">IM: 98765 — Juiz de Fora / MG</p>
-              <p className="text-green-200 text-xs mt-1">Rua das Flores, 123 — Centro — CEP 36010-010</p>
+              <p className="font-bold text-lg leading-tight">{nomeEmitente}</p>
+              <p className="text-green-200 text-sm">CNPJ: {cnpjEmitente}</p>
+              {imEmitente !== '—' && (
+                <p className="text-green-200 text-sm">IM: {imEmitente} — {cidadeUf}</p>
+              )}
+              {linhaEndereco && (
+                <p className="text-green-200 text-xs mt-1">{linhaEndereco}</p>
+              )}
             </div>
           </div>
           <div className="text-right">
             <p className="text-green-200 text-xs uppercase tracking-widest font-semibold">Nota Fiscal de Serviços</p>
             <p className="text-white font-bold text-xs">Eletrônica — NFS-e</p>
-            <p className="text-green-200 text-xs mt-1">Prefeitura de Juiz de Fora / MG</p>
+            <p className="text-green-200 text-xs mt-1">Prefeitura de {cidadeUf || 'Juiz de Fora / MG'}</p>
             <div className="mt-3 bg-white/20 rounded-lg px-4 py-2 text-center">
               <p className="text-green-200 text-[10px] uppercase">Número</p>
               <p className="text-white font-bold text-2xl">{nota.numero}</p>
@@ -72,7 +106,7 @@ export default function NFSeVisualizarPage() {
           <div className="flex items-center gap-3 px-6 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800">
             <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
             <div>
-              <p className="text-sm font-bold text-green-800 dark:text-green-300">NFS-e Autorizada — Prefeitura de Juiz de Fora</p>
+              <p className="text-sm font-bold text-green-800 dark:text-green-300">NFS-e Autorizada — Prefeitura de {cidadeUf || 'Juiz de Fora'}</p>
               <p className="text-xs text-green-700 dark:text-green-400">
                 Código de Verificação: <span className="font-mono font-bold">{nota.codigoVerificacao}</span>
                 {' '} — Emitida em {formatDate(nota.dataEmissao)}
@@ -158,7 +192,7 @@ export default function NFSeVisualizarPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">Deduções / Descontos</p>
             <div className="space-y-2 text-sm">
               {[
-                ['Valor dos Serviços',formatCurrency(nota.valorServicos)],
+                ['Valor dos Serviços', formatCurrency(nota.valorServicos)],
                 ['Deduções', formatCurrency(0)],
                 ['Descontos', formatCurrency(0)],
                 ['Outras Retenções', formatCurrency(0)],
@@ -191,7 +225,7 @@ export default function NFSeVisualizarPage() {
         {/* Rodapé */}
         <div className="p-6 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
           <p>Emitido pelo sistema Syncromoney PREMIUM — syncromoney.com.br</p>
-          <p>Prefeitura de Juiz de Fora — ISS-Fácil</p>
+          <p>Prefeitura de {cidadeUf || 'Juiz de Fora / MG'} — ISS-Fácil</p>
         </div>
       </div>
     </div>
