@@ -53,6 +53,7 @@ export interface Cliente {
   user_id: string
   nome: string
   cpf_cnpj?: string
+  inscricao_estadual?: string
   telefone?: string
   email?: string
   cep?: string
@@ -73,6 +74,7 @@ export interface Cliente {
 export interface ClienteFormData {
   nome: string
   cpf_cnpj?: string
+  inscricao_estadual?: string
   telefone?: string
   email?: string
   cep?: string

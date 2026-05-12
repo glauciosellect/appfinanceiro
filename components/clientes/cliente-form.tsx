@@ -31,6 +31,7 @@ const schema = z
     tipo: z.enum(['pessoa_fisica', 'pessoa_juridica']),
     nome: z.string().min(3, 'Mínimo 3 caracteres'),
     cpf_cnpj: z.string().optional(),
+    inscricao_estadual: z.string().optional(),
     telefone: z.string().optional(),
     email: z.union([z.string().email('E-mail inválido'), z.literal('')]).optional(),
     cep: z.string().optional(),
@@ -84,6 +85,7 @@ export function ClienteForm({ initial, onSubmit, onCancel }: ClienteFormProps) {
       tipo: initial?.tipo ?? 'pessoa_fisica',
       nome: initial?.nome ?? '',
       cpf_cnpj: initial?.cpf_cnpj ?? '',
+      inscricao_estadual: initial?.inscricao_estadual ?? '',
       telefone: initial?.telefone ?? '',
       email: initial?.email ?? '',
       cep: initial?.cep ?? '',
@@ -185,6 +187,17 @@ export function ClienteForm({ initial, onSubmit, onCancel }: ClienteFormProps) {
           />
         </div>
       </div>
+
+      {/* Inscrição Estadual — apenas Pessoa Jurídica */}
+      {tipo === 'pessoa_juridica' && (
+        <div>
+          <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
+          <Input
+            {...field('inscricao_estadual')}
+            placeholder="Número da IE ou ISENTO"
+          />
+        </div>
+      )}
 
       {/* E-mail */}
       <div>
