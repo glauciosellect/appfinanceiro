@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -56,6 +56,7 @@ export default function ConfiguracoesPage() {
   const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
   const [savingPerfil, setSavingPerfil] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const { toast: _toast } = useToast()
 
   const formCat = useForm<CategoriaForm>({
@@ -147,7 +148,16 @@ export default function ConfiguracoesPage() {
 
   async function handleUploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !perfil) return
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      _toast('Imagem muito grande. Máximo 2 MB.', 'error')
+      e.target.value = ''
+      return
+    }
+    if (!perfil) {
+      _toast('Aguarde o carregamento do perfil.', 'error')
+      return
+    }
     setUploadingLogo(true)
     const { url, error } = await uploadLogo(perfil.user_id, file)
     if (error) _toast('Erro no upload: ' + error, 'error')
@@ -155,6 +165,7 @@ export default function ConfiguracoesPage() {
       setPerfil({ ...perfil, logo_url: url })
       _toast('Logo atualizada!', 'success')
     }
+    e.target.value = ''
     setUploadingLogo(false)
   }
 
@@ -281,16 +292,27 @@ export default function ConfiguracoesPage() {
                   )}
                 </div>
                 {/* Upload */}
-                <div className="space-y-2">
-                  <label className="cursor-pointer">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadLogo} disabled={uploadingLogo} />
-                    <div className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <Upload className="h-4 w-4" />
-                      {uploadingLogo ? 'Enviando...' : 'Escolher imagem'}
-                    </div>
-                  </label>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">PNG, JPG ou SVG — recomendado 300×100 px</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Tamanho máximo: 2 MB</p>
+                <div className="space-y-3">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    className="hidden"
+                    onChange={handleUploadLogo}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={uploadingLogo}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {uploadingLogo ? 'Enviando...' : 'Escolher imagem'}
+                  </Button>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
+                    <p>PNG, JPG ou SVG — recomendado 300×100 px</p>
+                    <p>Tamanho máximo: 2 MB</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
