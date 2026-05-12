@@ -21,7 +21,7 @@ import { z } from 'zod'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Cartao, FaturaCartao, ContaCorrente, Bandeira } from '@/types'
 
-const BANCOS_BR = ['Nubank','Banco Inter','C6 Bank','Banco do Brasil','Itaú','Bradesco','Santander','Caixa Econômica Federal','BTG Pactual','XP','Outro']
+const BANCOS_BR = ['Nubank','Banco Inter','C6 Bank','Banco do Brasil','Itaú','Bradesco','Santander','Caixa Econômica Federal','BTG Pactual','XP','Sicoob','Sicredi','Neon','PagBank','Mercado Pago','Outro']
 const BANDEIRAS: { value: Bandeira; label: string }[] = [
   { value: 'visa', label: 'Visa' },
   { value: 'mastercard', label: 'Mastercard' },
@@ -30,13 +30,23 @@ const BANDEIRAS: { value: Bandeira; label: string }[] = [
   { value: 'hipercard', label: 'Hipercard' },
   { value: 'outro', label: 'Outro' },
 ]
-const BANDEIRA_COLORS: Record<string, string> = {
-  visa: 'from-blue-800 to-blue-600',
-  mastercard: 'from-orange-600 to-red-600',
-  elo: 'from-yellow-500 to-blue-700',
-  amex: 'from-green-600 to-teal-600',
-  hipercard: 'from-red-700 to-red-500',
-  outro: 'from-gray-700 to-gray-500',
+const BANCO_COLORS: Record<string, string> = {
+  'Nubank':                  'from-purple-800 to-purple-600',
+  'Banco Inter':             'from-orange-600 to-orange-400',
+  'C6 Bank':                 'from-gray-900 to-gray-700',
+  'Banco do Brasil':         'from-yellow-600 to-yellow-400',
+  'Itaú':                    'from-orange-700 to-amber-500',
+  'Bradesco':                'from-red-700 to-red-500',
+  'Santander':               'from-red-800 to-rose-600',
+  'Caixa Econômica Federal': 'from-blue-800 to-cyan-600',
+  'BTG Pactual':             'from-blue-950 to-blue-800',
+  'XP':                      'from-gray-950 to-gray-800',
+  'Sicoob':                  'from-green-800 to-green-600',
+  'Sicredi':                 'from-green-700 to-emerald-500',
+  'Neon':                    'from-teal-600 to-cyan-400',
+  'PagBank':                 'from-yellow-500 to-green-500',
+  'Mercado Pago':            'from-sky-600 to-blue-500',
+  'Outro':                   'from-gray-700 to-gray-500',
 }
 
 const schemaCartao = z.object({
@@ -160,7 +170,7 @@ export default function CartoesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cartoes.map((c) => {
             const usadoPct = c.limite_total > 0 ? ((c.limite_total - c.limite_disponivel) / c.limite_total) * 100 : 0
-            const gradiente = BANDEIRA_COLORS[c.bandeira] ?? BANDEIRA_COLORS['outro']
+            const gradiente = BANCO_COLORS[c.banco] ?? BANCO_COLORS['Outro']
             return (
               <div
                 key={c.id}
