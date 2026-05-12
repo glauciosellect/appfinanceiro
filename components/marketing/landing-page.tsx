@@ -223,7 +223,7 @@ const PLANS = [
   },
   {
     name: 'Premium Fiscal',
-    price: 'R$ 59,90',
+    price: 'R$ 99,90',
     period: '/mês',
     description: 'Para empresas que emitem notas fiscais',
     savings: null,
@@ -595,7 +595,7 @@ export function LandingPageContent() {
                 </div>
                 <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
                   <div>
-                    <p className="text-white font-bold text-xl">R$ 59,90<span className="text-slate-400 text-sm font-normal">/mês</span></p>
+                    <p className="text-white font-bold text-xl">R$ 99,90<span className="text-slate-400 text-sm font-normal">/mês</span></p>
                     <p className="text-slate-400 text-xs mt-0.5">Inclui todos os recursos do plano Anual</p>
                   </div>
                   <Button asChild size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold gap-1.5 shadow-lg shadow-[#FBBF24]/25">
