@@ -106,13 +106,13 @@ export default function NFeVisualizarPage() {
         <div className="grid grid-cols-[1fr_200px_1fr] border-b-2 border-gray-800 dark:border-gray-300">
 
           {/* Emitente */}
-          <div className="p-3 border-r border-gray-800 dark:border-gray-300">
-            <div className="flex items-start gap-3">
+          <div className="p-3 border-r border-gray-800 dark:border-gray-300 flex items-center justify-center">
+            <div className="flex flex-col items-center text-center gap-2">
               {perfil?.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={perfil.logo_url} alt="Logo" className="w-14 h-14 object-contain shrink-0" />
+                <img src={perfil.logo_url} alt="Logo" className="w-14 h-14 object-contain" />
               ) : (
-                <div className="w-14 h-14 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-lg shrink-0">
+                <div className="w-14 h-14 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-lg">
                   {nome.slice(0,2).toUpperCase()}
                 </div>
               )}
