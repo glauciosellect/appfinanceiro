@@ -35,12 +35,16 @@ const BANCOS_BR = [
 
 const schemaContaForm = z.object({
   nome_apelido: z.string().min(2, 'Mínimo 2 caracteres'),
-  banco: z.string().min(1, 'Selecione o banco'),
+  banco: z.string().optional(),
   agencia: z.string().optional(),
   conta: z.string().optional(),
   digito: z.string().optional(),
   tipo_conta: z.enum(['corrente', 'poupanca', 'investimento', 'caixa']),
   saldo_inicial: z.number().min(0, 'Saldo não pode ser negativo'),
+}).superRefine((data, ctx) => {
+  if (data.tipo_conta !== 'caixa' && !data.banco) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione o banco', path: ['banco'] })
+  }
 })
 type ContaFormValues = z.infer<typeof schemaContaForm>
 
@@ -351,23 +355,36 @@ export default function ContasCorrentesPage() {
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Banco</Label>
-                <Select
-                  value={formConta.watch('banco') ?? ''}
-                  onValueChange={(v) => formConta.setValue('banco', v)}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {BANCOS_BR.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
+              {formConta.watch('tipo_conta') !== 'caixa' && (
+                <div>
+                  <Label>Banco</Label>
+                  <Select
+                    value={formConta.watch('banco') ?? ''}
+                    onValueChange={(v) => formConta.setValue('banco', v)}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {BANCOS_BR.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {formConta.formState.errors.banco && (
+                    <p className="text-xs text-red-500 mt-1">{formConta.formState.errors.banco.message}</p>
+                  )}
+                </div>
+              )}
+              <div className={formConta.watch('tipo_conta') === 'caixa' ? 'col-span-2' : ''}>
                 <Label>Tipo</Label>
                 <Select
                   value={formConta.watch('tipo_conta') ?? 'corrente'}
-                  onValueChange={(v) => formConta.setValue('tipo_conta', v as never)}
+                  onValueChange={(v) => {
+                    formConta.setValue('tipo_conta', v as never)
+                    if (v === 'caixa') {
+                      formConta.setValue('banco', '')
+                      formConta.setValue('agencia', '')
+                      formConta.setValue('conta', '')
+                      formConta.setValue('digito', '')
+                    }
+                  }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -378,20 +395,22 @@ export default function ContasCorrentesPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label>Agência</Label>
-                <Input {...formConta.register('agencia')} placeholder="0000" />
+            {formConta.watch('tipo_conta') !== 'caixa' && (
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>Agência</Label>
+                  <Input {...formConta.register('agencia')} placeholder="0000" />
+                </div>
+                <div>
+                  <Label>Conta</Label>
+                  <Input {...formConta.register('conta')} placeholder="00000" />
+                </div>
+                <div>
+                  <Label>Dígito</Label>
+                  <Input {...formConta.register('digito')} placeholder="0" />
+                </div>
               </div>
-              <div>
-                <Label>Conta</Label>
-                <Input {...formConta.register('conta')} placeholder="00000" />
-              </div>
-              <div>
-                <Label>Dígito</Label>
-                <Input {...formConta.register('digito')} placeholder="0" />
-              </div>
-            </div>
+            )}
             <div>
               <Label>Saldo Inicial (R$)</Label>
               <Input
