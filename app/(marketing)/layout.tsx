@@ -98,9 +98,9 @@ function Footer() {
               {
                 title: 'Legal',
                 items: [
-                  { label: 'Privacidade', href: '#' },
-                  { label: 'Termos', href: '#' },
-                  { label: 'Cookies', href: '#' },
+                  { label: 'Privacidade', href: '/privacidade' },
+                  { label: 'Termos', href: '/termos' },
+                  { label: 'Cookies', href: '/cookies' },
                 ],
               },
             ].map(({ title, items }) => (

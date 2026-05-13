@@ -56,7 +56,7 @@ function Footer() {
             {[
               { title: 'Produto', items: [{ label: 'Funcionalidades', href: '#features' }, { label: 'Preços', href: '#pricing' }, { label: 'Entrar', href: '/login' }] },
               { title: 'Empresa', items: [{ label: 'Sobre', href: '#' }, { label: 'Contato', href: '#' }, { label: 'Blog', href: '#' }] },
-              { title: 'Legal', items: [{ label: 'Privacidade', href: '#' }, { label: 'Termos', href: '#' }, { label: 'Cookies', href: '#' }] },
+              { title: 'Legal', items: [{ label: 'Privacidade', href: '/privacidade' }, { label: 'Termos', href: '/termos' }, { label: 'Cookies', href: '/cookies' }] },
             ].map(({ title, items }) => (
               <div key={title}>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#111827]">{title}</p>
