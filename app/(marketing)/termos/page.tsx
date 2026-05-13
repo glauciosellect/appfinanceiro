@@ -97,8 +97,8 @@ export default function TermosPage() {
             <strong>Direito de arrependimento (CDC, Art. 49):</strong> para assinaturas contratadas
             online, você tem 7 dias corridos a partir da contratação para solicitar reembolso integral
             pelo e-mail{' '}
-            <a href="mailto:financeiro@syncromoney.com.br" className="text-blue-600 hover:underline">
-              financeiro@syncromoney.com.br
+            <a href="mailto:glaucio.sellect@gmail.com" className="text-blue-600 hover:underline">
+              glaucio.sellect@gmail.com
             </a>
             .
           </li>
@@ -219,8 +219,8 @@ export default function TermosPage() {
       <Section title="13. Contato">
         <p>
           Dúvidas sobre estes termos:{' '}
-          <a href="mailto:suporte@syncromoney.com.br" className="text-blue-600 hover:underline">
-            suporte@syncromoney.com.br
+          <a href="mailto:glaucio.sellect@gmail.com" className="text-blue-600 hover:underline">
+            glaucio.sellect@gmail.com
           </a>
         </p>
       </Section>

@@ -20,8 +20,8 @@ export default function PrivacidadePage() {
         </p>
         <p className="mt-3">
           Para dúvidas sobre esta política ou sobre seus dados, entre em contato pelo e-mail{' '}
-          <a href="mailto:privacidade@syncromoney.com.br" className="text-blue-600 hover:underline">
-            privacidade@syncromoney.com.br
+          <a href="mailto:glaucio.sellect@gmail.com" className="text-blue-600 hover:underline">
+            glaucio.sellect@gmail.com
           </a>
           .
         </p>
@@ -109,8 +109,8 @@ export default function PrivacidadePage() {
       <Section title="8. Seus direitos (LGPD, Art. 18)">
         <p className="mb-3">
           Você pode exercer os seguintes direitos a qualquer momento pelo e-mail{' '}
-          <a href="mailto:privacidade@syncromoney.com.br" className="text-blue-600 hover:underline">
-            privacidade@syncromoney.com.br
+          <a href="mailto:glaucio.sellect@gmail.com" className="text-blue-600 hover:underline">
+            glaucio.sellect@gmail.com
           </a>
           :
         </p>

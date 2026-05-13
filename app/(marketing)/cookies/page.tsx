@@ -136,8 +136,8 @@ export default function CookiesPage() {
       <Section title="7. Contato">
         <p>
           Dúvidas sobre nossa política de cookies:{' '}
-          <a href="mailto:privacidade@syncromoney.com.br" className="text-blue-600 hover:underline">
-            privacidade@syncromoney.com.br
+          <a href="mailto:glaucio.sellect@gmail.com" className="text-blue-600 hover:underline">
+            glaucio.sellect@gmail.com
           </a>
         </p>
       </Section>
