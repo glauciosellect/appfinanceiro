@@ -2,56 +2,80 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cadastrarEmpresa } from '@/lib/fiscal/focusnfe'
 
+const REGIME_MAP: Record<string, string> = {
+  simples: '1',
+  mei: '1',
+  lucro_presumido: '3',
+  lucro_real: '3',
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const body = await req.json() as Record<string, string | boolean>
-
-  const {
-    cnpj, razao_social, inscricao_estadual, inscricao_municipal,
-    regime_tributario, cep, logradouro, numero, complemento,
-    bairro, municipio, uf, telefone, email,
-    habilita_nfse, habilita_nfe,
-  } = body
-
-  if (!cnpj || !razao_social) {
-    return NextResponse.json({ error: 'CNPJ e Razão Social são obrigatórios' }, { status: 400 })
+  const { habilita_nfse, habilita_nfe } = await req.json() as {
+    habilita_nfse?: boolean
+    habilita_nfe?: boolean
   }
 
-  // Salva config no banco primeiro
+  // Lê dados do perfil da empresa
+  const { data: perfil } = await supabase
+    .from('perfil_empresa')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!perfil?.cnpj_cpf || !perfil?.razao_social) {
+    return NextResponse.json(
+      { error: 'Preencha o CNPJ e a Razão Social no Perfil antes de ativar o módulo fiscal.' },
+      { status: 400 }
+    )
+  }
+
+  const regimeFocus = REGIME_MAP[perfil.regime_tributario as string] ?? '1'
+
+  // Salva/atualiza config fiscal no banco
   await supabase.from('fiscal_config').upsert({
     user_id: user.id,
-    cnpj: String(cnpj).replace(/\D/g, ''),
-    razao_social, inscricao_estadual, inscricao_municipal,
-    regime_tributario: regime_tributario ?? '1',
-    cep, logradouro, numero, complemento, bairro, municipio, uf,
-    telefone, email,
+    cnpj: perfil.cnpj_cpf.replace(/\D/g, ''),
+    razao_social: perfil.razao_social,
+    inscricao_estadual: perfil.inscricao_estadual ?? '',
+    inscricao_municipal: perfil.inscricao_municipal ?? '',
+    regime_tributario: regimeFocus,
+    cep: perfil.cep ?? '',
+    logradouro: perfil.logradouro ?? '',
+    numero: perfil.numero ?? '',
+    complemento: perfil.complemento ?? '',
+    bairro: perfil.bairro ?? '',
+    municipio: perfil.cidade ?? '',
+    uf: perfil.uf ?? '',
+    telefone: perfil.telefone ?? '',
+    email: perfil.email_comercial ?? '',
     habilita_nfse: habilita_nfse !== false,
     habilita_nfe: habilita_nfe === true,
     focus_status: 'cadastrando',
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' })
 
-  // Cadastra empresa na Focus NFe
+  // Cadastra/atualiza empresa na Focus NFe
   let retorno
   try {
     retorno = await cadastrarEmpresa({
-      cnpj: String(cnpj),
-      razao_social: String(razao_social),
-      inscricao_estadual: inscricao_estadual ? String(inscricao_estadual) : undefined,
-      inscricao_municipal: inscricao_municipal ? String(inscricao_municipal) : undefined,
-      regime_tributario: regime_tributario ? String(regime_tributario) : '1',
-      cep: cep ? String(cep) : undefined,
-      logradouro: logradouro ? String(logradouro) : undefined,
-      numero: numero ? String(numero) : undefined,
-      complemento: complemento ? String(complemento) : undefined,
-      bairro: bairro ? String(bairro) : undefined,
-      municipio: municipio ? String(municipio) : undefined,
-      uf: uf ? String(uf) : undefined,
-      telefone: telefone ? String(telefone) : undefined,
-      email: email ? String(email) : undefined,
+      cnpj: perfil.cnpj_cpf,
+      razao_social: perfil.razao_social,
+      inscricao_estadual: perfil.inscricao_estadual,
+      inscricao_municipal: perfil.inscricao_municipal,
+      regime_tributario: regimeFocus,
+      cep: perfil.cep,
+      logradouro: perfil.logradouro,
+      numero: perfil.numero,
+      complemento: perfil.complemento,
+      bairro: perfil.bairro,
+      municipio: perfil.cidade,
+      uf: perfil.uf,
+      telefone: perfil.telefone,
+      email: perfil.email_comercial,
       habilita_nfse: habilita_nfse !== false,
       habilita_nfe: habilita_nfe === true,
     })
