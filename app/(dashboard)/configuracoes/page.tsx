@@ -15,7 +15,8 @@ import { useToast } from '@/components/ui/toast'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle, Upload, Building2, Save, X, Zap } from 'lucide-react'
+import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle, Upload, Building2, Save, X, Zap, Receipt } from 'lucide-react'
+import FiscalTab from '@/components/configuracoes/fiscal-tab'
 import type { Categoria, TipoCategoria } from '@/types'
 import { assinaturaAtiva, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
 import {
@@ -45,7 +46,7 @@ const EMOJIS_RAPIDOS = ['💰','💵','💳','🏦','📊','📈','📉','🛒',
 const CORES_RAPIDAS = ['#22c55e','#3b82f6','#f97316','#ef4444','#8b5cf6','#ec4899','#f59e0b','#6366f1','#14b8a6','#64748b']
 
 export default function ConfiguracoesPage() {
-  const [aba, setAba] = useState<'categorias' | 'perfil' | 'senha' | 'assinatura'>('categorias')
+  const [aba, setAba] = useState<'categorias' | 'perfil' | 'senha' | 'assinatura' | 'fiscal'>('categorias')
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogCat, setDialogCat] = useState(false)
@@ -234,6 +235,7 @@ export default function ConfiguracoesPage() {
           ['perfil', 'Perfil', Settings],
           ['senha', 'Alterar Senha', CardIcon],
           ['assinatura', 'Assinatura', Crown],
+          ['fiscal', 'Fiscal', Receipt],
         ] as const).map(([tab, label, Icon]) => (
           <button key={tab} onClick={() => setAba(tab)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${aba === tab ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
@@ -698,6 +700,9 @@ export default function ConfiguracoesPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Aba: Fiscal */}
+      {aba === 'fiscal' && <FiscalTab userId={userId} />}
 
       {/* Dialog: Categoria */}
       <Dialog open={dialogCat} onOpenChange={setDialogCat}>

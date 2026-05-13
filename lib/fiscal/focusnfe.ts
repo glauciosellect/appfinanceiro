@@ -111,3 +111,83 @@ export async function cancelarNFSe(ref: string): Promise<FocusNFSeRetorno> {
 export function getAmbiente() {
   return AMBIENTE
 }
+
+// ============================================================
+// GESTÃO DE EMPRESAS (cadastro de clientes na Focus NFe)
+// ============================================================
+
+export interface CadastrarEmpresaParams {
+  cnpj: string
+  razao_social: string
+  inscricao_estadual?: string
+  inscricao_municipal?: string
+  regime_tributario?: string
+  cep?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  municipio?: string
+  uf?: string
+  telefone?: string
+  email?: string
+  habilita_nfse?: boolean
+  habilita_nfe?: boolean
+}
+
+export interface FocusEmpresaRetorno {
+  status?: string
+  message?: string
+  cnpj?: string
+  nome?: string
+  erros?: Array<{ codigo: string; mensagem: string }>
+}
+
+export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<FocusEmpresaRetorno> {
+  const body = {
+    nome: params.razao_social,
+    cnpj: params.cnpj.replace(/\D/g, ''),
+    inscricao_estadual: params.inscricao_estadual ?? '',
+    inscricao_municipal: params.inscricao_municipal ?? '',
+    regime_tributario: params.regime_tributario ?? '1',
+    cep: params.cep?.replace(/\D/g, '') ?? '',
+    logradouro: params.logradouro ?? '',
+    numero: params.numero ?? '',
+    complemento: params.complemento ?? '',
+    bairro: params.bairro ?? '',
+    municipio: params.municipio ?? '',
+    uf: params.uf ?? '',
+    telefone: params.telefone?.replace(/\D/g, '') ?? '',
+    email: params.email ?? '',
+    habilita_nfse: params.habilita_nfse ?? true,
+    habilita_nfe: params.habilita_nfe ?? false,
+    habilita_nfce: false,
+  }
+
+  const cnpjLimpo = params.cnpj.replace(/\D/g, '')
+  const res = await fetch(`${BASE_URL}/empresas/${cnpjLimpo}`, {
+    method: 'PUT',
+    headers: authHeader(),
+    body: JSON.stringify(body),
+  })
+
+  return res.json() as Promise<FocusEmpresaRetorno>
+}
+
+export async function consultarEmpresa(cnpj: string): Promise<FocusEmpresaRetorno> {
+  const cnpjLimpo = cnpj.replace(/\D/g, '')
+  const res = await fetch(`${BASE_URL}/empresas/${cnpjLimpo}`, {
+    headers: authHeader(),
+  })
+  return res.json() as Promise<FocusEmpresaRetorno>
+}
+
+export async function enviarCertificado(cnpj: string, pfxBase64: string, senha: string): Promise<FocusEmpresaRetorno> {
+  const cnpjLimpo = cnpj.replace(/\D/g, '')
+  const res = await fetch(`${BASE_URL}/empresas/${cnpjLimpo}/certificado`, {
+    method: 'PUT',
+    headers: authHeader(),
+    body: JSON.stringify({ certificado: pfxBase64, senha }),
+  })
+  return res.json() as Promise<FocusEmpresaRetorno>
+}
