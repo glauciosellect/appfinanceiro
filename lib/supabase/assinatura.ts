@@ -40,3 +40,16 @@ export function diasRestantesTrial(assinatura: Assinatura | null): number {
   const diff = new Date(assinatura.trial_end).getTime() - Date.now()
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }
+
+// IDs dos planos Premium Fiscal (mensal e anual) — adicione novos price IDs aqui conforme criar no Stripe
+const PREMIUM_PRICE_IDS = [
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
+  process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_ANUAL,
+].filter(Boolean) as string[]
+
+export function isPremiumFiscal(assinatura: Assinatura | null): boolean {
+  if (!assinatura) return false
+  if (assinatura.status !== 'active') return false
+  if (!assinatura.stripe_price_id) return false
+  return PREMIUM_PRICE_IDS.includes(assinatura.stripe_price_id)
+}

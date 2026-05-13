@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
+import { usePlan } from '@/lib/hooks/use-plan'
 
 interface NavItem {
   href: string
@@ -105,6 +106,7 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const { isPremium } = usePlan()
 
   return (
     <>
@@ -138,7 +140,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-4">
-          {navSections.map((section) => (
+          {navSections.filter(s => !s.premium || isPremium).map((section) => (
             <div key={section.title}>
               <div className="px-3 mb-1 flex items-center gap-2">
                 <p className="text-[10px] font-semibold tracking-widest text-gray-400 dark:text-gray-600 uppercase">
