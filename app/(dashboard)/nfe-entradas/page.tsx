@@ -40,7 +40,7 @@ export default function NFeEntradasPage() {
         {[
           { label: 'NF-e de Entrada no Mês', value: String(entradas.length) },
           { label: 'Total de Compras',        value: formatCurrency(totalEntradas) },
-          { label: 'Fornecedores',            value: '2' },
+          { label: 'Fornecedores',            value: String(new Set(entradas.map(n => n.cnpjDestinatario)).size) },
         ].map(({ label, value }) => (
           <Card key={label}>
             <CardContent className="pt-6">
