@@ -8,7 +8,7 @@ import { LandingPageContent } from '@/components/marketing/landing-page'
 function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-0 h-16 relative">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-0 h-20 relative">
         {/* Logo absoluta — sai do fluxo, não afeta a altura h-16 do header */}
         <div className="absolute left-5 top-1/2 -translate-y-1/2 z-10">
           <MarketingLogo />

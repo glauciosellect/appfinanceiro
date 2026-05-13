@@ -5,7 +5,7 @@ import { MarketingLogo } from '@/components/shared/MarketingLogo'
 function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
         <MarketingLogo />
 
         {/* desktop nav */}
