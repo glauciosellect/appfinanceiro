@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade — SyncroMoney',
@@ -7,7 +8,9 @@ export const metadata: Metadata = {
 
 export default function PrivacidadePage() {
   return (
-    <main className="mx-auto max-w-3xl px-5 py-16">
+    <div className="min-h-screen bg-white">
+      <LegalHeader />
+      <main className="mx-auto max-w-3xl px-5 py-16">
       <h1 className="mb-2 text-3xl font-bold text-[#111827]">Política de Privacidade</h1>
       <p className="mb-10 text-sm text-[#6B7280]">Última atualização: 12 de maio de 2026</p>
 
@@ -152,6 +155,34 @@ export default function PrivacidadePage() {
         </p>
       </Section>
     </main>
+      <LegalFooter />
+    </div>
+  )
+}
+
+function LegalHeader() {
+  return (
+    <header className="border-b border-gray-200 bg-white">
+      <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-5">
+        <Link href="/" className="text-lg font-bold text-gray-900">SyncroMoney</Link>
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-900">← Voltar</Link>
+      </div>
+    </header>
+  )
+}
+
+function LegalFooter() {
+  return (
+    <footer className="border-t border-gray-200 bg-gray-50 mt-8">
+      <div className="mx-auto max-w-3xl px-5 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p className="text-xs text-gray-500">© {new Date().getFullYear()} SyncroMoney.</p>
+        <div className="flex gap-4 text-xs">
+          <Link href="/privacidade" className="text-gray-500 hover:text-gray-900">Privacidade</Link>
+          <Link href="/termos" className="text-gray-500 hover:text-gray-900">Termos</Link>
+          <Link href="/cookies" className="text-gray-500 hover:text-gray-900">Cookies</Link>
+        </div>
+      </div>
+    </footer>
   )
 }
 
