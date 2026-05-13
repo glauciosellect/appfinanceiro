@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   Zap,
   Truck,
+  GraduationCap,
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
@@ -82,6 +83,7 @@ const navSections: NavSection[] = [
       { href: '/fiscal-produtos',  label: 'Produtos',          icon: ShoppingCart },
       { href: '/fiscal-servicos',  label: 'Serviços',          icon: Wrench    },
       { href: '/nfe-entradas',     label: 'NF-e de Entrada',   icon: TrendingUp, color: 'green' },
+      { href: '/tutorial-fiscal',  label: 'Tutorial Fiscal',   icon: GraduationCap },
     ],
     premium: true,
   },
