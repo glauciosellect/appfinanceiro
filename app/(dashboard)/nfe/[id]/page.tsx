@@ -12,13 +12,20 @@ import { getNFe, type NFeRecord } from '@/lib/supabase/nfe'
 
 interface ItemJSONB {
   descricao?: string
+  // campos salvos pelo emitir-nfe (nomes Focus NFe)
+  codigo_ncm?: string
+  unidade_comercial?: string
+  quantidade_comercial?: number
+  valor_unitario_comercial?: number
+  valor_bruto?: number
+  // campos legados (formulário antigo)
   ncm?: string
-  cfop?: string
   unidade?: string
   quantidade?: number
   valor_unitario?: number
   desconto?: number
   total?: number
+  cfop?: string
 }
 
 function Cell({ label, value, mono, className = '' }: { label: string; value?: string | null; mono?: boolean; className?: string }) {
@@ -293,19 +300,24 @@ export default function NFeVisualizarPage() {
                   <td colSpan={12} className="px-2 py-3 text-center text-gray-400">Nenhum item</td>
                 </tr>
               ) : itens.map((item, i) => {
-                const total   = item.total ?? (item.quantidade ?? 0) * (item.valor_unitario ?? 0) * (1 - (item.desconto ?? 0) / 100)
-                const bcIcms  = total
-                const vlrIcms = total * 0.12
+                const qtd      = item.quantidade_comercial ?? item.quantidade ?? 0
+                const vlrUnit  = item.valor_unitario_comercial ?? item.valor_unitario ?? 0
+                const desc     = item.desconto ?? 0
+                const total    = item.valor_bruto ?? item.total ?? qtd * vlrUnit * (1 - desc / 100)
+                const ncm      = item.codigo_ncm ?? item.ncm ?? '—'
+                const unidade  = item.unidade_comercial ?? item.unidade ?? '—'
+                const bcIcms   = total
+                const vlrIcms  = total * 0.12
                 return (
                   <tr key={i} className={i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/40'}>
                     <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-gray-500">{i + 1}</td>
                     <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-medium text-gray-800 dark:text-gray-200">{item.descricao || '—'}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-mono text-gray-600 dark:text-gray-400">{item.ncm || '—'}</td>
+                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-mono text-gray-600 dark:text-gray-400">{ncm}</td>
                     <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-mono text-gray-600 dark:text-gray-400">{item.cfop || '—'}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-gray-600 dark:text-gray-400">{item.unidade || '—'}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-gray-700 dark:text-gray-300">{(item.quantidade ?? 0).toFixed(2)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-700 dark:text-gray-300">{formatCurrency(item.valor_unitario ?? 0)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">{item.desconto ?? 0}%</td>
+                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-gray-600 dark:text-gray-400">{unidade}</td>
+                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-gray-700 dark:text-gray-300">{qtd.toFixed(2)}</td>
+                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-700 dark:text-gray-300">{formatCurrency(vlrUnit)}</td>
+                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">{desc}%</td>
                     <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(total)}</td>
                     <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">{formatCurrency(bcIcms)}</td>
                     <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">{formatCurrency(vlrIcms)}</td>
