@@ -106,7 +106,11 @@ export async function POST(req: NextRequest) {
   })
 
   const ref = `nfe-${user.id.slice(0, 8)}-${Date.now()}`
-  const dataEmissao = new Date().toISOString().slice(0, 19) // YYYY-MM-DDTHH:MM:SS
+  // SEFAZ exige data_emissao em horário local brasileiro (UTC-3) com offset;
+  // sem isso, rejeição 703 "Data-Hora de Emissao posterior ao horario de recebimento".
+  const agoraUtc = new Date()
+  const agoraBR = new Date(agoraUtc.getTime() - 3 * 60 * 60 * 1000)
+  const dataEmissao = agoraBR.toISOString().slice(0, 19) + '-03:00'
 
   // Busca numeração configurada
   const { data: fiscalCfg } = await supabase
