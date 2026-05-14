@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { consultarEmpresa, getAmbiente, isTokenConfigured } from '@/lib/fiscal/focusnfe'
 
 export async function GET() {
   const supabase = await createClient()
@@ -17,24 +16,41 @@ export async function GET() {
     return NextResponse.json({ error: 'CNPJ não configurado' }, { status: 400 })
   }
 
-  const ambiente = getAmbiente()
-  const tokenConfigurado = isTokenConfigured()
+  const ambiente = process.env.FOCUSNFE_AMBIENTE ?? 'homologacao'
+  const tokenProducao = process.env.FOCUSNFE_TOKEN_PRODUCAO ?? ''
+  const tokenHomologacao = process.env.FOCUSNFE_TOKEN_HOMOLOGACAO ?? ''
+  const tokenAtivo = tokenProducao || tokenHomologacao
 
-  if (!tokenConfigurado) {
+  if (!tokenAtivo) {
     return NextResponse.json({
       ambiente,
       token_configurado: false,
       fiscal_config_supabase: config,
-    })
+    }, { headers: { 'content-type': 'application/json; charset=utf-8' } })
   }
 
-  // Consulta o estado atual da empresa na Focus NFe
-  const empresaFocus = await consultarEmpresa(config.cnpj)
+  const cnpjLimpo = config.cnpj.replace(/\D/g, '')
+  const url = `https://api.focusnfe.com.br/v2/empresas/${cnpjLimpo}`
+  const encoded = Buffer.from(`${tokenAtivo}:`).toString('base64')
 
-  return NextResponse.json({
+  const res = await fetch(url, {
+    headers: { Authorization: `Basic ${encoded}`, 'Content-Type': 'application/json' },
+  })
+  const status = res.status
+  const rawText = await res.text()
+  let parsed: unknown = null
+  try { parsed = JSON.parse(rawText) } catch { /* mantém parsed = null */ }
+
+  const body = {
     ambiente,
-    token_configurado: true,
+    tem_token_producao: !!tokenProducao,
+    tem_token_homologacao: !!tokenHomologacao,
     fiscal_config_supabase: config,
-    empresa_na_focus_nfe: empresaFocus,
+    focus_nfe_request: { url, cnpj_limpo: cnpjLimpo },
+    focus_nfe_response: { status, parsed, raw_text: rawText },
+  }
+
+  return new NextResponse(JSON.stringify(body, null, 2), {
+    headers: { 'content-type': 'application/json; charset=utf-8' },
   })
 }
