@@ -1,20 +1,39 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { produtosFiscais } from '@/lib/fiscal/mock-data'
 import { createClient } from '@/lib/supabase/client'
 import { getTransportadoras } from '@/lib/supabase/transportadoras'
-import type { ProdutoFiscal } from '@/lib/fiscal/types'
 import type { Transportadora } from '@/types'
 
+interface ProdutoRow {
+  id: string
+  codigo: string
+  descricao: string
+  ncm: string
+  cfop: string
+  unidade: string
+  preco_unitario: number
+  preco_venda: number
+  estoque: number
+  estoque_minimo: number
+}
+
+interface ClienteRow {
+  id: string
+  nome: string
+  cpf_cnpj: string | null
+  email: string | null
+  telefone: string | null
+}
+
 interface ItemForm {
-  produto: ProdutoFiscal | null
+  produto: ProdutoRow | null
   quantidade: number
   valorUnitario: number
   desconto: number
@@ -29,16 +48,33 @@ const MODALIDADES_FRETE = [
   { value: '9', label: '9 — Sem Ocorrência de Transporte' },
 ]
 
+const ESTADOS_BR = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
+
 export default function NovaNFePage() {
+  const supabase = createClient()
+
   const [step, setStep] = useState<'form' | 'success'>('form')
-  const [destinatario, setDestinatario] = useState('')
-  const [cnpj, setCnpj] = useState('')
   const [natureza, setNatureza] = useState('Venda de Mercadoria')
   const [itens, setItens] = useState<ItemForm[]>([
     { produto: null, quantidade: 1, valorUnitario: 0, desconto: 0 },
   ])
+
+  // Destinatário
+  const [destinatario, setDestinatario] = useState('')
+  const [cnpj, setCnpj] = useState('')
+  const [email, setEmail] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [clientes, setClientes] = useState<ClienteRow[]>([])
+  const [showDropCnpj, setShowDropCnpj] = useState(false)
+  const [showDropRazao, setShowDropRazao] = useState(false)
+  const refCnpj = useRef<HTMLDivElement>(null)
+  const refRazao = useRef<HTMLDivElement>(null)
+
+  // Produtos
+  const [produtos, setProdutos] = useState<ProdutoRow[]>([])
   const [buscaIdx, setBuscaIdx] = useState<number | null>(null)
   const [termoBusca, setTermoBusca] = useState('')
+  const refProdutos = useRef<HTMLDivElement[]>([])
 
   // Transportador
   const [modalidadeFrete, setModalidadeFrete] = useState('9')
@@ -56,6 +92,29 @@ export default function NovaNFePage() {
     })
   }, [])
 
+  // Carrega produtos do Supabase
+  useEffect(() => {
+    if (!userId) return
+    supabase
+      .from('produtos_fiscais')
+      .select('id,codigo,descricao,ncm,cfop,unidade,preco_unitario,preco_venda,estoque,estoque_minimo')
+      .eq('user_id', userId)
+      .eq('ativo', true)
+      .order('descricao')
+      .then(({ data }) => setProdutos((data ?? []) as ProdutoRow[]))
+  }, [userId])
+
+  // Carrega clientes do Supabase
+  useEffect(() => {
+    if (!userId) return
+    supabase
+      .from('clientes')
+      .select('id,nome,cpf_cnpj,email,telefone')
+      .eq('user_id', userId)
+      .order('nome')
+      .then(({ data }) => setClientes((data ?? []) as ClienteRow[]))
+  }, [userId])
+
   const fetchTransportadoras = useCallback(async () => {
     if (!userId) return
     try {
@@ -65,6 +124,20 @@ export default function NovaNFePage() {
   }, [userId, buscaTransp])
 
   useEffect(() => { fetchTransportadoras() }, [fetchTransportadoras])
+
+  // Fecha dropdowns ao clicar fora
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (refCnpj.current && !refCnpj.current.contains(e.target as Node)) setShowDropCnpj(false)
+      if (refRazao.current && !refRazao.current.contains(e.target as Node)) setShowDropRazao(false)
+      if (buscaIdx !== null) {
+        const ref = refProdutos.current[buscaIdx]
+        if (ref && !ref.contains(e.target as Node)) setBuscaIdx(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [buscaIdx])
 
   const total = itens.reduce((s, i) => {
     const sub = i.quantidade * i.valorUnitario
@@ -82,10 +155,20 @@ export default function NovaNFePage() {
   function updateItem(idx: number, field: keyof ItemForm, value: unknown) {
     setItens(itens.map((it, i) => (i === idx ? { ...it, [field]: value } : it)))
   }
-  function selecionarProduto(idx: number, produto: ProdutoFiscal) {
-    setItens(itens.map((it, i) => i === idx ? { ...it, produto, valorUnitario: produto.precoUnitario } : it))
+  function selecionarProduto(idx: number, produto: ProdutoRow) {
+    setItens(itens.map((it, i) =>
+      i === idx ? { ...it, produto, valorUnitario: produto.preco_venda || produto.preco_unitario } : it
+    ))
     setBuscaIdx(null)
     setTermoBusca('')
+  }
+  function selecionarCliente(c: ClienteRow) {
+    setDestinatario(c.nome)
+    setCnpj(c.cpf_cnpj ?? '')
+    setEmail(c.email ?? '')
+    setTelefone(c.telefone ?? '')
+    setShowDropCnpj(false)
+    setShowDropRazao(false)
   }
   function selecionarTransportadora(t: Transportadora) {
     setTransportadoraSelecionada(t)
@@ -93,11 +176,15 @@ export default function NovaNFePage() {
     setShowDropdownTransp(false)
   }
 
-  const produtosFiltrados = produtosFiscais.filter(
-    (p) => p.descricao.toLowerCase().includes(termoBusca.toLowerCase()) || p.codigo.includes(termoBusca)
+  const clientesPorCnpj = clientes.filter(
+    (c) => cnpj.length >= 2 && (c.cpf_cnpj ?? '').replace(/\D/g, '').startsWith(cnpj.replace(/\D/g, ''))
   )
-
-  const ESTADOS_BR = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
+  const clientesPorNome = clientes.filter(
+    (c) => destinatario.length >= 2 && c.nome.toLowerCase().startsWith(destinatario.toLowerCase())
+  )
+  const produtosFiltrados = produtos.filter(
+    (p) => !termoBusca || p.descricao.toLowerCase().includes(termoBusca.toLowerCase()) || p.codigo.includes(termoBusca)
+  )
 
   if (step === 'success') {
     return (
@@ -162,21 +249,60 @@ export default function NovaNFePage() {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Step n={2} />Destinatário</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+
+          {/* CNPJ com autocomplete */}
+          <div className="relative" ref={refCnpj}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ / CPF</label>
-            <Input placeholder="00.000.000/0001-00" value={cnpj} onChange={(e) => setCnpj(e.target.value)} />
+            <Input
+              placeholder="00.000.000/0001-00"
+              value={cnpj}
+              onChange={(e) => { setCnpj(e.target.value); setShowDropCnpj(true) }}
+              onFocus={() => setShowDropCnpj(true)}
+              autoComplete="off"
+            />
+            {showDropCnpj && clientesPorCnpj.length > 0 && (
+              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                {clientesPorCnpj.map((c) => (
+                  <button key={c.id} onClick={() => selecionarCliente(c)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{c.nome}</span>
+                    <span className="text-xs text-gray-400 ml-3 font-mono">{c.cpf_cnpj}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <div>
+
+          {/* Razão Social com autocomplete */}
+          <div className="relative" ref={refRazao}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social</label>
-            <Input placeholder="Nome do destinatário" value={destinatario} onChange={(e) => setDestinatario(e.target.value)} />
+            <Input
+              placeholder="Nome do destinatário"
+              value={destinatario}
+              onChange={(e) => { setDestinatario(e.target.value); setShowDropRazao(true) }}
+              onFocus={() => setShowDropRazao(true)}
+              autoComplete="off"
+            />
+            {showDropRazao && clientesPorNome.length > 0 && (
+              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+                {clientesPorNome.map((c) => (
+                  <button key={c.id} onClick={() => selecionarCliente(c)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{c.nome}</span>
+                    {c.cpf_cnpj && <span className="text-xs text-gray-400 ml-3 font-mono">{c.cpf_cnpj}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-mail</label>
-            <Input type="email" placeholder="email@empresa.com.br" />
+            <Input type="email" placeholder="email@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
-            <Input placeholder="(00) 00000-0000" />
+            <Input placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -195,31 +321,45 @@ export default function NovaNFePage() {
                   </button>
                 )}
               </div>
-              <div className="relative">
+
+              {/* Busca produto com autocomplete */}
+              <div className="relative" ref={(el) => { if (el) refProdutos.current[idx] = el }}>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Produto</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input className="pl-9" placeholder="Buscar produto por nome ou código..."
+                  <Input
+                    className="pl-9"
+                    placeholder="Buscar produto por nome ou código..."
                     value={buscaIdx === idx ? termoBusca : item.produto?.descricao || ''}
                     onFocus={() => { setBuscaIdx(idx); setTermoBusca(item.produto?.descricao || '') }}
                     onChange={(e) => { setTermoBusca(e.target.value); setBuscaIdx(idx) }}
+                    autoComplete="off"
                   />
                 </div>
                 {buscaIdx === idx && (
-                  <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
-                    {produtosFiltrados.map((p) => (
+                  <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                    {produtosFiltrados.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-gray-400">
+                        Nenhum produto encontrado.{' '}
+                        <Link href="/fiscal-produtos" className="text-blue-500 hover:underline">Cadastrar</Link>
+                      </div>
+                    ) : produtosFiltrados.map((p) => (
                       <button key={p.id} onClick={() => selecionarProduto(idx, p)}
                         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
                         <div>
                           <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.descricao}</p>
                           <p className="text-xs text-gray-400">Cód: {p.codigo} | NCM: {p.ncm} | Estoque: {p.estoque} {p.unidade}</p>
                         </div>
-                        <span className="text-sm font-semibold text-blue-600 ml-4">{formatCurrency(p.precoUnitario)}</span>
+                        <div className="text-right ml-4 shrink-0">
+                          <p className="text-sm font-semibold text-green-600">{formatCurrency(p.preco_venda || p.preco_unitario)}</p>
+                          {p.preco_venda > 0 && <p className="text-xs text-gray-400">venda</p>}
+                        </div>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantidade</label>
@@ -258,7 +398,6 @@ export default function NovaNFePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Modalidade */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Modalidade do Frete</label>
             <select
@@ -266,10 +405,7 @@ export default function NovaNFePage() {
               value={modalidadeFrete}
               onChange={(e) => {
                 setModalidadeFrete(e.target.value)
-                if (e.target.value === '9') {
-                  setTransportadoraSelecionada(null)
-                  setBuscaTransp('')
-                }
+                if (e.target.value === '9') { setTransportadoraSelecionada(null); setBuscaTransp('') }
               }}
             >
               {MODALIDADES_FRETE.map((m) => (
@@ -278,10 +414,8 @@ export default function NovaNFePage() {
             </select>
           </div>
 
-          {/* Campos de transportadora — ocultos quando "Sem transporte" */}
           {!semTransporte && (
             <>
-              {/* Busca transportadora */}
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Transportadora
@@ -296,11 +430,7 @@ export default function NovaNFePage() {
                     placeholder="Buscar transportadora por nome ou CNPJ..."
                     value={buscaTransp}
                     onFocus={() => setShowDropdownTransp(true)}
-                    onChange={(e) => {
-                      setBuscaTransp(e.target.value)
-                      setTransportadoraSelecionada(null)
-                      setShowDropdownTransp(true)
-                    }}
+                    onChange={(e) => { setBuscaTransp(e.target.value); setTransportadoraSelecionada(null); setShowDropdownTransp(true) }}
                   />
                 </div>
                 {showDropdownTransp && (
@@ -316,9 +446,7 @@ export default function NovaNFePage() {
                           className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0">
                           <div>
                             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{t.razao_social}</p>
-                            <p className="text-xs text-gray-400">
-                              CNPJ: {t.cnpj || '—'} {t.rntrc ? `| RNTRC: ${t.rntrc}` : ''}
-                            </p>
+                            <p className="text-xs text-gray-400">CNPJ: {t.cnpj || '—'} {t.rntrc ? `| RNTRC: ${t.rntrc}` : ''}</p>
                           </div>
                           {t.cidade && <span className="text-xs text-gray-400 ml-4">{t.cidade}/{t.estado}</span>}
                         </button>
@@ -326,8 +454,6 @@ export default function NovaNFePage() {
                     )}
                   </div>
                 )}
-
-                {/* Card da transportadora selecionada */}
                 {transportadoraSelecionada && (
                   <div className="mt-2 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
                     <Truck className="h-5 w-5 text-blue-600 shrink-0" />
@@ -345,24 +471,16 @@ export default function NovaNFePage() {
                 )}
               </div>
 
-              {/* Veículo */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Placa do Veículo</label>
-                  <Input
-                    placeholder="AAA-0000 ou AAA0A00"
-                    value={placa}
-                    onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-                    maxLength={8}
-                  />
+                  <Input placeholder="AAA-0000 ou AAA0A00" value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} maxLength={8} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF da Placa</label>
                   <select
                     className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={ufPlaca}
-                    onChange={(e) => setUfPlaca(e.target.value)}
-                  >
+                    value={ufPlaca} onChange={(e) => setUfPlaca(e.target.value)}>
                     <option value="">Selecione</option>
                     {ESTADOS_BR.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
                   </select>
