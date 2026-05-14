@@ -479,7 +479,7 @@ export default function NovaEntradaPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chave de Acesso (44 dígitos)</label>
               <Input className="font-mono tracking-wider"
                 placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
-                maxLength={47} value={chave}
+                maxLength={54} value={chave}
                 onChange={(e) => setChave(e.target.value.replace(/\s/g, ''))} />
               <p className="text-xs text-gray-400 mt-1">{chave.length}/44 dígitos</p>
             </div>
