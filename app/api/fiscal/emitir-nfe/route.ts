@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { emitirNFe, consultarNFe, isTokenConfigured, type ItemNFe } from '@/lib/fiscal/focusnfe'
+import { emitirNFe, consultarNFe, isTokenConfigured, getAmbiente, type ItemNFe } from '@/lib/fiscal/focusnfe'
 
 const REGIME_MAP: Record<string, string> = {
   simples:          '1',
@@ -156,11 +156,17 @@ export async function POST(req: NextRequest) {
       ambiente: 'local',
     })
 
+    // Incrementa o próximo número para a nota seguinte
+    await supabase.from('fiscal_config').update({
+      numero_proximo_nfe: numero + 1,
+      updated_at: new Date().toISOString(),
+    }).eq('user_id', user.id)
+
     return NextResponse.json({
       ok: true,
       simulada: true,
       numero,
-      serie: '1',
+      serie,
       aviso: 'Token Focus NFe não configurado — nota registrada localmente.',
     })
   }
@@ -214,20 +220,21 @@ export async function POST(req: NextRequest) {
   const autorizado = resultado.status === 'autorizado'
   const valorTotal = itens.reduce((s, it) => s + it.valor_bruto, 0)
 
-  // Salva no Supabase
-  const { data: maxRow } = await supabase
-    .from('nfe_emitidas')
-    .select('numero')
-    .eq('user_id', user.id)
-    .order('numero', { ascending: false })
-    .limit(1)
-    .single()
-  const numeroLocal = maxRow ? (maxRow.numero as number) + 1 : 1
+  // Em produção, usa o número retornado pelo SEFAZ via Focus NFe.
+  // Em homologação, Focus NFe atribui sua própria sequência de teste (1, 2, 3...),
+  // então usamos o número configurado pelo usuário para manter a sequência correta.
+  const numeroConfigurado = fiscalCfg?.numero_proximo_nfe ?? 1
+  const serieConfigurada = fiscalCfg?.serie_nfe ?? '1'
+  const emProducao = getAmbiente() === 'producao'
+  const numeroFinal = emProducao && resultado.numero
+    ? Number(resultado.numero)
+    : numeroConfigurado
+  const serieFinal = resultado.serie ?? serieConfigurada
 
   await supabase.from('nfe_emitidas').insert({
     user_id: user.id,
-    numero: resultado.numero ? Number(resultado.numero) : numeroLocal,
-    serie: resultado.serie ?? '1',
+    numero: numeroFinal,
+    serie: serieFinal,
     chave_acesso: resultado.chave_nfe ?? null,
     natureza_operacao: body.natureza_operacao,
     data_emissao: dataEmissao.slice(0, 10),
@@ -252,11 +259,17 @@ export async function POST(req: NextRequest) {
     ambiente: process.env.FOCUSNFE_AMBIENTE ?? 'homologacao',
   })
 
+  // Incrementa o próximo número para a nota seguinte
+  await supabase.from('fiscal_config').update({
+    numero_proximo_nfe: numeroFinal + 1,
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', user.id)
+
   return NextResponse.json({
     ok: autorizado,
     status: resultado.status,
-    numero: resultado.numero,
-    serie: resultado.serie,
+    numero: String(numeroFinal),
+    serie: serieFinal,
     chave_nfe: resultado.chave_nfe,
     danfe_url: resultado.caminho_danfe,
     mensagem_sefaz: resultado.mensagem_sefaz,
