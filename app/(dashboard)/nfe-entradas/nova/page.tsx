@@ -2,14 +2,14 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Upload, QrCode, CheckCircle2, FileText, AlertCircle, CreditCard, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Upload, QrCode, CheckCircle2, FileText, AlertCircle, CreditCard, ChevronRight, PenLine, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
-type Modo = 'chave' | 'upload' | null
+type Modo = 'chave' | 'upload' | 'digitar' | null
 type Step = 'form' | 'review' | 'pagamento' | 'success'
 
 interface ParsedItem {
@@ -22,6 +22,10 @@ interface ParsedNFe {
   naturezaOperacao: string; valorTotal: number; itens: ParsedItem[]
 }
 interface SelectOption { id: string; nome: string; extra?: string }
+interface DigitarItem {
+  codigo: string; descricao: string; ncm: string; cfop: string
+  unidade: string; quantidade: number; valorUnitario: number
+}
 
 function getText(el: Element | Document, tag: string): string {
   return el.getElementsByTagName(tag)[0]?.textContent?.trim() ?? ''
@@ -72,6 +76,43 @@ export default function NovaEntradaPage() {
   const getMargemItem = (i: number) => margens[i] ?? margemGlobal
   const getPrecoVenda = (custo: number, margem: number) =>
     Math.round(custo * (1 + margem / 100) * 100) / 100
+
+  // Digitar nota manualmente
+  const [digitarNota, setDigitarNota] = useState({
+    numero: '', serie: '1', dataEmissao: '',
+    naturezaOperacao: 'Compra de mercadorias',
+    fornecedorNome: '', fornecedorCnpj: '',
+  })
+  const [digitarItens, setDigitarItens] = useState<DigitarItem[]>([
+    { codigo: '', descricao: '', ncm: '', cfop: '1102', unidade: 'UN', quantidade: 1, valorUnitario: 0 },
+  ])
+
+  function addDigitarItem() {
+    setDigitarItens((prev) => [...prev, { codigo: '', descricao: '', ncm: '', cfop: '1102', unidade: 'UN', quantidade: 1, valorUnitario: 0 }])
+  }
+  function removeDigitarItem(i: number) {
+    setDigitarItens((prev) => prev.filter((_, idx) => idx !== i))
+  }
+  function updateDigitarItem(i: number, field: keyof DigitarItem, value: string | number) {
+    setDigitarItens((prev) => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it))
+  }
+
+  function handleSalvarDigitada() {
+    if (!digitarNota.fornecedorNome || digitarItens.length === 0) return
+    const valorTotal = digitarItens.reduce((sum, it) => sum + it.quantidade * it.valorUnitario, 0)
+    const parsed: ParsedNFe = {
+      numero: digitarNota.numero,
+      serie: digitarNota.serie,
+      dataEmissao: digitarNota.dataEmissao,
+      naturezaOperacao: digitarNota.naturezaOperacao,
+      fornecedorNome: digitarNota.fornecedorNome,
+      fornecedorCnpj: digitarNota.fornecedorCnpj.replace(/\D/g, ''),
+      valorTotal,
+      itens: digitarItens.map((it) => ({ ...it, valorTotal: it.quantidade * it.valorUnitario })),
+    }
+    setNfeData(parsed)
+    setStep('review')
+  }
 
   // Contas a pagar
   const [lancaCP, setLancaCP] = useState(true)
@@ -453,10 +494,11 @@ export default function NovaEntradaPage() {
 
       <Card>
         <CardHeader><CardTitle className="text-base">Como você quer importar a nota?</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { id: 'chave' as Modo, icon: QrCode, title: 'Pela Chave de Acesso', desc: 'Digite a chave de 44 dígitos da NF-e do fornecedor' },
             { id: 'upload' as Modo, icon: Upload, title: 'Upload do XML', desc: 'Importe o arquivo XML da nota fiscal eletrônica' },
+            { id: 'digitar' as Modo, icon: PenLine, title: 'Digitar Nota', desc: 'Preencha os dados da nota fiscal manualmente' },
           ].map(({ id, icon: Icon, title, desc }) => (
             <button key={id as string} onClick={() => { setModo(id); setErro(null) }}
               className={cn('p-5 rounded-xl border-2 text-left transition-all', modo === id
@@ -526,6 +568,156 @@ export default function NovaEntradaPage() {
             <Button variant="outline" className="w-full" onClick={() => { setModo(null); setErro(null) }}>Voltar</Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Digitar Nota */}
+      {modo === 'digitar' && (
+        <div className="space-y-4">
+          {/* Dados da Nota */}
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Dados da Nota</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
+                  <Input placeholder="000001" value={digitarNota.numero}
+                    onChange={(e) => setDigitarNota((n) => ({ ...n, numero: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Série</label>
+                  <Input placeholder="1" value={digitarNota.serie}
+                    onChange={(e) => setDigitarNota((n) => ({ ...n, serie: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Emissão</label>
+                  <Input type="date" value={digitarNota.dataEmissao}
+                    onChange={(e) => setDigitarNota((n) => ({ ...n, dataEmissao: e.target.value }))} />
+                </div>
+                <div className="md:col-span-1 col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Natureza da Operação</label>
+                  <Input placeholder="Compra de mercadorias" value={digitarNota.naturezaOperacao}
+                    onChange={(e) => setDigitarNota((n) => ({ ...n, naturezaOperacao: e.target.value }))} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Fornecedor */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Fornecedor</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social *</label>
+                <Input placeholder="Nome do fornecedor" value={digitarNota.fornecedorNome}
+                  onChange={(e) => setDigitarNota((n) => ({ ...n, fornecedorNome: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ</label>
+                <Input placeholder="00.000.000/0000-00" value={digitarNota.fornecedorCnpj}
+                  onChange={(e) => setDigitarNota((n) => ({ ...n, fornecedorCnpj: e.target.value }))} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Itens */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Itens da Nota</CardTitle>
+                <Button size="sm" variant="outline" onClick={addDigitarItem}>
+                  <Plus className="h-4 w-4 mr-1" /> Adicionar Item
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                      {['Código', 'Descrição', 'NCM', 'CFOP', 'Un.', 'Qtd', 'Valor Unit. (R$)', 'Total', ''].map((h) => (
+                        <th key={h} className={cn('px-3 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
+                          ['Qtd', 'Valor Unit. (R$)', 'Total'].includes(h) ? 'text-right' : 'text-left')}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {digitarItens.map((item, i) => (
+                      <tr key={i} className="align-top">
+                        <td className="px-3 py-2">
+                          <Input className="w-24 h-8 text-sm font-mono" placeholder="0001"
+                            value={item.codigo} onChange={(e) => updateDigitarItem(i, 'codigo', e.target.value)} />
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input className="w-48 h-8 text-sm" placeholder="Descrição do produto"
+                            value={item.descricao} onChange={(e) => updateDigitarItem(i, 'descricao', e.target.value)} />
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input className="w-24 h-8 text-sm font-mono" placeholder="00000000"
+                            value={item.ncm} onChange={(e) => updateDigitarItem(i, 'ncm', e.target.value)} />
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input className="w-20 h-8 text-sm font-mono" placeholder="1102"
+                            value={item.cfop} onChange={(e) => updateDigitarItem(i, 'cfop', e.target.value)} />
+                        </td>
+                        <td className="px-3 py-2">
+                          <select className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            value={item.unidade} onChange={(e) => updateDigitarItem(i, 'unidade', e.target.value)}>
+                            {['UN','CX','KG','LT','MT','PC','PAR'].map((u) => <option key={u}>{u}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Input type="number" min="0.001" step="0.001" className="w-20 h-8 text-sm text-right"
+                            value={item.quantidade} onChange={(e) => updateDigitarItem(i, 'quantidade', parseFloat(e.target.value) || 0)} />
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Input type="number" min="0" step="0.01" className="w-28 h-8 text-sm text-right"
+                            value={item.valorUnitario || ''} placeholder="0,00"
+                            onChange={(e) => updateDigitarItem(i, 'valorUnitario', parseFloat(e.target.value) || 0)} />
+                        </td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(item.quantidade * item.valorUnitario)}</span>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {digitarItens.length > 1 && (
+                            <button onClick={() => removeDigitarItem(i)}
+                              className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30">
+                      <td colSpan={7} className="px-3 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300 text-right">Valor Total da Nota</td>
+                      <td className="px-3 py-3 text-right">
+                        <span className="font-bold text-gray-900 dark:text-white text-base">
+                          {formatCurrency(digitarItens.reduce((sum, it) => sum + it.quantidade * it.valorUnitario, 0))}
+                        </span>
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {erro && (
+            <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />{erro}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => { setModo(null); setErro(null) }}>Voltar</Button>
+            <Button className="flex-1" onClick={handleSalvarDigitada}
+              disabled={!digitarNota.fornecedorNome || digitarItens.every((it) => !it.descricao)}>
+              <ChevronRight className="h-4 w-4 mr-1" /> Revisar Nota
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Upload XML */}
