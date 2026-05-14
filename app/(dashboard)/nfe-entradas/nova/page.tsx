@@ -487,9 +487,41 @@ export default function NovaEntradaPage() {
               <p className="font-semibold mb-1">Como funciona?</p>
               <p>O sistema consulta a SEFAZ com essa chave, importa todos os dados da nota e atualiza seu estoque automaticamente.</p>
             </div>
+            {erro && (
+              <div className="space-y-1">
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{erro}
+                </div>
+                <p className="text-xs text-gray-400 px-1">Dica: baixe o XML da nota no portal do fornecedor e use &quot;Upload do XML&quot;.</p>
+              </div>
+            )}
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setModo(null)}>Voltar</Button>
-              <Button className="flex-1" disabled={chave.length < 44}>Consultar e Importar</Button>
+              <Button variant="outline" className="flex-1" onClick={() => { setModo(null); setErro(null) }}>Voltar</Button>
+              <Button className="flex-1" disabled={chave.length < 44 || salvando}
+                onClick={async () => {
+                  setErro(null); setSalvando(true)
+                  try {
+                    const res = await fetch('/api/nfe-entradas/consulta-chave', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ chave }),
+                    })
+                    const body = await res.json() as { ok?: boolean; xml?: string; error?: string; dica?: string }
+                    if (!res.ok || !body.ok || !body.xml) {
+                      setErro(body.error ?? 'Não foi possível consultar a nota.'); return
+                    }
+                    const data = parseNFeXML(body.xml)
+                    if (data.itens.length === 0) throw new Error('Nenhum produto encontrado na nota.')
+                    setNfeData(data)
+                    setStep('review')
+                  } catch (err) {
+                    setErro(err instanceof Error ? err.message : 'Erro ao consultar a chave.')
+                  } finally {
+                    setSalvando(false)
+                  }
+                }}>
+                {salvando ? 'Consultando...' : 'Consultar e Importar'}
+              </Button>
             </div>
           </CardContent>
         </Card>
