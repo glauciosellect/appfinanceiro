@@ -306,6 +306,8 @@ export interface CadastrarEmpresaParams {
   email?: string
   habilita_nfse?: boolean
   habilita_nfe?: boolean
+  numero_proximo_nfe?: number
+  serie_nfe?: string
 }
 
 export interface FocusEmpresaRetorno {
@@ -335,6 +337,8 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
     habilita_nfse: params.habilita_nfse ?? true,
     habilita_nfe: params.habilita_nfe ?? false,
     habilita_nfce: false,
+    ...(params.numero_proximo_nfe !== undefined ? { numero_proximo_nfe: params.numero_proximo_nfe } : {}),
+    ...(params.serie_nfe !== undefined ? { serie_nfe: params.serie_nfe } : {}),
   }
 
   const cnpjLimpo = params.cnpj.replace(/\D/g, '')

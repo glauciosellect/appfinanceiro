@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
-import { CheckCircle2, AlertCircle, Loader2, FileKey, Zap, Receipt, ExternalLink, Upload, FileText } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, FileKey, Zap, Receipt, ExternalLink, Upload, FileText, Hash } from 'lucide-react'
 
 interface FiscalConfig {
   habilita_nfse?: boolean
@@ -17,6 +17,8 @@ interface FiscalConfig {
   certificado_status?: string
   ativo?: boolean
   cnpj?: string
+  numero_proximo_nfe?: number
+  serie_nfe?: string
 }
 
 export default function FiscalTab({ userId }: { userId: string }) {
@@ -25,6 +27,9 @@ export default function FiscalTab({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true)
   const [ativando, setAtivando] = useState(false)
   const [enviandoCert, setEnviandoCert] = useState(false)
+  const [numeroProximo, setNumeroProximo] = useState('')
+  const [serieNfe, setSerieNfe] = useState('1')
+  const [salvandoNum, setSalvandoNum] = useState(false)
   const [senhaCert, setSenhaCert] = useState('')
   const [arquivoCert, setArquivoCert] = useState<File | null>(null)
   const certInputRef = useRef<HTMLInputElement>(null)
@@ -33,10 +38,14 @@ export default function FiscalTab({ userId }: { userId: string }) {
   useEffect(() => {
     if (!userId) return
     Promise.all([
-      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj').eq('user_id', userId).single(),
+      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj,numero_proximo_nfe,serie_nfe').eq('user_id', userId).single(),
       createClient().from('perfil_empresa').select('cnpj_cpf, razao_social').eq('user_id', userId).single(),
     ]).then(([{ data: fiscal }, { data: perfil }]) => {
-      if (fiscal) setConfig(fiscal as FiscalConfig)
+      if (fiscal) {
+        setConfig(fiscal as FiscalConfig)
+        setNumeroProximo(String(fiscal.numero_proximo_nfe ?? 1))
+        setSerieNfe(fiscal.serie_nfe ?? '1')
+      }
       setPerfilOk(!!(perfil?.cnpj_cpf && perfil?.razao_social))
       setLoading(false)
     })
@@ -92,6 +101,30 @@ export default function FiscalTab({ userId }: { userId: string }) {
       toast('Erro de conexão', 'error')
     } finally {
       setEnviandoCert(false)
+    }
+  }
+
+  async function handleSalvarNumeracao() {
+    const num = parseInt(numeroProximo)
+    if (!num || num < 1) { toast('Informe um número válido (mínimo 1)', 'error'); return }
+    setSalvandoNum(true)
+    try {
+      const res = await fetch('/api/fiscal/numeracao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numero_proximo_nfe: num, serie_nfe: serieNfe }),
+      })
+      const json = await res.json() as { ok?: boolean; error?: string; aviso?: string }
+      if (json.ok) {
+        toast(json.aviso ?? 'Numeração sincronizada com a Focus NFe!', 'success')
+        setConfig(c => ({ ...c, numero_proximo_nfe: num, serie_nfe: serieNfe }))
+      } else {
+        toast(json.error ?? 'Erro ao salvar numeração', 'error')
+      }
+    } catch {
+      toast('Erro de conexão', 'error')
+    } finally {
+      setSalvandoNum(false)
     }
   }
 
@@ -215,6 +248,62 @@ export default function FiscalTab({ userId }: { userId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Numeração NF-e — só aparece se NF-e estiver habilitada e módulo ativo */}
+      {config.habilita_nfe && isAtivo && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Hash className="h-5 w-5 text-blue-600" />
+              Numeração da NF-e
+            </CardTitle>
+            <p className="text-sm text-gray-500">
+              Configure o próximo número da nota. Se veio de outro sistema, informe o número seguinte ao último emitido.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-[2fr_1fr] gap-3">
+              <div>
+                <Label>Próximo número da NF-e</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="Ex: 109"
+                  value={numeroProximo}
+                  onChange={e => setNumeroProximo(e.target.value)}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Último número do sistema anterior + 1
+                </p>
+              </div>
+              <div>
+                <Label>Série</Label>
+                <Input
+                  placeholder="Ex: 1"
+                  value={serieNfe}
+                  onChange={e => setSerieNfe(e.target.value)}
+                />
+              </div>
+            </div>
+            {config.numero_proximo_nfe && (
+              <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                <p className="text-xs text-blue-700">
+                  Configuração atual: Nº <strong>{config.numero_proximo_nfe}</strong> / Série <strong>{config.serie_nfe ?? '1'}</strong>
+                </p>
+              </div>
+            )}
+            <Button
+              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleSalvarNumeracao}
+              disabled={salvandoNum || !numeroProximo}
+            >
+              {salvandoNum ? <Loader2 className="h-4 w-4 animate-spin" /> : <Hash className="h-4 w-4" />}
+              Salvar e sincronizar com Focus NFe
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Certificado Digital — só aparece se NF-e estiver habilitada */}
       {config.habilita_nfe && (

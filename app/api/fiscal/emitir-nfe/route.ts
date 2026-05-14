@@ -108,6 +108,13 @@ export async function POST(req: NextRequest) {
   const ref = `nfe-${user.id.slice(0, 8)}-${Date.now()}`
   const dataEmissao = new Date().toISOString().slice(0, 19) // YYYY-MM-DDTHH:MM:SS
 
+  // Busca numeração configurada
+  const { data: fiscalCfg } = await supabase
+    .from('fiscal_config')
+    .select('numero_proximo_nfe, serie_nfe')
+    .eq('user_id', user.id)
+    .single()
+
   // Se token não configurado → salva localmente como "emitida simulada"
   if (!isTokenConfigured()) {
     const valorTotal = itens.reduce((s, it) => s + it.valor_bruto, 0)
@@ -119,12 +126,16 @@ export async function POST(req: NextRequest) {
       .order('numero', { ascending: false })
       .limit(1)
       .single()
-    const numero = maxRow ? (maxRow.numero as number) + 1 : 1
+
+    const numeroConfigurado = fiscalCfg?.numero_proximo_nfe ?? 1
+    const maxEmitido = maxRow ? (maxRow.numero as number) + 1 : null
+    const numero = maxEmitido !== null ? Math.max(maxEmitido, numeroConfigurado) : numeroConfigurado
+    const serie = fiscalCfg?.serie_nfe ?? '1'
 
     await supabase.from('nfe_emitidas').insert({
       user_id: user.id,
       numero,
-      serie: '1',
+      serie,
       natureza_operacao: body.natureza_operacao,
       data_emissao: dataEmissao.slice(0, 10),
       destinatario: body.destinatario.nome,
