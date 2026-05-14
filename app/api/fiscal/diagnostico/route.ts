@@ -12,42 +12,51 @@ export async function GET() {
     .eq('user_id', user.id)
     .single()
 
-  if (!config?.cnpj) {
-    return NextResponse.json({ error: 'CNPJ não configurado' }, { status: 400 })
-  }
-
   const ambiente = process.env.FOCUSNFE_AMBIENTE ?? 'homologacao'
   const tokenProducao = process.env.FOCUSNFE_TOKEN_PRODUCAO ?? ''
   const tokenHomologacao = process.env.FOCUSNFE_TOKEN_HOMOLOGACAO ?? ''
-  const tokenAtivo = tokenProducao || tokenHomologacao
+  const tokenAtivo = ambiente === 'producao' ? tokenProducao : tokenHomologacao
+  const baseUrl = ambiente === 'producao'
+    ? 'https://api.focusnfe.com.br/v2'
+    : 'https://homologacao.focusnfe.com.br/v2'
 
-  if (!tokenAtivo) {
-    return NextResponse.json({
-      ambiente,
-      token_configurado: false,
-      fiscal_config_supabase: config,
-    }, { headers: { 'content-type': 'application/json; charset=utf-8' } })
+  // Últimas 5 NF-e emitidas
+  const { data: ultimasNfe } = await supabase
+    .from('nfe_emitidas')
+    .select('id, numero, serie, status, focus_ref, ambiente, data_emissao, destinatario')
+    .eq('user_id', user.id)
+    .order('id', { ascending: false })
+    .limit(5)
+
+  const headersFocus = {
+    Authorization: `Basic ${Buffer.from(`${tokenAtivo}:`).toString('base64')}`,
+    'Content-Type': 'application/json',
   }
 
-  const cnpjLimpo = config.cnpj.replace(/\D/g, '')
-  const url = `https://api.focusnfe.com.br/v2/empresas/${cnpjLimpo}`
-  const encoded = Buffer.from(`${tokenAtivo}:`).toString('base64')
-
-  const res = await fetch(url, {
-    headers: { Authorization: `Basic ${encoded}`, 'Content-Type': 'application/json' },
-  })
-  const status = res.status
-  const rawText = await res.text()
-  let parsed: unknown = null
-  try { parsed = JSON.parse(rawText) } catch { /* mantém parsed = null */ }
+  // Consulta status real de cada NF-e na Focus NFe
+  const consultas = await Promise.all(
+    (ultimasNfe ?? []).map(async (nfe) => {
+      if (!nfe.focus_ref) return { ...nfe, focus_status: null }
+      const url = `${baseUrl}/nfe/${encodeURIComponent(nfe.focus_ref)}`
+      try {
+        const res = await fetch(url, { headers: headersFocus })
+        const text = await res.text()
+        let parsed: unknown = null
+        try { parsed = JSON.parse(text) } catch { /* mantém parsed = null */ }
+        return { ...nfe, focus_status: { http: res.status, parsed, raw: text } }
+      } catch (err) {
+        return { ...nfe, focus_status: { error: String(err) } }
+      }
+    })
+  )
 
   const body = {
     ambiente,
+    base_url: baseUrl,
     tem_token_producao: !!tokenProducao,
     tem_token_homologacao: !!tokenHomologacao,
     fiscal_config_supabase: config,
-    focus_nfe_request: { url, cnpj_limpo: cnpjLimpo },
-    focus_nfe_response: { status, parsed, raw_text: rawText },
+    ultimas_nfe_e_status_focus: consultas,
   }
 
   return new NextResponse(JSON.stringify(body, null, 2), {
