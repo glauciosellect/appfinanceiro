@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Printer, Download, FileText } from 'lucide-react'
+import { Plus, Search, Printer, Download, FileText, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,6 +35,13 @@ export default function NFePage() {
       }
     })
   }, [])
+
+  async function handleExcluir(id: string) {
+    if (!confirm('Excluir esta NF-e do sistema? Esta ação não pode ser desfeita.')) return
+    const supabase = createClient()
+    await supabase.from('nfe_emitidas').delete().eq('id', id)
+    setNotas(prev => prev.filter(n => n.id !== id))
+  }
 
   const filtradas = notas.filter(
     (n) =>
@@ -123,7 +130,7 @@ export default function NFePage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {filtradas.map((nota) => (
-                    <NFeLine key={nota.id} nota={nota} />
+                    <NFeLine key={nota.id} nota={nota} onExcluir={handleExcluir} />
                   ))}
                   {filtradas.length === 0 && (
                     <tr>
@@ -143,7 +150,7 @@ export default function NFePage() {
   )
 }
 
-function NFeLine({ nota }: { nota: NFeRecord }) {
+function NFeLine({ nota, onExcluir }: { nota: NFeRecord; onExcluir: (id: string) => void }) {
   const st = statusConfig[nota.status] ?? { label: nota.status, className: 'bg-gray-100 text-gray-700' }
   const numeroFmt = `${nota.serie}/${String(nota.numero).padStart(6, '0')}`
   return (
@@ -196,6 +203,13 @@ function NFeLine({ nota }: { nota: NFeRecord }) {
               <Download className="h-4 w-4" />
             </button>
           )}
+          <button
+            title="Excluir"
+            onClick={() => onExcluir(nota.id)}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       </td>
     </tr>
