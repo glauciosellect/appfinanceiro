@@ -66,6 +66,13 @@ export default function NovaEntradaPage() {
   const [salvando, setSalvando] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Margem de lucro
+  const [margemGlobal, setMargemGlobal] = useState(30)
+  const [margens, setMargens] = useState<Record<number, number>>({})
+  const getMargemItem = (i: number) => margens[i] ?? margemGlobal
+  const getPrecoVenda = (custo: number, margem: number) =>
+    Math.round(custo * (1 + margem / 100) * 100) / 100
+
   // Contas a pagar
   const [lancaCP, setLancaCP] = useState(true)
   const [vencimento, setVencimento] = useState('')
@@ -125,10 +132,14 @@ export default function NovaEntradaPage() {
     setSalvando(true); setErro(null)
     try {
       // 1. Importar produtos no estoque
+      const itensComMargem = nfeData.itens.map((item, i) => {
+        const margem = getMargemItem(i)
+        return { ...item, margem, precoVenda: getPrecoVenda(item.valorUnitario, margem) }
+      })
       const resEstoque = await fetch('/api/estoque/import-xml', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nfeData),
+        body: JSON.stringify({ ...nfeData, itens: itensComMargem }),
       })
       if (!resEstoque.ok) {
         const body = await resEstoque.json()
@@ -355,32 +366,62 @@ export default function NovaEntradaPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Produtos ({nfeData.itens.length})</CardTitle>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Serão adicionados ao seu estoque</p>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <CardTitle className="text-base">Produtos ({nfeData.itens.length})</CardTitle>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Serão adicionados ao seu estoque</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Margem padrão (%)</label>
+                <input
+                  type="number" min={0} max={999} step={1}
+                  value={margemGlobal}
+                  onChange={(e) => setMargemGlobal(Math.max(0, Number(e.target.value)))}
+                  className="w-20 h-9 rounded-md border border-input bg-background px-3 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                    {['Código', 'Descrição', 'NCM', 'Un.', 'Qtd', 'Vl. Unit.', 'Total'].map((h) => (
+                    {['Código', 'Descrição', 'Un.', 'Qtd', 'Custo Unit.', 'Margem %', 'Preço Venda'].map((h) => (
                       <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
-                        ['Qtd', 'Vl. Unit.', 'Total'].includes(h) ? 'text-right' : 'text-left')}>{h}</th>
+                        ['Qtd', 'Custo Unit.', 'Margem %', 'Preço Venda'].includes(h) ? 'text-right' : 'text-left')}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {nfeData.itens.map((item, i) => (
-                    <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-500">{item.codigo}</td>
-                      <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{item.descricao}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">{item.ncm}</td>
-                      <td className="px-4 py-3 text-gray-500">{item.unidade}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-200">{item.quantidade}</td>
-                      <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">{formatCurrency(item.valorUnitario)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(item.valorTotal)}</td>
-                    </tr>
-                  ))}
+                  {nfeData.itens.map((item, i) => {
+                    const margem = getMargemItem(i)
+                    const precoVenda = getPrecoVenda(item.valorUnitario, margem)
+                    return (
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs text-gray-500">{item.codigo}</td>
+                        <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">
+                          <p>{item.descricao}</p>
+                          <p className="text-xs text-gray-400">NCM: {item.ncm}</p>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">{item.unidade}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-gray-200">{item.quantidade}</td>
+                        <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400">{formatCurrency(item.valorUnitario)}</td>
+                        <td className="px-4 py-2 text-right">
+                          <input
+                            type="number" min={0} max={999} step={1}
+                            value={margem}
+                            onChange={(e) => setMargens((prev) => ({ ...prev, [i]: Math.max(0, Number(e.target.value)) }))}
+                            className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring"
+                          />
+                          <span className="ml-1 text-gray-400 text-xs">%</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="font-semibold text-green-700 dark:text-green-400">{formatCurrency(precoVenda)}</span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

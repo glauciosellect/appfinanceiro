@@ -10,6 +10,8 @@ interface ItemImport {
   quantidade: number
   valorUnitario: number
   valorTotal: number
+  margem: number        // % de margem de lucro definida na importação
+  precoVenda: number    // valorUnitario * (1 + margem/100)
 }
 
 interface ImportPayload {
@@ -30,11 +32,9 @@ export async function POST(req: NextRequest) {
 
   const body: ImportPayload = await req.json()
   const nfRef = `NF-e ${body.serie}/${body.numero} — ${body.fornecedorNome}`
-
   const erros: string[] = []
 
   for (const item of body.itens) {
-    // Busca produto existente pelo código
     const { data: existente } = await supabase
       .from('produtos_fiscais')
       .select('id, estoque')
@@ -45,11 +45,14 @@ export async function POST(req: NextRequest) {
     let produtoId: string
 
     if (existente) {
-      // Incrementa estoque
+      // Produto já existe: incrementa estoque e atualiza preços
       const { error } = await supabase
         .from('produtos_fiscais')
         .update({
           estoque: (existente.estoque as number) + item.quantidade,
+          preco_unitario: item.valorUnitario,
+          margem_lucro: item.margem,
+          preco_venda: item.precoVenda,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existente.id)
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
       if (error) { erros.push(`Erro ao atualizar ${item.codigo}: ${error.message}`); continue }
       produtoId = existente.id as string
     } else {
-      // Cria produto novo
+      // Produto novo: cria com todos os dados de preço
       const { data: novo, error } = await supabase
         .from('produtos_fiscais')
         .insert({
@@ -68,6 +71,8 @@ export async function POST(req: NextRequest) {
           cfop: item.cfop,
           unidade: item.unidade,
           preco_unitario: item.valorUnitario,
+          margem_lucro: item.margem,
+          preco_venda: item.precoVenda,
           estoque: item.quantidade,
           estoque_minimo: 0,
           ativo: true,
@@ -79,7 +84,6 @@ export async function POST(req: NextRequest) {
       produtoId = novo.id as string
     }
 
-    // Registra movimento
     await supabase.from('movimentos_estoque').insert({
       user_id: user.id,
       produto_id: produtoId,
@@ -93,9 +97,6 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  if (erros.length > 0) {
-    return NextResponse.json({ ok: false, erros }, { status: 207 })
-  }
-
+  if (erros.length > 0) return NextResponse.json({ ok: false, erros }, { status: 207 })
   return NextResponse.json({ ok: true })
 }

@@ -17,6 +17,8 @@ interface Produto {
   cfop: string
   unidade: string
   preco_unitario: number
+  margem_lucro: number
+  preco_venda: number
   estoque: number
   estoque_minimo: number
   ativo: boolean
@@ -56,7 +58,7 @@ export default function FiscalProdutosPage() {
   )
 
   function abrirNovo() {
-    setForm({ ativo: true, unidade: 'UN', cfop: '5102', estoque: 0, estoque_minimo: 0 })
+    setForm({ ativo: true, unidade: 'UN', cfop: '5102', estoque: 0, estoque_minimo: 0, margem_lucro: 30, preco_venda: 0 })
     setModo('novo')
     setOpen(true)
   }
@@ -67,6 +69,10 @@ export default function FiscalProdutosPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSalvando(false); return }
 
+    const margem = form.margem_lucro ?? 0
+    const custo = form.preco_unitario ?? 0
+    const precoVenda = Math.round(custo * (1 + margem / 100) * 100) / 100
+
     if (modo === 'novo') {
       const novoCodigo = String(produtos.length + 1).padStart(4, '0')
       await supabase.from('produtos_fiscais').insert({
@@ -76,7 +82,9 @@ export default function FiscalProdutosPage() {
         ncm: form.ncm || '',
         cfop: form.cfop || '5102',
         unidade: form.unidade || 'UN',
-        preco_unitario: form.preco_unitario || 0,
+        preco_unitario: custo,
+        margem_lucro: margem,
+        preco_venda: precoVenda,
         estoque: form.estoque || 0,
         estoque_minimo: form.estoque_minimo || 0,
         ativo: true,
@@ -87,7 +95,9 @@ export default function FiscalProdutosPage() {
         ncm: form.ncm || '',
         cfop: form.cfop || '5102',
         unidade: form.unidade || 'UN',
-        preco_unitario: form.preco_unitario || 0,
+        preco_unitario: custo,
+        margem_lucro: margem,
+        preco_venda: precoVenda,
         estoque_minimo: form.estoque_minimo || 0,
         updated_at: new Date().toISOString(),
       }).eq('id', form.id!)
@@ -128,9 +138,9 @@ export default function FiscalProdutosPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                  {['Código','Descrição','NCM','CFOP','Un.','Preço Unit.','Estoque','Est. Mín.','Ações'].map((h) => (
+                  {['Código','Descrição','NCM','CFOP','Un.','Custo Unit.','Margem','Preço Venda','Estoque','Est. Mín.','Ações'].map((h) => (
                     <th key={h} className={cn('px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
-                      ['Preço Unit.','Estoque','Est. Mín.','Ações'].includes(h) ? 'text-right' : 'text-left')}>{h}</th>
+                      ['Custo Unit.','Margem','Preço Venda','Estoque','Est. Mín.','Ações'].includes(h) ? 'text-right' : 'text-left')}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -142,7 +152,9 @@ export default function FiscalProdutosPage() {
                     <td className="px-6 py-4 font-mono text-gray-500 dark:text-gray-400">{p.ncm}</td>
                     <td className="px-6 py-4 font-mono text-gray-500 dark:text-gray-400">{p.cfop}</td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{p.unidade}</td>
-                    <td className="px-6 py-4 text-right font-semibold text-gray-800 dark:text-gray-200">{formatCurrency(p.preco_unitario)}</td>
+                    <td className="px-6 py-4 text-right text-gray-600 dark:text-gray-400">{formatCurrency(p.preco_unitario)}</td>
+                    <td className="px-6 py-4 text-right text-gray-500 dark:text-gray-400">{(p.margem_lucro ?? 0).toFixed(0)}%</td>
+                    <td className="px-6 py-4 text-right font-semibold text-green-700 dark:text-green-400">{formatCurrency(p.preco_venda ?? 0)}</td>
                     <td className="px-6 py-4 text-right">
                       <span className={cn('font-bold', p.estoque <= p.estoque_minimo ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-800 dark:text-gray-200')}>{p.estoque}</span>
                     </td>
@@ -156,7 +168,7 @@ export default function FiscalProdutosPage() {
                   </tr>
                 ))}
                 {!loading && filtrados.length === 0 && (
-                  <tr><td colSpan={9} className="px-6 py-12 text-center">
+                  <tr><td colSpan={11} className="px-6 py-12 text-center">
                     <Package className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
                     <p className="text-gray-400 dark:text-gray-500">Nenhum produto encontrado</p>
                     <button onClick={abrirNovo} className="mt-3 text-blue-600 font-medium text-sm hover:underline">Cadastrar primeiro produto</button>
@@ -197,8 +209,23 @@ export default function FiscalProdutosPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preço Unitário (R$)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Custo Unitário (R$)</label>
                 <Input type="number" step="0.01" min="0" value={form.preco_unitario || ''} onChange={(e) => setForm({ ...form, preco_unitario: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Margem de Lucro (%)</label>
+                <Input type="number" step="1" min="0" max="999"
+                  value={form.margem_lucro ?? 0}
+                  onChange={(e) => setForm({ ...form, margem_lucro: Math.max(0, Number(e.target.value)) })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preço de Venda (R$)</label>
+                <Input type="number" step="0.01" min="0" readOnly
+                  value={Math.round((form.preco_unitario ?? 0) * (1 + (form.margem_lucro ?? 0) / 100) * 100) / 100 || ''}
+                  className="bg-gray-50 dark:bg-gray-800 text-green-700 dark:text-green-400 font-semibold cursor-not-allowed" />
+                <p className="text-xs text-gray-400 mt-1">Calculado automaticamente</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
