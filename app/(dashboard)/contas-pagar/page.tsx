@@ -100,6 +100,7 @@ export default function ContasPagarPage() {
   const [parcelaSelecionada, setParcelaSelecionada] = useState<ParcelaPagar | null>(null)
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [userId, setUserId] = useState('')
+  const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'total'>('mes')
   const { toast: _toast } = useToast()
 
   const formNova = useForm<ContaPagarForm>({
@@ -223,6 +224,33 @@ export default function ContasPagarPage() {
     }
   }
 
+  // ── Filtro de período ────────────────────────────────────────────────────
+  const periodoLabels: Record<string, string> = { hoje: 'Hoje', semana: 'Semana', mes: 'Mês', total: 'Total' }
+  function calcRange() {
+    const d = (dt: Date) => dt.toISOString().split('T')[0]
+    const hoje = new Date()
+    if (periodo === 'hoje') { const s = d(hoje); return { ini: s, fim: s } }
+    if (periodo === 'semana') {
+      const ini = new Date(hoje); ini.setDate(hoje.getDate() - hoje.getDay())
+      const fim = new Date(ini); fim.setDate(ini.getDate() + 6)
+      return { ini: d(ini), fim: d(fim) }
+    }
+    if (periodo === 'mes') {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+      const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+      return { ini: d(ini), fim: d(fim) }
+    }
+    return null
+  }
+  const range = calcRange()
+  const parcelasPeriodo = range
+    ? parcelas.filter(p => p.data_vencimento >= range.ini && p.data_vencimento <= range.fim)
+    : parcelas
+  const kpiAberto   = parcelasPeriodo.filter(p => p.status === 'aberto' || p.status === 'atrasado').reduce((s, p) => s + p.valor, 0)
+  const kpiAtrasado = parcelasPeriodo.filter(p => p.status === 'atrasado').reduce((s, p) => s + p.valor, 0)
+  const kpiPago     = parcelasPeriodo.filter(p => p.status === 'pago').reduce((s, p) => s + p.valor, 0)
+  const kpiVence    = parcelasPeriodo.filter(p => p.status === 'aberto' || p.status === 'atrasado').length
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -236,12 +264,26 @@ export default function ContasPagarPage() {
         </Button>
       </div>
 
+      {/* Filtro de período */}
+      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        {(['hoje', 'semana', 'mes', 'total'] as const).map((p) => (
+          <button key={p} onClick={() => setPeriodo(p)}
+            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+              periodo === p
+                ? 'bg-white shadow text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}>
+            {periodoLabels[p]}
+          </button>
+        ))}
+      </div>
+
       {/* Cards KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-blue-50 rounded-xl"><DollarSign className="h-5 w-5 text-blue-600" /></div><div><p className="text-xs text-gray-500">Em Aberto</p><p className="font-bold text-gray-900">{formatCurrency(resumo.totalAberto)}</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-red-50 rounded-xl"><AlertCircle className="h-5 w-5 text-red-600" /></div><div><p className="text-xs text-gray-500">Atrasado</p><p className="font-bold text-red-600">{formatCurrency(resumo.totalAtrasado)}</p></div></div></CardContent></Card>
-        <Card className="cursor-pointer hover:ring-2 hover:ring-green-400 transition-all" onClick={() => setFiltroStatus(filtroStatus === 'pago' ? 'todos' : 'pago')}><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-green-50 rounded-xl"><CheckCircle className="h-5 w-5 text-green-600" /></div><div><p className="text-xs text-gray-500">Pago (mês){filtroStatus === 'pago' ? ' ✓' : ''}</p><p className="font-bold text-green-600">{formatCurrency(resumo.totalPagoMes)}</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-amber-50 rounded-xl"><Clock className="h-5 w-5 text-amber-600" /></div><div><p className="text-xs text-gray-500">Vence Hoje</p><p className="font-bold text-amber-600">{resumo.qtdVenceHoje} parcelas</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-blue-50 rounded-xl"><DollarSign className="h-5 w-5 text-blue-600" /></div><div><p className="text-xs text-gray-500">Em Aberto</p><p className="font-bold text-gray-900">{formatCurrency(kpiAberto)}</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-red-50 rounded-xl"><AlertCircle className="h-5 w-5 text-red-600" /></div><div><p className="text-xs text-gray-500">Atrasado</p><p className="font-bold text-red-600">{formatCurrency(kpiAtrasado)}</p></div></div></CardContent></Card>
+        <Card className="cursor-pointer hover:ring-2 hover:ring-green-400 transition-all" onClick={() => setFiltroStatus(filtroStatus === 'pago' ? 'todos' : 'pago')}><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-green-50 rounded-xl"><CheckCircle className="h-5 w-5 text-green-600" /></div><div><p className="text-xs text-gray-500">Pago ({periodoLabels[periodo].toLowerCase()}){filtroStatus === 'pago' ? ' ✓' : ''}</p><p className="font-bold text-green-600">{formatCurrency(kpiPago)}</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-5"><div className="flex items-center gap-3"><div className="p-2 bg-amber-50 rounded-xl"><Clock className="h-5 w-5 text-amber-600" /></div><div><p className="text-xs text-gray-500">A vencer ({periodoLabels[periodo].toLowerCase()})</p><p className="font-bold text-amber-600">{kpiVence} parcelas</p></div></div></CardContent></Card>
       </div>
 
       {/* Abas + Filtros */}
@@ -278,8 +320,8 @@ export default function ContasPagarPage() {
           {loading ? (
             <div className="p-6 space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}</div>
           ) : aba === 'parcelas' ? (
-            parcelas.length === 0 ? (
-              <div className="py-16 text-center text-gray-400"><TrendingDown className="h-12 w-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Nenhuma parcela encontrada</p></div>
+            parcelasPeriodo.length === 0 ? (
+              <div className="py-16 text-center text-gray-400"><TrendingDown className="h-12 w-12 mx-auto mb-3 opacity-30" /><p className="font-medium">Nenhuma parcela em {periodoLabels[periodo].toLowerCase()}</p></div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -293,7 +335,7 @@ export default function ContasPagarPage() {
                     <th className="text-right px-6 py-3">Ação</th>
                   </tr></thead>
                   <tbody className="divide-y divide-gray-50">
-                    {parcelas.map((p) => (
+                    {parcelasPeriodo.map((p) => (
                       <tr key={p.id} className="hover:bg-gray-50">
                         <td className="px-6 py-3 font-medium text-gray-900">{p.fornecedor_nome ?? '—'}</td>
                         <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.conta_descricao ?? '—'}</td>

@@ -102,6 +102,7 @@ export default function ContasReceberPage() {
   const [parcelaSelecionada, setParcelaSelecionada] = useState<ParcelaReceber | null>(null)
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [userId, setUserId] = useState('')
+  const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'total'>('mes')
   const { toast: _toast } = useToast()
 
   const formNova = useForm<ContaReceberForm>({
@@ -217,6 +218,33 @@ export default function ContasReceberPage() {
     formReceber.setValue('valor_recebido', p.valor)
   }
 
+  // ── Filtro de período ────────────────────────────────────────────────────
+  const periodoLabels: Record<string, string> = { hoje: 'Hoje', semana: 'Semana', mes: 'Mês', total: 'Total' }
+  function calcRange() {
+    const d = (dt: Date) => dt.toISOString().split('T')[0]
+    const hoje = new Date()
+    if (periodo === 'hoje') { const s = d(hoje); return { ini: s, fim: s } }
+    if (periodo === 'semana') {
+      const ini = new Date(hoje); ini.setDate(hoje.getDate() - hoje.getDay())
+      const fim = new Date(ini); fim.setDate(ini.getDate() + 6)
+      return { ini: d(ini), fim: d(fim) }
+    }
+    if (periodo === 'mes') {
+      const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+      const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+      return { ini: d(ini), fim: d(fim) }
+    }
+    return null
+  }
+  const range = calcRange()
+  const parcelasPeriodo = range
+    ? parcelas.filter(p => p.data_vencimento >= range.ini && p.data_vencimento <= range.fim)
+    : parcelas
+  const kpiAberto    = parcelasPeriodo.filter(p => p.status === 'aberto' || p.status === 'atrasado').reduce((s, p) => s + p.valor, 0)
+  const kpiAtrasado  = parcelasPeriodo.filter(p => p.status === 'atrasado').reduce((s, p) => s + p.valor, 0)
+  const kpiRecebido  = parcelasPeriodo.filter(p => p.status === 'recebido').reduce((s, p) => s + p.valor, 0)
+  const kpiVence     = parcelasPeriodo.filter(p => p.status === 'aberto' || p.status === 'atrasado').length
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Cabeçalho */}
@@ -231,6 +259,20 @@ export default function ContasReceberPage() {
         </Button>
       </div>
 
+      {/* Filtro de período */}
+      <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        {(['hoje', 'semana', 'mes', 'total'] as const).map((p) => (
+          <button key={p} onClick={() => setPeriodo(p)}
+            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+              periodo === p
+                ? 'bg-white shadow text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}>
+            {periodoLabels[p]}
+          </button>
+        ))}
+      </div>
+
       {/* Cards KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -239,7 +281,7 @@ export default function ContasReceberPage() {
               <div className="p-2 bg-blue-50 rounded-xl"><DollarSign className="h-5 w-5 text-blue-600" /></div>
               <div>
                 <p className="text-xs text-gray-500">Em Aberto</p>
-                <p className="font-bold text-gray-900">{formatCurrency(resumo.totalAberto)}</p>
+                <p className="font-bold text-gray-900">{formatCurrency(kpiAberto)}</p>
               </div>
             </div>
           </CardContent>
@@ -250,7 +292,7 @@ export default function ContasReceberPage() {
               <div className="p-2 bg-red-50 rounded-xl"><AlertCircle className="h-5 w-5 text-red-600" /></div>
               <div>
                 <p className="text-xs text-gray-500">Atrasado</p>
-                <p className="font-bold text-red-600">{formatCurrency(resumo.totalAtrasado)}</p>
+                <p className="font-bold text-red-600">{formatCurrency(kpiAtrasado)}</p>
               </div>
             </div>
           </CardContent>
@@ -260,8 +302,8 @@ export default function ContasReceberPage() {
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-50 rounded-xl"><CheckCircle className="h-5 w-5 text-green-600" /></div>
               <div>
-                <p className="text-xs text-gray-500">Recebido (mês){filtroStatus === 'recebido' ? ' ✓' : ''}</p>
-                <p className="font-bold text-green-600">{formatCurrency(resumo.totalRecebidoMes)}</p>
+                <p className="text-xs text-gray-500">Recebido ({periodoLabels[periodo].toLowerCase()}){filtroStatus === 'recebido' ? ' ✓' : ''}</p>
+                <p className="font-bold text-green-600">{formatCurrency(kpiRecebido)}</p>
               </div>
             </div>
           </CardContent>
@@ -271,8 +313,8 @@ export default function ContasReceberPage() {
             <div className="flex items-center gap-3">
               <div className="p-2 bg-amber-50 rounded-xl"><Clock className="h-5 w-5 text-amber-600" /></div>
               <div>
-                <p className="text-xs text-gray-500">Vence Hoje</p>
-                <p className="font-bold text-amber-600">{resumo.qtdVenceHoje} parcelas</p>
+                <p className="text-xs text-gray-500">A vencer ({periodoLabels[periodo].toLowerCase()})</p>
+                <p className="font-bold text-amber-600">{kpiVence} parcelas</p>
               </div>
             </div>
           </CardContent>
@@ -324,10 +366,10 @@ export default function ContasReceberPage() {
               {[1,2,3,4].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}
             </div>
           ) : aba === 'parcelas' ? (
-            parcelas.length === 0 ? (
+            parcelasPeriodo.length === 0 ? (
               <div className="py-16 text-center text-gray-400">
                 <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p className="font-medium">Nenhuma parcela encontrada</p>
+                <p className="font-medium">Nenhuma parcela em {periodoLabels[periodo].toLowerCase()}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -344,7 +386,7 @@ export default function ContasReceberPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {parcelas.map((p) => (
+                    {parcelasPeriodo.map((p) => (
                       <tr key={p.id} className="hover:bg-gray-50">
                         <td className="px-6 py-3 font-medium text-gray-900">{p.cliente_nome ?? '—'}</td>
                         <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.conta_descricao ?? '—'}</td>
