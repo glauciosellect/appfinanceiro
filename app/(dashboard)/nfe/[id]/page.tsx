@@ -214,15 +214,15 @@ export default function NFeVisualizarPage() {
           <Cell label="Data de Emissão" value={formatDate(nota.data_emissao)} />
         </div>
         <div className="grid grid-cols-[2fr_1fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Endereço" value="—" />
-          <Cell label="Bairro / Distrito" value="—" />
-          <Cell label="CEP" value="—" mono />
+          <Cell label="Endereço" value={[nota.logradouro_destinatario, nota.numero_destinatario].filter(Boolean).join(', ') || '—'} />
+          <Cell label="Bairro / Distrito" value={nota.bairro_destinatario} />
+          <Cell label="CEP" value={nota.cep_destinatario} mono />
           <Cell label="Data Entrada / Saída" value={formatDate(nota.data_emissao)} />
         </div>
         <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Município" value="—" />
+          <Cell label="Município" value={nota.municipio_destinatario} />
           <Cell label="Fone / Fax" value={nota.email_destinatario || '—'} />
-          <Cell label="UF" value="—" />
+          <Cell label="UF" value={nota.uf_destinatario} />
           <Cell label="Inscrição Estadual" value="—" mono />
           <Cell label="Hora Entrada / Saída" value="—" />
         </div>

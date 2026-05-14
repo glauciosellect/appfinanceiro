@@ -11,6 +11,12 @@ export interface NFeRecord {
   destinatario: string
   cnpj_destinatario: string | null
   email_destinatario: string | null
+  logradouro_destinatario: string | null
+  numero_destinatario: string | null
+  bairro_destinatario: string | null
+  municipio_destinatario: string | null
+  uf_destinatario: string | null
+  cep_destinatario: string | null
   valor_total: number
   status: string
   tipo: string
