@@ -110,7 +110,7 @@ export default function DashboardPage() {
       supabase.from('movimentacoes_conta').select('data_movimentacao,valor,tipo').eq('user_id', userId).gte('data_movimentacao', inicio6m).order('data_movimentacao'),
       supabase.from('parcelas_receber').select('valor,data_vencimento,conta_receber_id,contas_receber(descricao,clientes(nome))').eq('user_id', userId).in('status',['aberto','atrasado']).lte('data_vencimento', em7dias).order('data_vencimento').limit(5),
       supabase.from('parcelas_pagar').select('valor,data_vencimento,conta_pagar_id,contas_pagar(descricao,fornecedores(nome))').eq('user_id', userId).in('status',['aberto','atrasado']).lte('data_vencimento', em7dias).order('data_vencimento').limit(5),
-      supabase.from('contas_pagar').select('descricao,valor_total,categoria').eq('user_id', userId).in('status',['aberto','parcial','atrasado']),
+      supabase.from('contas_pagar').select('descricao,valor_total,categorias(nome)').eq('user_id', userId).neq('status','cancelado'),
     ])
 
     const precs = rParcelasReceber.data ?? []
@@ -148,11 +148,12 @@ export default function DashboardPage() {
       return { mes: MESES_LABEL[mesNum], entradas: v.entradas, saidas: v.saidas, saldo: saldoAcum }
     }))
 
-    // Categorias de despesas
+    // Categorias de despesas (usa join com tabela categorias via categoria_id)
     const catMap: Record<string, number> = {}
     for (const cp of rContasPagar.data ?? []) {
-      const cat = cp.categoria || 'Outros'
-      catMap[cat] = (catMap[cat] || 0) + cp.valor_total
+      const catObj = cp.categorias as unknown as { nome: string } | null
+      const cat = catObj?.nome || 'Outros'
+      catMap[cat] = (catMap[cat] || 0) + (cp.valor_total as number)
     }
     setCategoriasPagar(
       Object.entries(catMap).sort((a,b) => b[1]-a[1]).slice(0,6).map(([nome,valor]) => ({ nome, valor }))
