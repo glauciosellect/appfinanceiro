@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
-import { CheckCircle2, AlertCircle, Loader2, Upload, FileKey, Zap, Receipt, FileText } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, FileKey, Zap, Receipt, ExternalLink } from 'lucide-react'
 
 interface FiscalConfig {
   habilita_nfse?: boolean
@@ -24,10 +22,7 @@ export default function FiscalTab({ userId }: { userId: string }) {
   const [perfilOk, setPerfilOk] = useState(false)
   const [loading, setLoading] = useState(true)
   const [ativando, setAtivando] = useState(false)
-  const [enviandoCert, setEnviandoCert] = useState(false)
-  const [senhaCert, setSenhaCert] = useState('')
-  const [arquivoCert, setArquivoCert] = useState<File | null>(null)
-  const certInputRef = useRef<HTMLInputElement>(null)
+  const [confirmandoCert, setConfirmandoCert] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -68,30 +63,20 @@ export default function FiscalTab({ userId }: { userId: string }) {
     }
   }
 
-  async function handleEnviarCertificado() {
-    if (!arquivoCert || !senhaCert) {
-      toast('Selecione o arquivo .pfx e informe a senha', 'error')
-      return
-    }
-    setEnviandoCert(true)
+  async function handleConfirmarCertificado() {
+    setConfirmandoCert(true)
     try {
-      const form = new FormData()
-      form.append('certificado', arquivoCert)
-      form.append('senha', senhaCert)
-      const res = await fetch('/api/fiscal/certificado', { method: 'POST', body: form })
-      const json = await res.json() as { ok?: boolean; error?: string }
-      if (json.ok) {
-        toast('Certificado enviado com sucesso!', 'success')
-        setConfig(c => ({ ...c, certificado_status: 'enviado' }))
-        setArquivoCert(null)
-        setSenhaCert('')
-      } else {
-        toast(json.error ?? 'Erro ao enviar certificado', 'error')
-      }
+      const supabase = createClient()
+      await supabase.from('fiscal_config').update({
+        certificado_status: 'enviado',
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', userId)
+      toast('Certificado confirmado!', 'success')
+      setConfig(c => ({ ...c, certificado_status: 'enviado' }))
     } catch {
-      toast('Erro de conexão', 'error')
+      toast('Erro ao salvar confirmação', 'error')
     } finally {
-      setEnviandoCert(false)
+      setConfirmandoCert(false)
     }
   }
 
@@ -105,8 +90,6 @@ export default function FiscalTab({ userId }: { userId: string }) {
 
   const isAtivo = config.focus_status === 'cadastrado' || config.ativo
   const certEnviado = config.certificado_status === 'enviado'
-  const temCnpjConfig = !!(config.cnpj)
-  const podeSendCert = isAtivo || temCnpjConfig
 
   return (
     <div className="space-y-6">
@@ -213,70 +196,52 @@ export default function FiscalTab({ userId }: { userId: string }) {
               <FileKey className="h-5 w-5 text-purple-600" />
               Certificado Digital A1
             </CardTitle>
-            <p className="text-sm text-gray-500">Necessário para emitir NF-e. Formato .pfx ou .p12.</p>
+            <p className="text-sm text-gray-500">Necessário para emitir NF-e. O upload é feito diretamente no painel da Focus NFe.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {certEnviado ? (
               <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                 <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
                 <div>
-                  <p className="text-sm text-green-800 font-medium">Certificado ativo</p>
-                  <p className="text-xs text-green-700">Seu certificado está armazenado com segurança.</p>
+                  <p className="text-sm text-green-800 font-medium">Certificado confirmado</p>
+                  <p className="text-xs text-green-700">O certificado foi registrado no painel da Focus NFe.</p>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-                <p className="text-sm text-amber-800">Nenhum certificado enviado. Necessário para emitir NF-e.</p>
+                <p className="text-sm text-amber-800">Certificado ainda não confirmado. Siga os passos abaixo.</p>
               </div>
             )}
 
-            <div
-              className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors"
-              onClick={() => certInputRef.current?.click()}
-            >
-              {arquivoCert ? (
-                <div className="flex items-center justify-center gap-2">
-                  <FileText className="h-5 w-5 text-purple-600" />
-                  <p className="text-sm font-medium text-purple-700">{arquivoCert.name}</p>
-                </div>
-              ) : (
-                <>
-                  <Upload className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">Clique para selecionar o arquivo .pfx</p>
-                </>
-              )}
-              <input
-                ref={certInputRef}
-                type="file"
-                accept=".pfx,.p12"
-                className="hidden"
-                onChange={e => setArquivoCert(e.target.files?.[0] ?? null)}
-              />
-            </div>
-
-            <div>
-              <Label>Senha do Certificado</Label>
-              <Input
-                type="password"
-                placeholder="Senha do arquivo .pfx"
-                value={senhaCert}
-                onChange={e => setSenhaCert(e.target.value)}
-              />
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+              <p className="text-sm font-medium text-gray-700">Como enviar o certificado:</p>
+              <ol className="text-sm text-gray-600 space-y-2 list-none">
+                <li className="flex gap-2"><span className="font-semibold text-purple-600">1.</span> Acesse o painel da Focus NFe no link abaixo</li>
+                <li className="flex gap-2"><span className="font-semibold text-purple-600">2.</span> Vá em <strong>Empresas</strong> → selecione sua empresa</li>
+                <li className="flex gap-2"><span className="font-semibold text-purple-600">3.</span> Clique em <strong>Certificado Digital</strong> e faça o upload do arquivo .pfx</li>
+                <li className="flex gap-2"><span className="font-semibold text-purple-600">4.</span> Volte aqui e clique em <strong>Confirmar envio</strong></li>
+              </ol>
+              <a
+                href="https://app.focusnfe.com.br"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 justify-center w-full px-4 py-2 rounded-lg border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 transition-colors text-sm font-medium"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Abrir painel Focus NFe
+              </a>
             </div>
 
             <Button
               className="w-full gap-2"
               variant="outline"
-              onClick={handleEnviarCertificado}
-              disabled={enviandoCert || !arquivoCert || !senhaCert || !podeSendCert}
+              onClick={handleConfirmarCertificado}
+              disabled={confirmandoCert || certEnviado}
             >
-              {enviandoCert ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {certEnviado ? 'Substituir Certificado' : 'Enviar Certificado'}
+              {confirmandoCert ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              {certEnviado ? 'Certificado já confirmado' : 'Confirmar envio do certificado'}
             </Button>
-            {!podeSendCert && (
-              <p className="text-xs text-gray-400 text-center">Ative o módulo fiscal antes de enviar o certificado.</p>
-            )}
           </CardContent>
         </Card>
       )}
