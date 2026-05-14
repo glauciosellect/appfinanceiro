@@ -16,15 +16,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Certificado e senha são obrigatórios' }, { status: 400 })
   }
 
-  // Busca CNPJ da config do usuário
-  const { data: config } = await supabase
+  // Busca CNPJ: tenta fiscal_config, fallback para perfil_empresa
+  const { data: configRow } = await supabase
     .from('fiscal_config')
     .select('cnpj')
     .eq('user_id', user.id)
     .single()
 
-  if (!config?.cnpj) {
-    return NextResponse.json({ error: 'Ative o cadastro fiscal antes de enviar o certificado' }, { status: 400 })
+  let cnpjFinal = configRow?.cnpj?.replace(/\D/g, '') ?? ''
+
+  if (!cnpjFinal) {
+    const { data: perfil } = await supabase
+      .from('perfil_empresa')
+      .select('cnpj_cpf')
+      .eq('user_id', user.id)
+      .single()
+    if (!perfil?.cnpj_cpf) {
+      return NextResponse.json({ error: 'Ative o módulo fiscal antes de enviar o certificado' }, { status: 400 })
+    }
+    cnpjFinal = perfil.cnpj_cpf.replace(/\D/g, '')
+    await supabase.from('fiscal_config')
+      .update({ cnpj: cnpjFinal })
+      .eq('user_id', user.id)
   }
 
   // Converte .pfx para base64
@@ -33,19 +46,28 @@ export async function POST(req: NextRequest) {
 
   let retorno
   try {
-    retorno = await enviarCertificado(config.cnpj, pfxBase64, senha)
+    retorno = await enviarCertificado(cnpjFinal, pfxBase64, senha)
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
   const temErro = retorno.erros && retorno.erros.length > 0
+  const erroMsg = temErro
+    ? retorno.erros!.map((e: { codigo?: string; mensagem?: string }) => `[${e.codigo ?? '?'}] ${e.mensagem ?? ''}`).join('; ')
+    : (retorno.message && retorno.status !== 'ok' ? retorno.message : null)
 
-  if (!temErro) {
+  if (!temErro && !erroMsg) {
     await supabase.from('fiscal_config').update({
       certificado_status: 'enviado',
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id)
   }
 
-  return NextResponse.json({ ok: !temErro, retorno })
+  console.log('[certificado] retorno Focus NFe:', JSON.stringify(retorno))
+
+  return NextResponse.json({
+    ok: !temErro && !erroMsg,
+    error: erroMsg ?? undefined,
+    retorno,
+  })
 }
