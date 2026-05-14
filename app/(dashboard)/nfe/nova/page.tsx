@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { getTransportadoras } from '@/lib/supabase/transportadoras'
-import { salvarNFe, type NFeRecord } from '@/lib/supabase/nfe'
+import type { NFeRecord } from '@/lib/supabase/nfe'
 import type { Transportadora } from '@/types'
 
 interface ProdutoRow {
@@ -31,6 +31,12 @@ interface ClienteRow {
   cpf_cnpj: string | null
   email: string | null
   telefone: string | null
+  endereco?: string | null
+  numero?: string | null
+  bairro?: string | null
+  cidade?: string | null
+  estado?: string | null
+  cep?: string | null
 }
 
 interface ItemForm {
@@ -68,6 +74,17 @@ export default function NovaNFePage() {
   const [cnpj, setCnpj] = useState('')
   const [email, setEmail] = useState('')
   const [telefone, setTelefone] = useState('')
+  // Endereço destinatário
+  const [endLogradouro, setEndLogradouro] = useState('')
+  const [endNumero, setEndNumero] = useState('')
+  const [endBairro, setEndBairro] = useState('')
+  const [endMunicipio, setEndMunicipio] = useState('')
+  const [endUf, setEndUf] = useState('')
+  const [endCep, setEndCep] = useState('')
+  // Opções da nota
+  const [consumidorFinal, setConsumidorFinal] = useState(false)
+  const [presencaComprador, setPresencaComprador] = useState('9')
+
   const [clientes, setClientes] = useState<ClienteRow[]>([])
   const [showDropCnpj, setShowDropCnpj] = useState(false)
   const [showDropRazao, setShowDropRazao] = useState(false)
@@ -113,7 +130,7 @@ export default function NovaNFePage() {
     if (!userId) return
     supabase
       .from('clientes')
-      .select('id,nome,cpf_cnpj,email,telefone')
+      .select('id,nome,cpf_cnpj,email,telefone,endereco,numero,bairro,cidade,estado,cep')
       .eq('user_id', userId)
       .order('nome')
       .then(({ data }) => setClientes((data ?? []) as ClienteRow[]))
@@ -171,6 +188,15 @@ export default function NovaNFePage() {
     setCnpj(c.cpf_cnpj ?? '')
     setEmail(c.email ?? '')
     setTelefone(c.telefone ?? '')
+    setEndLogradouro(c.endereco ?? '')
+    setEndNumero(c.numero ?? '')
+    setEndBairro(c.bairro ?? '')
+    setEndMunicipio(c.cidade ?? '')
+    setEndUf(c.estado ?? '')
+    setEndCep(c.cep ?? '')
+    // Se CPF (11 dígitos sem máscara) = consumidor final
+    const digits = (c.cpf_cnpj ?? '').replace(/\D/g, '')
+    setConsumidorFinal(digits.length === 11)
     setShowDropCnpj(false)
     setShowDropRazao(false)
   }
@@ -192,34 +218,69 @@ export default function NovaNFePage() {
 
   async function handleTransmitir() {
     if (!userId) return
+    if (!destinatario) { setErroTransmissao('Informe o destinatário.'); return }
     setTransmitindo(true)
     setErroTransmissao('')
     try {
-      const hoje = new Date().toISOString().split('T')[0]
-      const record = await salvarNFe(userId, {
-        natureza_operacao: natureza,
-        data_emissao: hoje,
-        destinatario,
-        cnpj_destinatario: cnpj || undefined,
-        email_destinatario: email || undefined,
-        valor_total: total,
-        itens: itens.map((it) => ({
-          produto_id: it.produto?.id,
-          descricao: it.produto?.descricao,
-          ncm: it.produto?.ncm,
-          cfop: it.produto?.cfop,
-          unidade: it.produto?.unidade,
-          quantidade: it.quantidade,
-          valor_unitario: it.valorUnitario,
-          desconto: it.desconto,
-          total: it.quantidade * it.valorUnitario * (1 - it.desconto / 100),
-        })),
-        transportadora: transportadoraSelecionada?.razao_social,
+      const res = await fetch('/api/fiscal/emitir-nfe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          natureza_operacao: natureza,
+          consumidor_final: consumidorFinal,
+          presenca_comprador: presencaComprador,
+          destinatario: {
+            nome: destinatario,
+            cnpj: cnpj.replace(/\D/g, '').length === 14 ? cnpj : undefined,
+            cpf:  cnpj.replace(/\D/g, '').length === 11 ? cnpj : undefined,
+            email: email || undefined,
+            logradouro: endLogradouro || 'Não informado',
+            numero:     endNumero    || 'S/N',
+            bairro:     endBairro    || 'Não informado',
+            municipio:  endMunicipio || 'Não informado',
+            uf:         endUf        || 'SP',
+            cep:        endCep       || '00000000',
+          },
+          itens: itens.map((it) => ({
+            codigo_produto: it.produto?.codigo || 'PROD',
+            descricao:      it.produto?.descricao || 'Produto',
+            ncm:            it.produto?.ncm || '00000000',
+            cfop:           it.produto?.cfop || '5102',
+            unidade:        it.produto?.unidade || 'UN',
+            quantidade:     it.quantidade,
+            valor_unitario: it.valorUnitario,
+            desconto:       it.desconto,
+          })),
+          frete: {
+            modalidade:          modalidadeFrete,
+            transportadora_nome: transportadoraSelecionada?.razao_social,
+            transportadora_cnpj: transportadoraSelecionada?.cnpj,
+            placa:               placa || undefined,
+            uf_placa:            ufPlaca || undefined,
+          },
+        }),
       })
-      setNfeEmitida(record)
+      const json = await res.json() as {
+        ok?: boolean; error?: string; simulada?: boolean; aviso?: string
+        numero?: string | number; serie?: string; chave_nfe?: string; danfe_url?: string
+        status?: string; mensagem_sefaz?: string
+      }
+      if (!res.ok || json.error) {
+        setErroTransmissao(json.error ?? 'Erro ao transmitir NF-e')
+        return
+      }
+      // Busca o registro salvo para exibir na tela de sucesso
+      const { data: saved } = await createClient()
+        .from('nfe_emitidas')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      setNfeEmitida(saved as NFeRecord)
       setStep('success')
     } catch (e) {
-      setErroTransmissao(e instanceof Error ? e.message : 'Erro ao salvar NF-e')
+      setErroTransmissao(e instanceof Error ? e.message : 'Erro ao transmitir NF-e')
     } finally {
       setTransmitindo(false)
     }
@@ -363,6 +424,72 @@ export default function NovaNFePage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
             <Input placeholder="(00) 00000-0000" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+          </div>
+
+          {/* Endereço destinatário */}
+          <div className="col-span-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-1">Endereço do Destinatário</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logradouro</label>
+            <Input placeholder="Rua, Av., Rodovia..." value={endLogradouro} onChange={e => setEndLogradouro(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
+            <Input placeholder="S/N" value={endNumero} onChange={e => setEndNumero(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bairro</label>
+            <Input placeholder="Bairro" value={endBairro} onChange={e => setEndBairro(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
+            <Input placeholder="00000-000" value={endCep} onChange={e => setEndCep(e.target.value)} maxLength={9} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Município</label>
+            <Input placeholder="Cidade" value={endMunicipio} onChange={e => setEndMunicipio(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF</label>
+            <select
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={endUf} onChange={e => setEndUf(e.target.value)}>
+              <option value="">Selecione</option>
+              {ESTADOS_BR.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+            </select>
+          </div>
+
+          {/* Opções */}
+          <div className="col-span-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-1">Opções da Nota</p>
+          </div>
+          <div
+            onClick={() => setConsumidorFinal(v => !v)}
+            className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer select-none transition-all ${
+              consumidorFinal ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className={`w-10 h-5 rounded-full transition-colors shrink-0 ${consumidorFinal ? 'bg-blue-500' : 'bg-gray-300'}`}>
+              <div className={`w-4 h-4 bg-white rounded-full shadow mt-0.5 transition-transform ${consumidorFinal ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Consumidor Final</p>
+              <p className="text-xs text-gray-500">Marque quando o destinatário é pessoa física ou consumidor final</p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Indicador de Presença</label>
+            <select
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={presencaComprador} onChange={e => setPresencaComprador(e.target.value)}>
+              <option value="0">0 — Não se aplica</option>
+              <option value="1">1 — Operação presencial</option>
+              <option value="2">2 — Operação não presencial — Internet</option>
+              <option value="3">3 — Operação não presencial — Teleatendimento</option>
+              <option value="4">4 — NFC-e em operação com entrega domiciliar</option>
+              <option value="9">9 — Operação não presencial — Outros</option>
+            </select>
           </div>
         </CardContent>
       </Card>

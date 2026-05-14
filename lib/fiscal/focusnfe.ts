@@ -109,6 +109,153 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
   return { ...json, ref: params.ref }
 }
 
+// ============================================================
+// NF-e (Nota Fiscal Eletrônica de Produtos)
+// ============================================================
+
+export interface ItemNFe {
+  codigo_produto: string
+  descricao: string
+  codigo_ncm: string
+  cfop: string
+  unidade_comercial: string
+  quantidade_comercial: number
+  valor_unitario_comercial: number
+  valor_bruto: number
+  // ICMS
+  icms_origem: string
+  icms_situacao_tributaria: string
+  icms_modalidade_base_calculo?: string
+  icms_base_calculo?: number
+  icms_aliquota?: number
+  // PIS
+  pis_situacao_tributaria: string
+  pis_base_calculo?: number
+  pis_aliquota_porcentual?: number
+  // COFINS
+  cofins_situacao_tributaria: string
+  cofins_base_calculo?: number
+  cofins_aliquota_porcentual?: number
+}
+
+export interface EmitirNFeParams {
+  ref: string
+  natureza_operacao: string
+  data_emissao: string
+  tipo_documento: string        // '0'=entrada '1'=saida
+  finalidade_emissao: string    // '1'=normal
+  consumidor_final: string      // '0'=não '1'=sim
+  presenca_comprador: string    // '9'=outros
+  // Emitente
+  cnpj_emitente: string
+  inscricao_estadual_emitente: string
+  regime_tributario_emitente: string // '1'=Simples '3'=Normal
+  // Destinatário
+  nome_destinatario: string
+  cnpj_destinatario?: string
+  cpf_destinatario?: string
+  email_destinatario?: string
+  logradouro_destinatario: string
+  numero_destinatario: string
+  bairro_destinatario: string
+  municipio_destinatario: string
+  uf_destinatario: string
+  cep_destinatario: string
+  // Frete
+  modalidade_frete: string
+  nome_transportador?: string
+  cnpj_transportador?: string
+  placa_transporte?: string
+  uf_transporte?: string
+  // Itens
+  itens: ItemNFe[]
+}
+
+export interface FocusNFeRetorno {
+  uuid?: string
+  ref?: string
+  status?: string
+  numero?: string
+  serie?: string
+  chave_nfe?: string
+  caminho_xml_nota_fiscal?: string
+  caminho_danfe?: string
+  erros?: Array<{ codigo: string; mensagem: string; correcao?: string }>
+  mensagem_sefaz?: string
+}
+
+export async function emitirNFe(params: EmitirNFeParams): Promise<FocusNFeRetorno> {
+  const cnpjDest = params.cnpj_destinatario?.replace(/\D/g, '')
+  const cpfDest  = params.cpf_destinatario?.replace(/\D/g, '')
+
+  const body: Record<string, unknown> = {
+    natureza_operacao:    params.natureza_operacao,
+    data_emissao:         params.data_emissao,
+    tipo_documento:       params.tipo_documento,
+    finalidade_emissao:   params.finalidade_emissao,
+    consumidor_final:     params.consumidor_final,
+    presenca_comprador:   params.presenca_comprador,
+    cnpj_emitente:        params.cnpj_emitente.replace(/\D/g, ''),
+    inscricao_estadual_emitente: params.inscricao_estadual_emitente,
+    regime_tributario_emitente:  params.regime_tributario_emitente,
+    nome_destinatario:    params.nome_destinatario,
+    logradouro_destinatario: params.logradouro_destinatario,
+    numero_destinatario:  params.numero_destinatario,
+    bairro_destinatario:  params.bairro_destinatario,
+    municipio_destinatario: params.municipio_destinatario,
+    uf_destinatario:      params.uf_destinatario,
+    cep_destinatario:     params.cep_destinatario.replace(/\D/g, ''),
+    modalidade_frete:     params.modalidade_frete,
+    ...(cnpjDest ? { cnpj_destinatario: cnpjDest } : {}),
+    ...(cpfDest  ? { cpf_destinatario:  cpfDest  } : {}),
+    ...(params.email_destinatario  ? { email_destinatario:  params.email_destinatario  } : {}),
+    ...(params.nome_transportador  ? { nome_transportador:  params.nome_transportador  } : {}),
+    ...(params.cnpj_transportador  ? { cnpj_transportador:  params.cnpj_transportador.replace(/\D/g, '') } : {}),
+    ...(params.placa_transporte    ? { placa_transporte:    params.placa_transporte    } : {}),
+    ...(params.uf_transporte       ? { uf_transporte:       params.uf_transporte       } : {}),
+    itens: params.itens.map((it, idx) => ({
+      numero_item:               idx + 1,
+      codigo_produto:            it.codigo_produto,
+      descricao:                 it.descricao,
+      codigo_ncm:                it.codigo_ncm,
+      cfop:                      it.cfop,
+      unidade_comercial:         it.unidade_comercial,
+      quantidade_comercial:      it.quantidade_comercial,
+      valor_unitario_comercial:  it.valor_unitario_comercial,
+      valor_bruto:               it.valor_bruto,
+      icms_origem:               it.icms_origem,
+      icms_situacao_tributaria:  it.icms_situacao_tributaria,
+      ...(it.icms_modalidade_base_calculo !== undefined ? { icms_modalidade_base_calculo: it.icms_modalidade_base_calculo } : {}),
+      ...(it.icms_base_calculo   !== undefined ? { icms_base_calculo:  it.icms_base_calculo  } : {}),
+      ...(it.icms_aliquota       !== undefined ? { icms_aliquota:       it.icms_aliquota      } : {}),
+      pis_situacao_tributaria:   it.pis_situacao_tributaria,
+      ...(it.pis_base_calculo    !== undefined ? { pis_base_calculo:    it.pis_base_calculo   } : {}),
+      ...(it.pis_aliquota_porcentual !== undefined ? { pis_aliquota_porcentual: it.pis_aliquota_porcentual } : {}),
+      cofins_situacao_tributaria: it.cofins_situacao_tributaria,
+      ...(it.cofins_base_calculo !== undefined ? { cofins_base_calculo: it.cofins_base_calculo } : {}),
+      ...(it.cofins_aliquota_porcentual !== undefined ? { cofins_aliquota_porcentual: it.cofins_aliquota_porcentual } : {}),
+    })),
+  }
+
+  const url = `${BASE_URL}/nfe?ref=${encodeURIComponent(params.ref)}`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: authHeader(),
+    body: JSON.stringify(body),
+  })
+  return safeJson(res) as unknown as FocusNFeRetorno
+}
+
+export async function consultarNFe(ref: string): Promise<FocusNFeRetorno> {
+  const url = `${BASE_URL}/nfe/${encodeURIComponent(ref)}`
+  const res = await fetch(url, { headers: authHeader() })
+  return safeJson(res) as unknown as FocusNFeRetorno
+}
+
+// ============================================================
+// NFS-e
+// ============================================================
+
 export async function consultarNFSe(ref: string): Promise<FocusNFSeRetorno> {
   const url = `${BASE_URL}/nfse/${encodeURIComponent(ref)}`
   const res = await fetch(url, { headers: authHeader() })
