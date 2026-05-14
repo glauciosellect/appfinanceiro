@@ -34,6 +34,27 @@ export async function POST(req: NextRequest) {
   const nfRef = `NF-e ${body.serie}/${body.numero} — ${body.fornecedorNome}`
   const erros: string[] = []
 
+  // Auto-cadastro do fornecedor se ainda não existir
+  if (body.fornecedorCnpj) {
+    const cnpjLimpo = body.fornecedorCnpj.replace(/\D/g, '')
+    const { data: fornExistente } = await supabase
+      .from('fornecedores')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('cpf_cnpj', cnpjLimpo)
+      .maybeSingle()
+
+    if (!fornExistente) {
+      await supabase.from('fornecedores').insert({
+        user_id: user.id,
+        nome: body.fornecedorNome,
+        cpf_cnpj: cnpjLimpo,
+        tipo: 'juridica',
+        ativo: true,
+      })
+    }
+  }
+
   for (const item of body.itens) {
     const { data: existente } = await supabase
       .from('produtos_fiscais')

@@ -480,62 +480,50 @@ export default function NovaEntradaPage() {
               <Input className="font-mono tracking-wider"
                 placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
                 maxLength={54} value={chave}
-                onChange={(e) => { setChave(e.target.value.replace(/\s/g, '')); setErro(null) }} />
+                onChange={(e) => setChave(e.target.value.replace(/\s/g, ''))} />
               <p className="text-xs text-gray-400 mt-1">{chave.length}/44 dígitos</p>
             </div>
 
-            {erro && (
-              <div className="space-y-2">
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{erro}
+            {chave.length === 44 && (
+              <div className="space-y-3">
+                {/* Passo 1 */}
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm space-y-3">
+                  <p className="font-semibold text-blue-800 dark:text-blue-300">Passo 1 — Baixar o XML da SEFAZ</p>
+                  <p className="text-blue-700 dark:text-blue-400">Clique no botão abaixo para abrir o portal da SEFAZ com a chave já preenchida. Resolva o captcha e baixe o arquivo XML.</p>
+                  <a
+                    href={`https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=XMotivo=&chave=${chave}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors">
+                    Abrir SEFAZ ↗
+                  </a>
                 </div>
-                <p className="text-xs text-gray-400 px-1">
-                  Alternativa: use &quot;Upload do XML&quot; — baixe o arquivo no portal do fornecedor ou da{' '}
-                  <a href={`https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=XMotivo=&chave=${chave}`}
-                    target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">SEFAZ</a>.
-                </p>
+
+                {/* Passo 2 — upload inline */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm space-y-3">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200">Passo 2 — Importar o XML baixado</p>
+                  <input ref={inputRef} type="file" accept=".xml" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
+                  {erro && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 text-xs text-red-700 dark:text-red-400">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{erro}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => inputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-600 dark:text-gray-400 text-sm font-medium transition-colors w-full justify-center">
+                    <Upload className="h-4 w-4" /> Selecionar arquivo XML
+                  </button>
+                </div>
               </div>
             )}
 
-            {salvando && (
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
-                <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                Consultando a SEFAZ — aguarde até 20 segundos…
+            {!chave.length && (
+              <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+                Cole a chave de 44 dígitos acima para ver as instruções de importação.
               </div>
             )}
 
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => { setModo(null); setErro(null) }} disabled={salvando}>Voltar</Button>
-              <Button className="flex-1" disabled={chave.length < 44 || salvando}
-                onClick={async () => {
-                  setErro(null); setSalvando(true)
-                  try {
-                    const res = await fetch('/api/nfe-entradas/consulta-chave', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ chave }),
-                    })
-                    const body = await res.json() as { ok?: boolean; xml?: string; error?: string; dica?: string }
-                    if (!res.ok || !body.ok || !body.xml) {
-                      setErro((body.error ?? 'Não foi possível consultar a nota.') + (body.dica ? ` — ${body.dica}` : ''))
-                      return
-                    }
-                    const data = parseNFeXML(body.xml)
-                    if (data.itens.length === 0) throw new Error('Nenhum produto encontrado na nota.')
-                    setNfeData(data)
-                    setStep('review')
-                  } catch (err) {
-                    setErro(err instanceof Error ? err.message : 'Erro ao consultar a chave.')
-                  } finally {
-                    setSalvando(false)
-                  }
-                }}>
-                {salvando ? 'Consultando…' : 'Importar pela Chave'}
-              </Button>
-            </div>
+            <Button variant="outline" className="w-full" onClick={() => { setModo(null); setErro(null) }}>Voltar</Button>
           </CardContent>
         </Card>
       )}
