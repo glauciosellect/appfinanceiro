@@ -339,8 +339,16 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
     // evita desabilitar serviços que já estão ativos na Focus NFe.
     ...(params.habilita_nfse !== undefined && params.habilita_nfse !== null ? { habilita_nfse: params.habilita_nfse } : {}),
     ...(params.habilita_nfe !== undefined && params.habilita_nfe !== null ? { habilita_nfe: params.habilita_nfe } : {}),
-    ...(params.numero_proximo_nfe !== undefined ? { numero_proximo_nfe: params.numero_proximo_nfe } : {}),
-    ...(params.serie_nfe !== undefined ? { serie_nfe: params.serie_nfe } : {}),
+    // Focus NFe espera "proximo_numero_nfe_producao" / "proximo_numero_nfe_homologacao",
+    // não "numero_proximo_nfe". Envia para os dois ambientes para garantir.
+    ...(params.numero_proximo_nfe !== undefined ? {
+      proximo_numero_nfe_producao: params.numero_proximo_nfe,
+      proximo_numero_nfe_homologacao: params.numero_proximo_nfe,
+    } : {}),
+    ...(params.serie_nfe !== undefined ? {
+      serie_nfe_producao: params.serie_nfe,
+      serie_nfe_homologacao: params.serie_nfe,
+    } : {}),
   }
 
   const cnpjLimpo = params.cnpj.replace(/\D/g, '')
