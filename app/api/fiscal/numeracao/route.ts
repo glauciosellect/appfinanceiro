@@ -56,8 +56,8 @@ export async function POST(req: NextRequest) {
       uf:                    config.uf,
       telefone:              config.telefone,
       email:                 config.email,
-      habilita_nfse:         config.habilita_nfse,
-      habilita_nfe:          config.habilita_nfe,
+      habilita_nfse:         config.habilita_nfse ?? undefined,
+      habilita_nfe:          config.habilita_nfe ?? true, // garante NF-e habilitada ao salvar numeração
       numero_proximo_nfe,
       serie_nfe:             serie_nfe ?? '1',
     })

@@ -334,9 +334,11 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
     uf: params.uf ?? '',
     telefone: params.telefone?.replace(/\D/g, '') ?? '',
     email: params.email ?? '',
-    habilita_nfse: params.habilita_nfse ?? true,
-    habilita_nfe: params.habilita_nfe ?? false,
     habilita_nfce: false,
+    // Envia habilita_nfse/habilita_nfe somente se explicitamente definidos;
+    // evita desabilitar serviços que já estão ativos na Focus NFe.
+    ...(params.habilita_nfse !== undefined && params.habilita_nfse !== null ? { habilita_nfse: params.habilita_nfse } : {}),
+    ...(params.habilita_nfe !== undefined && params.habilita_nfe !== null ? { habilita_nfe: params.habilita_nfe } : {}),
     ...(params.numero_proximo_nfe !== undefined ? { numero_proximo_nfe: params.numero_proximo_nfe } : {}),
     ...(params.serie_nfe !== undefined ? { serie_nfe: params.serie_nfe } : {}),
   }
