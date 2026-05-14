@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Printer, Download, FileText, Trash2 } from 'lucide-react'
+import { Plus, Search, Printer, Download, FileText, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -203,6 +203,13 @@ function NFeLine({ nota, onExcluir }: { nota: NFeRecord; onExcluir: (id: string)
               <Download className="h-4 w-4" />
             </button>
           )}
+          <Link
+            href={`/nfe/nova?reenviar=${nota.id}`}
+            title="Editar / Reenviar"
+            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors inline-flex"
+          >
+            <Pencil className="h-4 w-4" />
+          </Link>
           <button
             title="Excluir"
             onClick={() => onExcluir(nota.id)}

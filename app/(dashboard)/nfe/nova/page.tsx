@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -106,12 +107,65 @@ export default function NovaNFePage() {
   const [placa, setPlaca] = useState('')
   const [ufPlaca, setUfPlaca] = useState('')
   const [userId, setUserId] = useState('')
+  const searchParams = useSearchParams()
+  const reenviarId = searchParams.get('reenviar')
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
     })
   }, [])
+
+  // Pré-preenche o formulário quando é um reenvio
+  useEffect(() => {
+    if (!reenviarId || !userId) return
+    createClient()
+      .from('nfe_emitidas')
+      .select('*')
+      .eq('id', reenviarId)
+      .eq('user_id', userId)
+      .single()
+      .then(({ data }) => {
+        if (!data) return
+        const nota = data as NFeRecord
+        setNatureza(nota.natureza_operacao ?? 'Venda de Mercadoria')
+        setDestinatario(nota.destinatario ?? '')
+        setCnpj(nota.cnpj_destinatario ?? '')
+        setEmail(nota.email_destinatario ?? '')
+        setEndLogradouro(nota.logradouro_destinatario ?? '')
+        setEndNumero(nota.numero_destinatario ?? '')
+        setEndBairro(nota.bairro_destinatario ?? '')
+        setEndMunicipio(nota.municipio_destinatario ?? '')
+        setEndUf(nota.uf_destinatario ?? '')
+        setEndCep(nota.cep_destinatario ?? '')
+        const digits = (nota.cnpj_destinatario ?? '').replace(/\D/g, '')
+        setConsumidorFinal(digits.length === 11)
+        // Reconstrói itens a partir do JSONB salvo
+        type StoredItem = {
+          descricao?: string; codigo_produto?: string; codigo_ncm?: string
+          cfop?: string; unidade_comercial?: string; quantidade_comercial?: number
+          valor_unitario_comercial?: number; valor_bruto?: number
+        }
+        const stored = (nota.itens as StoredItem[]) ?? []
+        if (stored.length > 0) {
+          setItens(stored.map(it => ({
+            produto: {
+              id: '', codigo: it.codigo_produto ?? 'PROD',
+              descricao: it.descricao ?? '',
+              ncm: it.codigo_ncm ?? '00000000',
+              cfop: it.cfop ?? '5102',
+              unidade: it.unidade_comercial ?? 'UN',
+              preco_unitario: it.valor_unitario_comercial ?? 0,
+              preco_venda: it.valor_unitario_comercial ?? 0,
+              estoque: 0, estoque_minimo: 0,
+            },
+            quantidade: it.quantidade_comercial ?? 1,
+            valorUnitario: it.valor_unitario_comercial ?? 0,
+            desconto: 0,
+          })))
+        }
+      })
+  }, [reenviarId, userId])
 
   // Carrega produtos do Supabase
   useEffect(() => {
@@ -343,8 +397,12 @@ export default function NovaNFePage() {
           <Link href="/nfe"><ArrowLeft className="h-5 w-5" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Emitir Nova NF-e</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Nota Fiscal de Saída — SEFAZ / Receita Federal</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {reenviarId ? 'Editar / Reenviar NF-e' : 'Emitir Nova NF-e'}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {reenviarId ? 'Corrija os dados e reenvie a nota' : 'Nota Fiscal de Saída — SEFAZ / Receita Federal'}
+          </p>
         </div>
       </div>
 
