@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Eye, Download, FileText } from 'lucide-react'
+import { Plus, Search, Printer, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -180,6 +180,13 @@ function NFeLine({ nota }: { nota: NFeRecord }) {
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-1">
+          <Link
+            href={`/nfe/${nota.id}`}
+            title="Visualizar / Imprimir"
+            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors inline-flex"
+          >
+            <Printer className="h-4 w-4" />
+          </Link>
           {nota.danfe_url && (
             <button
               title="Baixar DANFE"

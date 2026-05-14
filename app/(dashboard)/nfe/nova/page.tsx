@@ -264,13 +264,9 @@ export default function NovaNFePage() {
           )}
         </div>
         <div className="flex gap-3 justify-center">
-          {nfeEmitida?.danfe_url ? (
-            <Button variant="outline" onClick={() => window.open(nfeEmitida.danfe_url!, '_blank')}>
-              Baixar DANFE (PDF)
-            </Button>
-          ) : (
-            <Button variant="outline" disabled title="DANFE disponível após integração com certificado digital">
-              Baixar DANFE (PDF)
+          {nfeEmitida && (
+            <Button variant="outline" asChild>
+              <Link href={`/nfe/${nfeEmitida.id}`}>Imprimir / Ver DANFE</Link>
             </Button>
           )}
           <Button asChild><Link href="/nfe">Ver todas as NF-e</Link></Button>

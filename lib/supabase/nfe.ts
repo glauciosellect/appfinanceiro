@@ -76,6 +76,18 @@ export async function salvarNFe(userId: string, dados: SalvarNFeInput): Promise<
   return data as NFeRecord
 }
 
+export async function getNFe(userId: string, id: string): Promise<NFeRecord | null> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('nfe_emitidas')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('id', id)
+    .single()
+  if (error) return null
+  return data as NFeRecord
+}
+
 export async function listNFe(userId: string): Promise<NFeRecord[]> {
   const supabase = createClient()
   const { data, error } = await supabase
