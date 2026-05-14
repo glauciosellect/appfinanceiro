@@ -7,8 +7,21 @@ const BASE_URL =
     ? 'https://api.focusnfe.com.br/v2'
     : 'https://homologacao.focusnfe.com.br/v2'
 
+// Certificados e gestão de empresa sempre na produção
+const PROD_BASE_URL = 'https://api.focusnfe.com.br/v2'
+
 function getToken() {
   return AMBIENTE === 'producao' ? TOKEN_PRODUCAO : TOKEN_HOMOLOGACAO
+}
+
+function getProdToken() {
+  return TOKEN_PRODUCAO || TOKEN_HOMOLOGACAO
+}
+
+function prodAuthHeader() {
+  const token = getProdToken()
+  const encoded = Buffer.from(`${token}:`).toString('base64')
+  return { Authorization: `Basic ${encoded}`, 'Content-Type': 'application/json' }
 }
 
 export function isTokenConfigured() {
@@ -325,9 +338,9 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
   }
 
   const cnpjLimpo = params.cnpj.replace(/\D/g, '')
-  const res = await fetch(`${BASE_URL}/empresas/${cnpjLimpo}`, {
+  const res = await fetch(`${PROD_BASE_URL}/empresas/${cnpjLimpo}`, {
     method: 'PUT',
-    headers: authHeader(),
+    headers: prodAuthHeader(),
     body: JSON.stringify(body),
   })
 
@@ -336,17 +349,17 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
 
 export async function consultarEmpresa(cnpj: string): Promise<FocusEmpresaRetorno> {
   const cnpjLimpo = cnpj.replace(/\D/g, '')
-  const res = await fetch(`${BASE_URL}/empresas/${cnpjLimpo}`, {
-    headers: authHeader(),
+  const res = await fetch(`${PROD_BASE_URL}/empresas/${cnpjLimpo}`, {
+    headers: prodAuthHeader(),
   })
   return safeJson(res) as unknown as FocusEmpresaRetorno
 }
 
 export async function enviarCertificado(cnpj: string, pfxBase64: string, senha: string): Promise<FocusEmpresaRetorno> {
   const cnpjLimpo = cnpj.replace(/\D/g, '')
-  const res = await fetch(`${BASE_URL}/empresas/${cnpjLimpo}/certificado`, {
+  const res = await fetch(`${PROD_BASE_URL}/empresas/${cnpjLimpo}/certificado`, {
     method: 'PUT',
-    headers: authHeader(),
+    headers: prodAuthHeader(),
     body: JSON.stringify({ certificado: pfxBase64, senha }),
   })
   return safeJson(res) as unknown as FocusEmpresaRetorno
