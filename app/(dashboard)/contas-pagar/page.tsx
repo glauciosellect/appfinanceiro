@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, TrendingDown, CheckCircle, AlertCircle, Clock, DollarSign } from 'lucide-react'
+import { Plus, TrendingDown, CheckCircle, AlertCircle, Clock, DollarSign, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getContasPagar,
@@ -11,6 +11,7 @@ import {
   createContaPagar,
   updateContaPagar,
   cancelarContaPagar,
+  excluirContaPagar,
   registrarPagamento,
   getResumoPagar,
   atualizarParcelasAtrasadasPagar,
@@ -301,12 +302,24 @@ export default function ContasPagarPage() {
                         <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(p.valor)}</td>
                         <td className="px-4 py-3 text-center"><StatusBadge status={p.status} /></td>
                         <td className="px-6 py-3 text-right">
-                          {(p.status === 'aberto' || p.status === 'atrasado') && (
-                            <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50"
-                              onClick={() => { setParcelaSelecionada(p); formPagar.setValue('valor_pago', p.valor) }}>
-                              Pagar
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            {(p.status === 'aberto' || p.status === 'atrasado') && (
+                              <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50"
+                                onClick={() => { setParcelaSelecionada(p); formPagar.setValue('valor_pago', p.valor) }}>
+                                Pagar
+                              </Button>
+                            )}
+                            <button
+                              title="Excluir nota completa"
+                              onClick={() => {
+                                if (confirm('EXCLUIR permanentemente esta conta e todas as suas parcelas? Esta ação não pode ser desfeita.')) {
+                                  excluirContaPagar(userId, p.conta_pagar_id).then(() => { _toast('Conta excluída', 'success'); fetchTudo() })
+                                }
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -342,10 +355,20 @@ export default function ContasPagarPage() {
                               <button onClick={() => abrirEdicao(c)}
                                 className="text-xs text-blue-500 hover:underline">Editar</button>
                             )}
-                            {c.status === 'aberto' && (
+                            {(c.status === 'aberto' || c.status === 'atrasado' || c.status === 'parcial') && (
                               <button onClick={() => cancelarContaPagar(userId, c.id).then(() => { _toast('Cancelado', 'success'); fetchTudo() })}
-                                className="text-xs text-red-500 hover:underline">Cancelar</button>
+                                className="text-xs text-amber-600 hover:underline">Cancelar</button>
                             )}
+                            <button
+                              onClick={() => {
+                                if (confirm('EXCLUIR permanentemente esta conta e todas as suas parcelas? Esta ação não pode ser desfeita.')) {
+                                  excluirContaPagar(userId, c.id).then(() => { _toast('Conta excluída', 'success'); fetchTudo() })
+                                }
+                              }}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir permanentemente">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>

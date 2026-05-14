@@ -355,16 +355,28 @@ export default function ContasReceberPage() {
                         <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(p.valor)}</td>
                         <td className="px-4 py-3 text-center"><StatusBadge status={p.status} /></td>
                         <td className="px-6 py-3 text-right">
-                          {(p.status === 'aberto' || p.status === 'atrasado' || p.status === 'entrada') && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-600 border-green-200 hover:bg-green-50"
-                              onClick={() => abrirRecebimento(p)}
-                            >
-                              Receber
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            {(p.status === 'aberto' || p.status === 'atrasado' || p.status === 'entrada') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-600 border-green-200 hover:bg-green-50"
+                                onClick={() => abrirRecebimento(p)}
+                              >
+                                Receber
+                              </Button>
+                            )}
+                            <button
+                              title="Excluir nota completa"
+                              onClick={() => {
+                                if (confirm('EXCLUIR permanentemente esta conta e todas as suas parcelas? Esta ação não pode ser desfeita.')) {
+                                  excluirContaReceber(userId, p.conta_receber_id).then(() => { _toast('Conta excluída', 'success'); fetchTudo() })
+                                }
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -405,7 +417,7 @@ export default function ContasReceberPage() {
                               <button onClick={() => abrirEdicao(c)}
                                 className="text-xs text-blue-500 hover:underline">Editar</button>
                             )}
-                            {(c.status === 'aberto' || c.status === 'parcial') && (
+                            {(c.status === 'aberto' || c.status === 'parcial' || c.status === 'atrasado') && (
                               <button
                                 onClick={() => {
                                   if (confirm('Cancelar esta conta? As parcelas em aberto serão marcadas como canceladas.')) {
@@ -417,18 +429,16 @@ export default function ContasReceberPage() {
                                 Cancelar
                               </button>
                             )}
-                            {c.status === 'cancelado' && (
-                              <button
-                                onClick={() => {
-                                  if (confirm('EXCLUIR permanentemente esta conta e todas as suas parcelas? Esta ação não pode ser desfeita.')) {
-                                    excluirContaReceber(userId, c.id).then(() => { _toast('Conta excluída', 'success'); fetchTudo() })
-                                  }
-                                }}
-                                className="text-xs text-red-500 hover:underline flex items-center gap-1"
-                              >
-                                <Trash2 className="h-3 w-3" />Excluir
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                if (confirm('EXCLUIR permanentemente esta conta e todas as suas parcelas? Esta ação não pode ser desfeita.')) {
+                                  excluirContaReceber(userId, c.id).then(() => { _toast('Conta excluída', 'success'); fetchTudo() })
+                                }
+                              }}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir permanentemente">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>

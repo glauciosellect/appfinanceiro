@@ -145,6 +145,12 @@ export async function cancelarContaPagar(userId: string, id: string): Promise<vo
     .eq('user_id', userId)
 }
 
+export async function excluirContaPagar(userId: string, id: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('parcelas_pagar').delete().eq('conta_pagar_id', id)
+  await supabase.from('contas_pagar').delete().eq('id', id).eq('user_id', userId)
+}
+
 export async function registrarPagamento(
   userId: string,
   parcelaId: string,
