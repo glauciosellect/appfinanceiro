@@ -480,42 +480,60 @@ export default function NovaEntradaPage() {
               <Input className="font-mono tracking-wider"
                 placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
                 maxLength={54} value={chave}
-                onChange={(e) => setChave(e.target.value.replace(/\s/g, ''))} />
+                onChange={(e) => { setChave(e.target.value.replace(/\s/g, '')); setErro(null) }} />
               <p className="text-xs text-gray-400 mt-1">{chave.length}/44 dígitos</p>
             </div>
 
-            {/* Passo a passo para baixar XML da SEFAZ */}
-            {chave.length === 44 && (
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm space-y-2">
-                <p className="font-semibold text-amber-800 dark:text-amber-300">Como obter o XML desta nota:</p>
-                <ol className="list-decimal list-inside space-y-1 text-amber-700 dark:text-amber-400">
-                  <li>Clique no botão abaixo para abrir o portal da SEFAZ</li>
-                  <li>Digite o código de segurança mostrado e clique em Consultar</li>
-                  <li>Na página da nota, clique em <strong>Download do XML</strong></li>
-                  <li>Volte aqui e use <strong>Upload do XML</strong> com o arquivo baixado</li>
-                </ol>
-                <a
-                  href={`https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=XMotivo=&chave=${chave}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium transition-colors">
-                  Abrir SEFAZ →
-                </a>
+            {erro && (
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{erro}
+                </div>
+                <p className="text-xs text-gray-400 px-1">
+                  Alternativa: use &quot;Upload do XML&quot; — baixe o arquivo no portal do fornecedor ou da{' '}
+                  <a href={`https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=XMotivo=&chave=${chave}`}
+                    target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">SEFAZ</a>.
+                </p>
               </div>
             )}
 
-            {!chave.length && (
-              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
-                <p className="font-semibold mb-1">Como usar?</p>
-                <p>Cole a chave de 44 dígitos acima. O sistema vai te guiar para baixar o XML da SEFAZ e importar automaticamente.</p>
+            {salvando && (
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
+                <svg className="animate-spin h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                Consultando a SEFAZ — aguarde até 20 segundos…
               </div>
             )}
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => { setModo(null); setErro(null) }}>Voltar</Button>
-              <Button className="flex-1" variant="outline"
-                disabled={chave.length < 44}
-                onClick={() => { setModo('upload' as Modo); setErro(null) }}>
-                Já tenho o XML — fazer upload
+              <Button variant="outline" className="flex-1" onClick={() => { setModo(null); setErro(null) }} disabled={salvando}>Voltar</Button>
+              <Button className="flex-1" disabled={chave.length < 44 || salvando}
+                onClick={async () => {
+                  setErro(null); setSalvando(true)
+                  try {
+                    const res = await fetch('/api/nfe-entradas/consulta-chave', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ chave }),
+                    })
+                    const body = await res.json() as { ok?: boolean; xml?: string; error?: string }
+                    if (!res.ok || !body.ok || !body.xml) {
+                      setErro(body.error ?? 'Não foi possível consultar a nota.')
+                      return
+                    }
+                    const data = parseNFeXML(body.xml)
+                    if (data.itens.length === 0) throw new Error('Nenhum produto encontrado na nota.')
+                    setNfeData(data)
+                    setStep('review')
+                  } catch (err) {
+                    setErro(err instanceof Error ? err.message : 'Erro ao consultar a chave.')
+                  } finally {
+                    setSalvando(false)
+                  }
+                }}>
+                {salvando ? 'Consultando…' : 'Importar pela Chave'}
               </Button>
             </div>
           </CardContent>

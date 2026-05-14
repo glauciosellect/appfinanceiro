@@ -14,6 +14,10 @@ function authHeader() {
   return { Authorization: `Basic ${encoded}` }
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -27,34 +31,69 @@ export async function POST(req: NextRequest) {
   }
 
   if (!TOKEN) {
-    return NextResponse.json({ error: 'Token Focus NFe não configurado.' }, { status: 500 })
+    return NextResponse.json({ error: 'Token Focus NFe não configurado nas variáveis de ambiente.' }, { status: 500 })
   }
 
-  // Passo 1: Ciência da operação (manifestação do destinatário)
+  // Passo 1: Registrar ciência da operação (manifestação do destinatário)
   await fetch(`${BASE_URL}/nfe_destinatario?ref=${chaveLimpa}`, {
     method: 'POST',
     headers: { ...authHeader(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ manifestacao: 'ciencia_da_operacao' }),
-  }).catch(() => { /* ignora erro de manifestação, tenta download mesmo assim */ })
+  }).catch(() => {/* ignora — pode já ter sido feito antes */})
 
-  // Passo 2: Download do XML da NF-e (retorna XML bruto ao cliente para parse)
+  // Passo 2: Polling — aguarda a Focus NFe baixar o XML da SEFAZ (até 20s)
+  interface StatusResp { status?: string; caminho_xml_nota_fiscal?: string }
+  let statusResp: StatusResp = {}
+  for (let tentativa = 0; tentativa < 8; tentativa++) {
+    await sleep(tentativa === 0 ? 1500 : 2500)
+    const r = await fetch(`${BASE_URL}/nfe_destinatario/${chaveLimpa}`, {
+      headers: authHeader(),
+    })
+    if (r.ok) {
+      statusResp = await r.json() as StatusResp
+      if (statusResp.status === 'baixado' || statusResp.caminho_xml_nota_fiscal) break
+    }
+  }
+
+  // Passo 3: Download do XML
   const xmlRes = await fetch(`${BASE_URL}/nfe_destinatario/${chaveLimpa}/xml`, {
     headers: authHeader(),
   })
 
-  if (!xmlRes.ok) {
-    let mensagem = `Erro ${xmlRes.status} ao consultar a SEFAZ.`
-    try {
-      const body = await xmlRes.json() as { erros?: Array<{ mensagem: string }> }
-      if (body?.erros?.[0]?.mensagem) mensagem = body.erros[0].mensagem
-    } catch { /* ignora */ }
-
-    return NextResponse.json({
-      error: mensagem,
-      dica: 'Use o Upload do XML para importar esta nota.',
-    }, { status: 422 })
+  if (xmlRes.ok) {
+    const contentType = xmlRes.headers.get('content-type') ?? ''
+    let xml: string
+    if (contentType.includes('json')) {
+      // Alguns endpoints retornam o XML dentro de um campo JSON
+      const body = await xmlRes.json() as { xml?: string; nfe_xml?: string }
+      xml = body.xml ?? body.nfe_xml ?? ''
+    } else {
+      xml = await xmlRes.text()
+    }
+    if (xml && xml.includes('<nfeProc') || xml.includes('<NFe')) {
+      return NextResponse.json({ ok: true, xml })
+    }
   }
 
-  const xml = await xmlRes.text()
-  return NextResponse.json({ ok: true, xml })
+  // Fallback: tenta o endpoint alternativo /nfe/{chave}/xml
+  const fallbackRes = await fetch(`${BASE_URL}/nfe/${chaveLimpa}/xml`, {
+    headers: authHeader(),
+  })
+  if (fallbackRes.ok) {
+    const xml = await fallbackRes.text()
+    if (xml.includes('<nfeProc') || xml.includes('<NFe')) {
+      return NextResponse.json({ ok: true, xml })
+    }
+  }
+
+  // Verifica se o ambiente está em homologação (não acessa NF-e reais)
+  const ambienteMsg = AMBIENTE === 'homologacao'
+    ? ' (atenção: ambiente de homologação não acessa NF-e reais da SEFAZ — configure FOCUSNFE_AMBIENTE=producao)'
+    : ''
+
+  return NextResponse.json({
+    error: `Não foi possível baixar o XML desta NF-e via Focus NFe.${ambienteMsg}`,
+    status: statusResp.status ?? 'não disponível',
+    dica: 'Verifique se o CNPJ destinatário está cadastrado na Focus NFe em produção.',
+  }, { status: 422 })
 }
