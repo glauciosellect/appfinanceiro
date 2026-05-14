@@ -16,12 +16,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Número inválido' }, { status: 400 })
   }
 
-  // Salva no banco
-  await supabase.from('fiscal_config').update({
+  // Salva no banco (upsert garante que cria a linha se não existir)
+  const { error: dbErr } = await supabase.from('fiscal_config').upsert({
+    user_id: user.id,
     numero_proximo_nfe,
     serie_nfe: serie_nfe ?? '1',
     updated_at: new Date().toISOString(),
-  }).eq('user_id', user.id)
+  }, { onConflict: 'user_id' })
+
+  if (dbErr) {
+    return NextResponse.json({ error: dbErr.message }, { status: 500 })
+  }
 
   // Sincroniza com Focus NFe se token configurado
   if (!isTokenConfigured()) {

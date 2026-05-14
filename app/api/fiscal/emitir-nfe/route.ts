@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       simulada: true,
       numero,
-      serie: '1',
+      serie,
       aviso: 'Token Focus NFe não configurado — nota registrada localmente.',
     })
   }
