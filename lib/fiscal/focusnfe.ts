@@ -11,10 +11,23 @@ function getToken() {
   return AMBIENTE === 'producao' ? TOKEN_PRODUCAO : TOKEN_HOMOLOGACAO
 }
 
+export function isTokenConfigured() {
+  return !!getToken()
+}
+
 function authHeader() {
   const token = getToken()
   const encoded = Buffer.from(`${token}:`).toString('base64')
   return { Authorization: `Basic ${encoded}`, 'Content-Type': 'application/json' }
+}
+
+async function safeJson(res: Response): Promise<Record<string, unknown>> {
+  const text = await res.text()
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    return { erros: [{ codigo: String(res.status), mensagem: text.slice(0, 200) }] }
+  }
 }
 
 export interface EmitirNFSeParams {
@@ -91,7 +104,7 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
     body: JSON.stringify(body),
   })
 
-  const json = await res.json() as FocusNFSeRetorno
+  const json = await safeJson(res) as unknown as FocusNFSeRetorno
 
   return { ...json, ref: params.ref }
 }
@@ -99,13 +112,13 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
 export async function consultarNFSe(ref: string): Promise<FocusNFSeRetorno> {
   const url = `${BASE_URL}/nfse/${encodeURIComponent(ref)}`
   const res = await fetch(url, { headers: authHeader() })
-  return res.json() as Promise<FocusNFSeRetorno>
+  return safeJson(res) as unknown as FocusNFSeRetorno
 }
 
 export async function cancelarNFSe(ref: string): Promise<FocusNFSeRetorno> {
   const url = `${BASE_URL}/nfse/${encodeURIComponent(ref)}`
   const res = await fetch(url, { method: 'DELETE', headers: authHeader() })
-  return res.json() as Promise<FocusNFSeRetorno>
+  return safeJson(res) as unknown as FocusNFSeRetorno
 }
 
 export function getAmbiente() {
@@ -171,7 +184,7 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
     body: JSON.stringify(body),
   })
 
-  return res.json() as Promise<FocusEmpresaRetorno>
+  return safeJson(res) as unknown as FocusEmpresaRetorno
 }
 
 export async function consultarEmpresa(cnpj: string): Promise<FocusEmpresaRetorno> {
@@ -179,7 +192,7 @@ export async function consultarEmpresa(cnpj: string): Promise<FocusEmpresaRetorn
   const res = await fetch(`${BASE_URL}/empresas/${cnpjLimpo}`, {
     headers: authHeader(),
   })
-  return res.json() as Promise<FocusEmpresaRetorno>
+  return safeJson(res) as unknown as FocusEmpresaRetorno
 }
 
 export async function enviarCertificado(cnpj: string, pfxBase64: string, senha: string): Promise<FocusEmpresaRetorno> {
@@ -189,5 +202,5 @@ export async function enviarCertificado(cnpj: string, pfxBase64: string, senha: 
     headers: authHeader(),
     body: JSON.stringify({ certificado: pfxBase64, senha }),
   })
-  return res.json() as Promise<FocusEmpresaRetorno>
+  return safeJson(res) as unknown as FocusEmpresaRetorno
 }

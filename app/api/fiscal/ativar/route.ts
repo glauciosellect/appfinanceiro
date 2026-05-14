@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { cadastrarEmpresa } from '@/lib/fiscal/focusnfe'
+import { cadastrarEmpresa, isTokenConfigured } from '@/lib/fiscal/focusnfe'
 
 const REGIME_MAP: Record<string, string> = {
   simples: '1',
@@ -57,6 +57,17 @@ export async function POST(req: NextRequest) {
     focus_status: 'cadastrando',
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' })
+
+  // Se não há token configurado, ativa apenas localmente
+  if (!isTokenConfigured()) {
+    await supabase.from('fiscal_config').update({
+      focus_status: 'cadastrado',
+      focus_erro: null,
+      ativo: true,
+      updated_at: new Date().toISOString(),
+    }).eq('user_id', user.id)
+    return NextResponse.json({ ok: true, focus_status: 'cadastrado', aviso: 'Token Focus NFe não configurado — módulo ativado localmente.' })
+  }
 
   // Cadastra/atualiza empresa na Focus NFe
   let retorno
