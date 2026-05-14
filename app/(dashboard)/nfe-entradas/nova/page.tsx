@@ -1,75 +1,56 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Upload, QrCode, CheckCircle2, FileText, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Upload, QrCode, CheckCircle2, FileText, AlertCircle, CreditCard, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn, formatCurrency } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { createContaPagar } from '@/lib/supabase/contas-pagar'
 
 type Modo = 'chave' | 'upload' | null
-type Step = 'form' | 'review' | 'success'
+type Step = 'form' | 'review' | 'pagamento' | 'success'
 
 interface ParsedItem {
-  codigo: string
-  descricao: string
-  ncm: string
-  cfop: string
-  unidade: string
-  quantidade: number
-  valorUnitario: number
-  valorTotal: number
+  codigo: string; descricao: string; ncm: string; cfop: string
+  unidade: string; quantidade: number; valorUnitario: number; valorTotal: number
 }
-
 interface ParsedNFe {
-  numero: string
-  serie: string
-  dataEmissao: string
-  fornecedorNome: string
-  fornecedorCnpj: string
-  naturezaOperacao: string
-  valorTotal: number
-  itens: ParsedItem[]
+  numero: string; serie: string; dataEmissao: string
+  fornecedorNome: string; fornecedorCnpj: string
+  naturezaOperacao: string; valorTotal: number; itens: ParsedItem[]
 }
+interface SelectOption { id: string; nome: string; extra?: string }
 
 function getText(el: Element | Document, tag: string): string {
   return el.getElementsByTagName(tag)[0]?.textContent?.trim() ?? ''
 }
 
 function parseNFeXML(xmlText: string): ParsedNFe {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(xmlText, 'application/xml')
-
-  const parseError = doc.getElementsByTagName('parsererror')[0]
-  if (parseError) throw new Error('XML inválido')
-
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml')
+  if (doc.getElementsByTagName('parsererror')[0]) throw new Error('XML inválido')
   const ide = doc.getElementsByTagName('ide')[0]
   const emit = doc.getElementsByTagName('emit')[0]
   const icmsTot = doc.getElementsByTagName('ICMSTot')[0]
-
   if (!ide || !emit) throw new Error('Estrutura de NF-e não reconhecida')
 
   const itens: ParsedItem[] = Array.from(doc.getElementsByTagName('det')).map((det) => {
     const prod = det.getElementsByTagName('prod')[0]
     return {
-      codigo: getText(prod, 'cProd'),
-      descricao: getText(prod, 'xProd'),
-      ncm: getText(prod, 'NCM'),
-      cfop: getText(prod, 'CFOP'),
+      codigo: getText(prod, 'cProd'), descricao: getText(prod, 'xProd'),
+      ncm: getText(prod, 'NCM'), cfop: getText(prod, 'CFOP'),
       unidade: getText(prod, 'uCom'),
       quantidade: parseFloat(getText(prod, 'qCom')) || 0,
       valorUnitario: parseFloat(getText(prod, 'vUnCom')) || 0,
       valorTotal: parseFloat(getText(prod, 'vProd')) || 0,
     }
   })
-
   return {
-    numero: getText(ide, 'nNF'),
-    serie: getText(ide, 'serie'),
+    numero: getText(ide, 'nNF'), serie: getText(ide, 'serie'),
     dataEmissao: getText(ide, 'dhEmi') || getText(ide, 'dEmi'),
-    fornecedorNome: getText(emit, 'xNome'),
-    fornecedorCnpj: getText(emit, 'CNPJ'),
+    fornecedorNome: getText(emit, 'xNome'), fornecedorCnpj: getText(emit, 'CNPJ'),
     naturezaOperacao: getText(ide, 'natOp'),
     valorTotal: icmsTot ? parseFloat(getText(icmsTot, 'vNF')) || 0 : 0,
     itens,
@@ -86,17 +67,43 @@ export default function NovaEntradaPage() {
   const [salvando, setSalvando] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Contas a pagar
+  const [lancaCP, setLancaCP] = useState(true)
+  const [vencimento, setVencimento] = useState('')
+  const [numParcelas, setNumParcelas] = useState(1)
+  const [formaPagamentoId, setFormaPagamentoId] = useState('')
+  const [contaCorrenteId, setContaCorrenteId] = useState('')
+  const [observacoes, setObservacoes] = useState('')
+  const [formas, setFormas] = useState<SelectOption[]>([])
+  const [contas, setContas] = useState<SelectOption[]>([])
+  const [loadingOpcoes, setLoadingOpcoes] = useState(false)
+
+  // Carrega formas de pagamento e contas correntes ao entrar no step pagamento
+  useEffect(() => {
+    if (step !== 'pagamento') return
+    setLoadingOpcoes(true)
+    const supabase = createClient()
+    Promise.all([
+      supabase.from('formas_pagamento').select('id, nome, tipo').eq('ativo', true).order('nome'),
+      supabase.from('contas_correntes').select('id, nome_apelido, banco').eq('ativo', true).is('deleted_at', null).order('nome_apelido'),
+    ]).then(([{ data: fp }, { data: cc }]) => {
+      setFormas((fp ?? []).map((f: { id: string; nome: string; tipo: string }) => ({ id: f.id, nome: f.nome, extra: f.tipo })))
+      setContas((cc ?? []).map((c: { id: string; nome_apelido: string; banco: string }) => ({ id: c.id, nome: c.nome_apelido, extra: c.banco })))
+    }).finally(() => setLoadingOpcoes(false))
+
+    // Data padrão: hoje + 30 dias
+    const d = new Date()
+    d.setDate(d.getDate() + 30)
+    setVencimento(d.toISOString().split('T')[0])
+  }, [step])
+
   function handleFile(file: File) {
     setErro(null)
-    if (!file.name.toLowerCase().endsWith('.xml')) {
-      setErro('Apenas arquivos .xml são aceitos.')
-      return
-    }
+    if (!file.name.toLowerCase().endsWith('.xml')) { setErro('Apenas arquivos .xml são aceitos.'); return }
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const text = e.target?.result as string
-        const data = parseNFeXML(text)
+        const data = parseNFeXML(e.target?.result as string)
         if (data.itens.length === 0) throw new Error('Nenhum produto encontrado no XML.')
         setNfeData(data)
         setStep('review')
@@ -108,43 +115,60 @@ export default function NovaEntradaPage() {
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
+    e.preventDefault(); setDragging(false)
+    const file = e.dataTransfer.files[0]; if (file) handleFile(file)
   }, [])
-
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragging(true)
-  }, [])
-
+  const onDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragging(true) }, [])
   const onDragLeave = useCallback(() => setDragging(false), [])
 
-  async function handleImportar() {
+  async function handleConfirmar() {
     if (!nfeData) return
-    setSalvando(true)
-    setErro(null)
+    setSalvando(true); setErro(null)
     try {
-      const res = await fetch('/api/estoque/import-xml', {
+      // 1. Importar produtos no estoque
+      const resEstoque = await fetch('/api/estoque/import-xml', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nfeData),
       })
-      if (!res.ok) {
-        const body = await res.json()
-        setErro(body.erros?.join(', ') ?? 'Erro ao importar. Tente novamente.')
-        return
+      if (!resEstoque.ok) {
+        const body = await resEstoque.json()
+        setErro(body.erros?.join(', ') ?? 'Erro ao importar estoque. Tente novamente.'); return
       }
+
+      // 2. Lançar no contas a pagar (se solicitado)
+      if (lancaCP && vencimento) {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await createContaPagar(user.id, {
+            descricao: `NF-e Entrada ${nfeData.serie}/${nfeData.numero} — ${nfeData.fornecedorNome}`,
+            valor_total: nfeData.valorTotal,
+            num_parcelas: numParcelas,
+            juros_percentual: 0,
+            multa_percentual: 0,
+            desconto_valor: 0,
+            data_primeira_parcela: vencimento,
+            forma_pagamento_id: formaPagamentoId || undefined,
+            conta_corrente_id: contaCorrenteId || undefined,
+            observacoes: observacoes || `Importado automaticamente da NF-e ${nfeData.serie}/${nfeData.numero}`,
+            fornecedor_id: undefined,
+            categoria_id: undefined,
+            centro_custo_id: undefined,
+            cartao_id: undefined,
+          })
+        }
+      }
+
       setStep('success')
-    } catch {
-      setErro('Falha de conexão. Tente novamente.')
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Falha ao salvar. Tente novamente.')
     } finally {
       setSalvando(false)
     }
   }
 
-  // Tela de sucesso
+  // ── Tela de sucesso ──────────────────────────────────────────────────────
   if (step === 'success') {
     return (
       <div className="max-w-lg mx-auto mt-16 text-center">
@@ -152,18 +176,151 @@ export default function NovaEntradaPage() {
           <CheckCircle2 className="h-10 w-10 text-green-600" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">NF-e de Entrada importada!</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">
-          {nfeData?.itens.length} produto(s) adicionados ao estoque automaticamente.
+        <p className="text-gray-500 dark:text-gray-400 mb-2">
+          {nfeData?.itens.length} produto(s) adicionados ao estoque.
         </p>
+        {lancaCP && (
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            Conta a pagar de {formatCurrency(nfeData?.valorTotal ?? 0)} lançada em {numParcelas}x.
+          </p>
+        )}
         <div className="flex gap-3 justify-center">
           <Button variant="outline" asChild><Link href="/estoque">Ver Estoque</Link></Button>
+          {lancaCP && <Button variant="outline" asChild><Link href="/contas-pagar">Ver Contas a Pagar</Link></Button>}
           <Button asChild><Link href="/nfe-entradas">Ver Entradas</Link></Button>
         </div>
       </div>
     )
   }
 
-  // Tela de revisão
+  // ── Step: Contas a Pagar ─────────────────────────────────────────────────
+  if (step === 'pagamento' && nfeData) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setStep('review')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Contas a Pagar</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Deseja registrar o pagamento desta nota?</p>
+          </div>
+        </div>
+
+        {/* Toggle Sim/Não */}
+        <Card>
+          <CardContent className="pt-6">
+            <p className="font-medium text-gray-800 dark:text-gray-200 mb-4">
+              Lançar <span className="text-blue-600 font-bold">{formatCurrency(nfeData.valorTotal)}</span> no Contas a Pagar?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setLancaCP(true)}
+                className={cn('p-4 rounded-xl border-2 font-semibold transition-all',
+                  lancaCP ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300')}>
+                Sim, lançar
+              </button>
+              <button onClick={() => setLancaCP(false)}
+                className={cn('p-4 rounded-xl border-2 font-semibold transition-all',
+                  !lancaCP ? 'border-gray-500 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300')}>
+                Não, pular
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Formulário (só aparece se sim) */}
+        {lancaCP && (
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Detalhes do Pagamento</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {loadingOpcoes ? (
+                <p className="text-sm text-gray-400 dark:text-gray-500">Carregando opções...</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimento *</label>
+                      <Input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parcelas</label>
+                      <select
+                        value={numParcelas}
+                        onChange={(e) => setNumParcelas(Number(e.target.value))}
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map((n) => (
+                          <option key={n} value={n}>{n}x {n > 1 ? `de ${formatCurrency(nfeData.valorTotal / n)}` : '(à vista)'}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Forma de Pagamento</label>
+                    <select
+                      value={formaPagamentoId}
+                      onChange={(e) => setFormaPagamentoId(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <option value="">— Selecionar —</option>
+                      {formas.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Banco / Conta Corrente</label>
+                    <select
+                      value={contaCorrenteId}
+                      onChange={(e) => setContaCorrenteId(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <option value="">— Selecionar —</option>
+                      {contas.map((c) => <option key={c.id} value={c.id}>{c.nome} — {c.extra}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observações</label>
+                    <Input
+                      placeholder="Ex: pagamento via PIX em 30 dias"
+                      value={observacoes}
+                      onChange={(e) => setObservacoes(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Resumo */}
+                  <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm">
+                    <div className="flex justify-between text-blue-700 dark:text-blue-300">
+                      <span>Total da nota</span><span className="font-bold">{formatCurrency(nfeData.valorTotal)}</span>
+                    </div>
+                    {numParcelas > 1 && (
+                      <div className="flex justify-between text-blue-600 dark:text-blue-400 mt-1">
+                        <span>{numParcelas} parcelas de</span>
+                        <span className="font-semibold">{formatCurrency(nfeData.valorTotal / numParcelas)}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {erro && (
+          <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />{erro}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={() => setStep('review')} disabled={salvando}>Voltar</Button>
+          <Button className="flex-1" onClick={handleConfirmar} disabled={salvando || (lancaCP && !vencimento)}>
+            {salvando ? 'Importando...' : lancaCP ? 'Confirmar e Importar' : 'Importar sem lançar'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Step: Review ─────────────────────────────────────────────────────────
   if (step === 'review' && nfeData) {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
@@ -173,11 +330,10 @@ export default function NovaEntradaPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Revisar NF-e de Entrada</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Confirme os dados antes de importar para o estoque</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Confira os dados e avance para o próximo passo</p>
           </div>
         </div>
 
-        {/* Dados da nota */}
         <Card>
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Dados da Nota</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
@@ -197,11 +353,10 @@ export default function NovaEntradaPage() {
           </CardContent>
         </Card>
 
-        {/* Produtos */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Produtos ({nfeData.itens.length})</CardTitle>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Estes produtos serão adicionados ao seu estoque</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Serão adicionados ao seu estoque</p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -210,9 +365,7 @@ export default function NovaEntradaPage() {
                   <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                     {['Código', 'Descrição', 'NCM', 'Un.', 'Qtd', 'Vl. Unit.', 'Total'].map((h) => (
                       <th key={h} className={cn('px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
-                        ['Qtd', 'Vl. Unit.', 'Total'].includes(h) ? 'text-right' : 'text-left')}>
-                        {h}
-                      </th>
+                        ['Qtd', 'Vl. Unit.', 'Total'].includes(h) ? 'text-right' : 'text-left')}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -234,26 +387,17 @@ export default function NovaEntradaPage() {
           </CardContent>
         </Card>
 
-        {erro && (
-          <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            {erro}
-          </div>
-        )}
-
         <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={() => { setStep('form'); setNfeData(null) }} disabled={salvando}>
-            Cancelar
-          </Button>
-          <Button className="flex-1" onClick={handleImportar} disabled={salvando}>
-            {salvando ? 'Importando...' : `Confirmar e Importar ${nfeData.itens.length} produto(s)`}
+          <Button variant="outline" className="flex-1" onClick={() => { setStep('form'); setNfeData(null) }}>Cancelar</Button>
+          <Button className="flex-1" onClick={() => setStep('pagamento')}>
+            Avançar <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
       </div>
     )
   }
 
-  // Tela principal (seleção de modo)
+  // ── Step: Form (seleção de modo) ─────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
@@ -262,13 +406,10 @@ export default function NovaEntradaPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Registrar NF-e de Entrada</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Compra de fornecedor — estoque atualizado automaticamente
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Compra de fornecedor — estoque atualizado automaticamente</p>
         </div>
       </div>
 
-      {/* Seleção de modo */}
       <Card>
         <CardHeader><CardTitle className="text-base">Como você quer importar a nota?</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -277,7 +418,9 @@ export default function NovaEntradaPage() {
             { id: 'upload' as Modo, icon: Upload, title: 'Upload do XML', desc: 'Importe o arquivo XML da nota fiscal eletrônica' },
           ].map(({ id, icon: Icon, title, desc }) => (
             <button key={id as string} onClick={() => { setModo(id); setErro(null) }}
-              className={cn('p-5 rounded-xl border-2 text-left transition-all', modo === id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600')}>
+              className={cn('p-5 rounded-xl border-2 text-left transition-all', modo === id
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600')}>
               <Icon className={cn('h-7 w-7 mb-3', modo === id ? 'text-blue-600' : 'text-gray-400 dark:text-gray-500')} />
               <p className="font-semibold text-gray-800 dark:text-gray-200">{title}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{desc}</p>
@@ -293,8 +436,10 @@ export default function NovaEntradaPage() {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chave de Acesso (44 dígitos)</label>
-              <Input className="font-mono tracking-wider" placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
-                maxLength={47} value={chave} onChange={(e) => setChave(e.target.value.replace(/\s/g, ''))} />
+              <Input className="font-mono tracking-wider"
+                placeholder="0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000"
+                maxLength={47} value={chave}
+                onChange={(e) => setChave(e.target.value.replace(/\s/g, ''))} />
               <p className="text-xs text-gray-400 mt-1">{chave.length}/44 dígitos</p>
             </div>
             <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
@@ -314,43 +459,25 @@ export default function NovaEntradaPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Upload do XML</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {/* Input oculto */}
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".xml"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-            />
-
-            {/* Zona de drop */}
+            <input ref={inputRef} type="file" accept=".xml" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
             <div
               onClick={() => inputRef.current?.click()}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              className={cn(
-                'border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors select-none',
+              onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
+              className={cn('border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors select-none',
                 dragging
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/30'
-              )}
-            >
+                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/30')}>
               <Upload className={cn('h-10 w-10 mx-auto mb-3', dragging ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500')} />
-              <p className="font-medium text-gray-700 dark:text-gray-300">
-                {dragging ? 'Solte o arquivo aqui' : 'Arraste o XML aqui'}
-              </p>
+              <p className="font-medium text-gray-700 dark:text-gray-300">{dragging ? 'Solte o arquivo aqui' : 'Arraste o XML aqui'}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">ou clique para selecionar o arquivo</p>
               <p className="text-xs text-gray-400 mt-2">Apenas arquivos .xml de NF-e</p>
             </div>
-
             {erro && (
               <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {erro}
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />{erro}
               </div>
             )}
-
             <Button variant="outline" className="w-full" onClick={() => { setModo(null); setErro(null) }}>Voltar</Button>
           </CardContent>
         </Card>
