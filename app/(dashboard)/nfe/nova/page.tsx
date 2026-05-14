@@ -6,9 +6,10 @@ import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, Truck } from
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { getTransportadoras } from '@/lib/supabase/transportadoras'
+import { salvarNFe, type NFeRecord } from '@/lib/supabase/nfe'
 import type { Transportadora } from '@/types'
 
 interface ProdutoRow {
@@ -54,6 +55,9 @@ export default function NovaNFePage() {
   const supabase = createClient()
 
   const [step, setStep] = useState<'form' | 'success'>('form')
+  const [nfeEmitida, setNfeEmitida] = useState<NFeRecord | null>(null)
+  const [transmitindo, setTransmitindo] = useState(false)
+  const [erroTransmissao, setErroTransmissao] = useState('')
   const [natureza, setNatureza] = useState('Venda de Mercadoria')
   const [itens, setItens] = useState<ItemForm[]>([
     { produto: null, quantidade: 1, valorUnitario: 0, desconto: 0 },
@@ -186,6 +190,41 @@ export default function NovaNFePage() {
     (p) => !termoBusca || p.descricao.toLowerCase().includes(termoBusca.toLowerCase()) || p.codigo.includes(termoBusca)
   )
 
+  async function handleTransmitir() {
+    if (!userId) return
+    setTransmitindo(true)
+    setErroTransmissao('')
+    try {
+      const hoje = new Date().toISOString().split('T')[0]
+      const record = await salvarNFe(userId, {
+        natureza_operacao: natureza,
+        data_emissao: hoje,
+        destinatario,
+        cnpj_destinatario: cnpj || undefined,
+        email_destinatario: email || undefined,
+        valor_total: total,
+        itens: itens.map((it) => ({
+          produto_id: it.produto?.id,
+          descricao: it.produto?.descricao,
+          ncm: it.produto?.ncm,
+          cfop: it.produto?.cfop,
+          unidade: it.produto?.unidade,
+          quantidade: it.quantidade,
+          valor_unitario: it.valorUnitario,
+          desconto: it.desconto,
+          total: it.quantidade * it.valorUnitario * (1 - it.desconto / 100),
+        })),
+        transportadora: transportadoraSelecionada?.razao_social,
+      })
+      setNfeEmitida(record)
+      setStep('success')
+    } catch (e) {
+      setErroTransmissao(e instanceof Error ? e.message : 'Erro ao salvar NF-e')
+    } finally {
+      setTransmitindo(false)
+    }
+  }
+
   if (step === 'success') {
     return (
       <div className="max-w-lg mx-auto mt-16 text-center">
@@ -195,20 +234,45 @@ export default function NovaNFePage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">NF-e emitida com sucesso!</h1>
         <p className="text-gray-500 dark:text-gray-400 mb-4">Sua NF-e foi transmitida e autorizada pela SEFAZ.</p>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-6 text-left space-y-1.5">
-          <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-semibold">Número:</span> 1/000004</p>
-          <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-semibold">Valor:</span> {formatCurrency(total)}</p>
-          {transportadoraSelecionada && (
-            <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-semibold">Transportadora:</span> {transportadoraSelecionada.razao_social}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-semibold">Número:</span>{' '}
+            {nfeEmitida ? `${nfeEmitida.serie}/${String(nfeEmitida.numero).padStart(6, '0')}` : '—'}
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-semibold">Destinatário:</span> {destinatario}
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-semibold">Valor:</span> {formatCurrency(total)}
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-semibold">Data de emissão:</span>{' '}
+            {nfeEmitida ? formatDate(nfeEmitida.data_emissao) : '—'}
+          </p>
+          {nfeEmitida?.transportadora && (
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="font-semibold">Transportadora:</span> {nfeEmitida.transportadora}
+            </p>
           )}
-          <p className="text-sm"><span className="font-semibold text-gray-700 dark:text-gray-300">Status:</span>{' '}
-            <span className="text-green-600 font-semibold">Autorizada — SEFAZ</span>
+          <p className="text-sm">
+            <span className="font-semibold text-gray-700 dark:text-gray-300">Status:</span>{' '}
+            <span className="text-green-600 font-semibold">Registrada</span>
           </p>
-          <p className="text-xs text-gray-400 mt-1 font-mono break-all">
-            Chave: 31260512345678000190550010000040012345678901
-          </p>
+          {nfeEmitida?.chave_acesso && (
+            <p className="text-xs text-gray-400 mt-1 font-mono break-all">
+              Chave: {nfeEmitida.chave_acesso}
+            </p>
+          )}
         </div>
         <div className="flex gap-3 justify-center">
-          <Button variant="outline">Baixar DANFE (PDF)</Button>
+          {nfeEmitida?.danfe_url ? (
+            <Button variant="outline" onClick={() => window.open(nfeEmitida.danfe_url!, '_blank')}>
+              Baixar DANFE (PDF)
+            </Button>
+          ) : (
+            <Button variant="outline" disabled title="DANFE disponível após integração com certificado digital">
+              Baixar DANFE (PDF)
+            </Button>
+          )}
           <Button asChild><Link href="/nfe">Ver todas as NF-e</Link></Button>
         </div>
       </div>
@@ -506,12 +570,18 @@ export default function NovaNFePage() {
               <p className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(total)}</p>
             </div>
           </div>
+          {erroTransmissao && (
+            <p className="text-sm text-red-600 dark:text-red-400 text-right">{erroTransmissao}</p>
+          )}
           <div className="flex gap-3 justify-end">
             <Button variant="outline"><Save className="h-4 w-4" />Salvar Rascunho</Button>
-            <Button onClick={() => setStep('success')}><Send className="h-4 w-4" />Transmitir para SEFAZ</Button>
+            <Button onClick={handleTransmitir} disabled={transmitindo}>
+              <Send className="h-4 w-4" />
+              {transmitindo ? 'Registrando…' : 'Transmitir para SEFAZ'}
+            </Button>
           </div>
           <p className="text-xs text-gray-400 mt-3 text-right">
-            A NF-e será transmitida e autorizada em segundos pela SEFAZ / Receita Federal
+            A NF-e será registrada e poderá ser visualizada na listagem de notas
           </p>
         </CardContent>
       </Card>
