@@ -518,9 +518,9 @@ export default function NovaEntradaPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ chave }),
                     })
-                    const body = await res.json() as { ok?: boolean; xml?: string; error?: string }
+                    const body = await res.json() as { ok?: boolean; xml?: string; error?: string; dica?: string }
                     if (!res.ok || !body.ok || !body.xml) {
-                      setErro(body.error ?? 'Não foi possível consultar a nota.')
+                      setErro((body.error ?? 'Não foi possível consultar a nota.') + (body.dica ? ` — ${body.dica}` : ''))
                       return
                     }
                     const data = parseNFeXML(body.xml)
