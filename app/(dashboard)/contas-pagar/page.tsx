@@ -397,7 +397,7 @@ export default function ContasPagarPage() {
                               <button onClick={() => abrirEdicao(c)}
                                 className="text-xs text-blue-500 hover:underline">Editar</button>
                             )}
-                            {(c.status === 'aberto' || c.status === 'atrasado' || c.status === 'parcial') && (
+                            {(c.status === 'aberto' || c.status === 'parcial') && (
                               <button onClick={() => cancelarContaPagar(userId, c.id).then(() => { _toast('Cancelado', 'success'); fetchTudo() })}
                                 className="text-xs text-amber-600 hover:underline">Cancelar</button>
                             )}

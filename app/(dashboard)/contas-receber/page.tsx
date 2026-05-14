@@ -459,7 +459,7 @@ export default function ContasReceberPage() {
                               <button onClick={() => abrirEdicao(c)}
                                 className="text-xs text-blue-500 hover:underline">Editar</button>
                             )}
-                            {(c.status === 'aberto' || c.status === 'parcial' || c.status === 'atrasado') && (
+                            {(c.status === 'aberto' || c.status === 'parcial') && (
                               <button
                                 onClick={() => {
                                   if (confirm('Cancelar esta conta? As parcelas em aberto serão marcadas como canceladas.')) {
