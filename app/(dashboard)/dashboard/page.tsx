@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 import {
   AlertTriangle, TrendingUp, TrendingDown, Clock, Wallet,
-  ArrowRight, CheckCircle, BarChart3,
+  ArrowRight, CheckCircle, BarChart3, Package,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -71,11 +71,18 @@ export default function DashboardPage() {
   const [categoriasPagar, setCategoriasPagar] = useState<CategoriaItem[]>([])
   const [proximosVencimentos, setProximosVencimentos] = useState<ProximoVencimento[]>([])
   const [grafTipo, setGrafTipo] = useState<'barras' | 'area'>('barras')
+  const [estoque, setEstoque] = useState<{ totalProdutos: number; abaixoMinimo: number; valorTotal: number } | null>(null)
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
     })
+    fetch('/api/estoque').then(r => r.json()).then(({ produtos }) => {
+      if (!produtos) return
+      const total = produtos.reduce((s: number, p: { estoque: number; estoque_minimo: number; preco_unitario: number }) => s + p.estoque * p.preco_unitario, 0)
+      const abaixo = produtos.filter((p: { estoque: number; estoque_minimo: number }) => p.estoque <= p.estoque_minimo).length
+      setEstoque({ totalProdutos: produtos.length, abaixoMinimo: abaixo, valorTotal: total })
+    }).catch(() => {})
   }, [])
 
   const fetchDados = useCallback(async () => {
@@ -314,6 +321,33 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Estoque ── */}
+      {estoque !== null && (
+        <Link href="/estoque">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-purple-500">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-purple-50 rounded-xl shrink-0"><Package className="h-5 w-5 text-purple-600" /></div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Estoque</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{estoque.totalProdutos} produto(s) — {formatCurrency(estoque.valorTotal)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  {estoque.abaixoMinimo > 0 && (
+                    <p className="text-xs text-yellow-600 font-medium flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5" />{estoque.abaixoMinimo} abaixo do mínimo
+                    </p>
+                  )}
+                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* ── Fluxo de Caixa + Categorias ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

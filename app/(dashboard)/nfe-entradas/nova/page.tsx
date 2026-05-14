@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { createContaPagar } from '@/lib/supabase/contas-pagar'
 
 type Modo = 'chave' | 'upload' | null
 type Step = 'form' | 'review' | 'pagamento' | 'success'
@@ -138,10 +137,10 @@ export default function NovaEntradaPage() {
 
       // 2. Lançar no contas a pagar (se solicitado)
       if (lancaCP && vencimento) {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          await createContaPagar(user.id, {
+        const resCP = await fetch('/api/contas-pagar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             descricao: `NF-e Entrada ${nfeData.serie}/${nfeData.numero} — ${nfeData.fornecedorNome}`,
             valor_total: nfeData.valorTotal,
             num_parcelas: numParcelas,
@@ -149,14 +148,15 @@ export default function NovaEntradaPage() {
             multa_percentual: 0,
             desconto_valor: 0,
             data_primeira_parcela: vencimento,
-            forma_pagamento_id: formaPagamentoId || undefined,
-            conta_corrente_id: contaCorrenteId || undefined,
-            observacoes: observacoes || `Importado automaticamente da NF-e ${nfeData.serie}/${nfeData.numero}`,
-            fornecedor_id: undefined,
-            categoria_id: undefined,
-            centro_custo_id: undefined,
-            cartao_id: undefined,
-          })
+            forma_pagamento_id: formaPagamentoId || null,
+            conta_corrente_id: contaCorrenteId || null,
+            observacoes: observacoes || `NF-e ${nfeData.serie}/${nfeData.numero} — ${nfeData.fornecedorNome}`,
+          }),
+        })
+        if (!resCP.ok) {
+          const body = await resCP.json()
+          setErro(body.error ?? 'Erro ao lançar conta a pagar.')
+          return
         }
       }
 
