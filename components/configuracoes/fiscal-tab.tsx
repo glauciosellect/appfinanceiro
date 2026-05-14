@@ -33,7 +33,7 @@ export default function FiscalTab({ userId }: { userId: string }) {
   useEffect(() => {
     if (!userId) return
     Promise.all([
-      createClient().from('fiscal_config').select('*').eq('user_id', userId).single(),
+      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj').eq('user_id', userId).single(),
       createClient().from('perfil_empresa').select('cnpj_cpf, razao_social').eq('user_id', userId).single(),
     ]).then(([{ data: fiscal }, { data: perfil }]) => {
       if (fiscal) setConfig(fiscal as FiscalConfig)
@@ -105,6 +105,8 @@ export default function FiscalTab({ userId }: { userId: string }) {
 
   const isAtivo = config.focus_status === 'cadastrado' || config.ativo
   const certEnviado = config.certificado_status === 'enviado'
+  const temCnpjConfig = !!(config.cnpj)
+  const podeSendCert = isAtivo || temCnpjConfig
 
   return (
     <div className="space-y-6">
@@ -267,12 +269,12 @@ export default function FiscalTab({ userId }: { userId: string }) {
               className="w-full gap-2"
               variant="outline"
               onClick={handleEnviarCertificado}
-              disabled={enviandoCert || !arquivoCert || !senhaCert || !isAtivo}
+              disabled={enviandoCert || !arquivoCert || !senhaCert || !podeSendCert}
             >
               {enviandoCert ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {certEnviado ? 'Substituir Certificado' : 'Enviar Certificado'}
             </Button>
-            {!isAtivo && (
+            {!podeSendCert && (
               <p className="text-xs text-gray-400 text-center">Ative o módulo fiscal antes de enviar o certificado.</p>
             )}
           </CardContent>
