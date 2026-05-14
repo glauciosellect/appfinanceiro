@@ -39,7 +39,13 @@ export async function proxy(request: NextRequest) {
     '/auth/bem-vindo',
     '/auth/erro-confirmacao',
     '/api/stripe/webhook',
+    '/api/fiscal/diagnostico',
   ]
+
+  // Rotas de API retornam JSON em vez de redirecionar para a home
+  if (!user && pathname.startsWith('/api/') && !PUBLIC_PATHS.includes(pathname)) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
 
   if (!user && !PUBLIC_PATHS.includes(pathname)) {
     return NextResponse.redirect(new URL('/', request.url))
