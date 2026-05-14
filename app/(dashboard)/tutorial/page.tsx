@@ -15,6 +15,9 @@ import {
   ArrowRight,
   BookOpen,
   CircleDot,
+  UserCircle2,
+  Package,
+  Receipt,
 } from 'lucide-react'
 
 /* ── Tipos ── */
@@ -40,8 +43,27 @@ interface FAQ {
 const steps: Step[] = [
   {
     number: 1,
+    title: 'Preencher o Perfil da Empresa',
+    description: 'Antes de qualquer cadastro, configure os dados básicos da sua empresa. Esses dados aparecem em relatórios e — se você ativar o módulo fiscal depois — são essenciais para emissão de notas.',
+    icon: UserCircle2,
+    color: '#0EA5E9',
+    bg: '#F0F9FF',
+    href: '/configuracoes',
+    required: true,
+    items: [
+      'Acesse Configurações no menu lateral',
+      'Selecione "Pessoa Física" ou "Pessoa Jurídica"',
+      'Informe o CPF ou CNPJ — os dados serão preenchidos automaticamente',
+      'Confirme/ajuste a razão social, nome fantasia, endereço e contato',
+      'Selecione o regime tributário (Simples Nacional, Lucro Presumido ou Lucro Real)',
+      'Clique em "Salvar Dados da Empresa"',
+    ],
+    tip: 'Mesmo que você não vá emitir notas fiscais agora, preencha os dados completos — isso evita refazer o cadastro depois e permite ativar o módulo fiscal a qualquer momento.',
+  },
+  {
+    number: 2,
     title: 'Cadastrar Contas Correntes',
-    description: 'O primeiro passo é cadastrar suas contas bancárias. Sem isso, o sistema não consegue registrar recebimentos, pagamentos ou transferências.',
+    description: 'Cadastre suas contas bancárias. Sem isso, o sistema não consegue registrar recebimentos, pagamentos ou transferências.',
     icon: Landmark,
     color: '#2563EB',
     bg: '#EFF6FF',
@@ -58,7 +80,7 @@ const steps: Step[] = [
     tip: 'Cadastre pelo menos 1 conta. Pode ser conta corrente, poupança, caixa físico ou qualquer outra.',
   },
   {
-    number: 2,
+    number: 3,
     title: 'Cadastrar Clientes',
     description: 'Se você presta serviços ou vende produtos e precisa cobrar, cadastre seus clientes. Eles são obrigatórios para criar Contas a Receber.',
     icon: Users,
@@ -77,7 +99,7 @@ const steps: Step[] = [
     tip: 'Não precisa preencher tudo de uma vez. O mínimo é nome e tipo. Você pode completar depois.',
   },
   {
-    number: 3,
+    number: 4,
     title: 'Cadastrar Fornecedores',
     description: 'Cadastre as empresas ou pessoas de quem você compra produtos ou serviços. Os fornecedores são usados nas Contas a Pagar para organizar suas despesas.',
     icon: Building2,
@@ -96,7 +118,7 @@ const steps: Step[] = [
     tip: 'O fornecedor é opcional nas Contas a Pagar. Mas cadastrá-los ajuda a organizar e filtrar suas despesas por categoria.',
   },
   {
-    number: 4,
+    number: 5,
     title: 'Cadastrar Cartões de Crédito',
     description: 'Se você paga despesas com cartão de crédito, cadastre seus cartões. Isso permite registrar pagamentos no cartão e controlar o limite e as faturas.',
     icon: CreditCard,
@@ -116,7 +138,7 @@ const steps: Step[] = [
     tip: 'Pule este passo se não usa cartão de crédito para pagar despesas da empresa.',
   },
   {
-    number: 5,
+    number: 6,
     title: 'Criar Contas a Receber',
     description: 'Agora você está pronto para registrar suas cobranças. Cada conta a receber pode ter 1 ou várias parcelas — o sistema gera automaticamente.',
     icon: TrendingUp,
@@ -138,7 +160,7 @@ const steps: Step[] = [
     tip: 'Para receber em parcela única, deixe "Nº de Parcelas" como 1.',
   },
   {
-    number: 6,
+    number: 7,
     title: 'Criar Contas a Pagar',
     description: 'Registre todas as suas despesas: aluguel, fornecedores, contas fixas, etc. Assim o sistema mostra exatamente quanto você vai precisar pagar e quando.',
     icon: TrendingDown,
@@ -157,6 +179,43 @@ const steps: Step[] = [
       'Salve — as parcelas serão geradas automaticamente',
     ],
     tip: 'Contas fixas mensais como aluguel: coloque em "Nº de Parcelas" quantos meses quer lançar de uma vez.',
+  },
+  {
+    number: 8,
+    title: 'Controlar Estoque (Opcional)',
+    description: 'Se você vende produtos físicos, use o módulo de Estoque para controlar quantidades, entradas e saídas. O estoque é atualizado automaticamente ao emitir NF-e de venda e ao registrar NF-e de entrada do fornecedor.',
+    icon: Package,
+    color: '#8B5CF6',
+    bg: '#F5F3FF',
+    href: '/estoque',
+    required: false,
+    items: [
+      'Acesse "Estoque" no menu lateral',
+      'Clique em "Novo Produto" para cadastrar os itens',
+      'Informe código, descrição, NCM, unidade e preço',
+      'Defina o estoque inicial de cada produto',
+      'Para reposição: importe NF-e do fornecedor via XML em "NF-e Entradas → Nova"',
+      'O sistema dará baixa automática no estoque ao emitir NF-e de saída',
+    ],
+    tip: 'Use NF-e Entradas para registrar compras com fornecedor. Basta importar o XML da nota e o sistema lança no estoque, na conta a pagar e na movimentação financeira automaticamente.',
+  },
+  {
+    number: 9,
+    title: 'Ativar o Módulo Fiscal (Opcional)',
+    description: 'Se você emite ou pretende emitir notas fiscais (NFS-e de serviços ou NF-e de produtos), ative o módulo fiscal. Há um tutorial dedicado com o passo a passo completo.',
+    icon: Receipt,
+    color: '#D97706',
+    bg: '#FFFBEB',
+    href: '/tutorial-fiscal',
+    required: false,
+    items: [
+      'Confirme que o Perfil da Empresa está 100% preenchido (CNPJ, IE, IM, regime tributário)',
+      'Acesse o Tutorial Fiscal pelo menu lateral',
+      'Siga os 9 passos: ativação, certificado A1, numeração inicial, cadastro de serviços/produtos, emissão',
+      'Você pode emitir NFS-e (serviços) imediatamente — não precisa de certificado digital',
+      'Para NF-e (produtos) é necessário um certificado digital A1 válido',
+    ],
+    tip: 'Migrando de outro emissor? No tutorial fiscal há um passo dedicado para continuar a sequência de numeração de NF-e sem quebrar a contabilidade.',
   },
 ]
 
@@ -188,6 +247,18 @@ const faqs: FAQ[] = [
   {
     question: 'Como exportar os dados?',
     answer: 'Vá em Relatórios no menu lateral. Selecione o tipo de relatório (Recebimentos, Pagamentos, Inadimplência ou Fluxo de Caixa), defina o período e clique em "Exportar CSV" ou "Imprimir".',
+  },
+  {
+    question: 'Posso usar o sistema sem emitir notas fiscais?',
+    answer: 'Sim. O módulo fiscal é totalmente opcional. Você pode usar o SyncroMoney só para controle financeiro (contas a pagar, receber, fluxo de caixa) sem ativar a parte de notas. Quando quiser emitir, basta seguir o Tutorial Fiscal.',
+  },
+  {
+    question: 'Como importar uma NF-e de fornecedor?',
+    answer: 'Acesse "NF-e Entradas" no menu lateral e clique em "Nova". Você pode importar o XML da NF-e que o fornecedor enviou — o sistema extrai os produtos, preços e impostos automaticamente, atualiza o estoque e gera as contas a pagar correspondentes. Também é possível digitar manualmente se você não tiver o XML.',
+  },
+  {
+    question: 'Como cadastrar uma transferência entre contas?',
+    answer: 'Acesse "Contas Correntes", clique na conta de origem e use a opção "Transferir". Informe a conta destino e o valor — o sistema debita uma conta e credita a outra, mantendo o saldo das duas atualizado automaticamente.',
   },
 ]
 

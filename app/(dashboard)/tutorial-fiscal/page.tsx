@@ -17,6 +17,7 @@ import {
   Wrench,
   ShoppingCart,
   Building2,
+  Hash,
 } from 'lucide-react'
 
 interface Step {
@@ -63,7 +64,7 @@ const steps: Step[] = [
   {
     number: 2,
     title: 'Ativar o Módulo Fiscal',
-    description: 'Com o perfil completo, ative a integração com a prefeitura e a Receita Federal. Este passo registra sua empresa no sistema de emissão e habilita os tipos de nota que você vai usar.',
+    description: 'Com o perfil completo, ative a emissão fiscal. O SyncroMoney registra automaticamente seus dados na nuvem fiscal e habilita a comunicação com a Prefeitura (NFS-e) e/ou a SEFAZ (NF-e). Tudo sem você precisar acessar portais externos.',
     icon: Settings,
     color: '#7C3AED',
     bg: '#F5F3FF',
@@ -71,12 +72,13 @@ const steps: Step[] = [
     required: 'sim',
     items: [
       'Acesse Configurações → aba Fiscal',
-      'Escolha quais tipos de nota deseja habilitar: NFS-e (serviços) e/ou NF-e (produtos)',
+      'Marque os tipos de nota que pretende emitir: NFS-e (serviços) e/ou NF-e (produtos)',
       'Clique em "Ativar Emissão Fiscal"',
-      'O sistema registra sua empresa automaticamente no integrador fiscal',
-      'Aguarde a confirmação — um banner verde aparecerá indicando "Módulo fiscal ativo"',
+      'O sistema sincroniza automaticamente seu CNPJ, IE, regime tributário e endereço com a nuvem fiscal',
+      'Aguarde 2-3 segundos — um banner verde aparecerá indicando "Módulo fiscal ativo"',
+      'Se algum dado estiver inválido, a mensagem de erro aparecerá em vermelho — corrija no Perfil e ative novamente',
     ],
-    tip: 'Se aparecer erro na ativação, verifique se o CNPJ e a Inscrição Municipal estão corretos no Perfil.',
+    tip: 'A ativação registra sua empresa no integrador automaticamente — você NÃO precisa se cadastrar em nenhum site externo. Toda a comunicação com SEFAZ e Prefeitura passa pelo SyncroMoney.',
   },
   {
     number: 3,
@@ -99,6 +101,26 @@ const steps: Step[] = [
   },
   {
     number: 4,
+    title: 'Configurar Numeração Inicial (Migração)',
+    description: 'Se você vem de outro sistema (Gestão Click, Nfe.io, emissor da contabilidade etc.), continue a sequência de numeração de onde parou. Esse passo é OBRIGATÓRIO em migrações — se a numeração começar errada, o SEFAZ vai rejeitar a nota.',
+    icon: Hash,
+    color: '#9333EA',
+    bg: '#FAF5FF',
+    href: '/configuracoes',
+    required: 'opcional',
+    items: [
+      'Acesse Configurações → aba Fiscal',
+      'Role até a seção "Numeração da NF-e"',
+      'Em "Próximo número da NF-e", informe o número da próxima nota a ser emitida (ex: se já emitiu até a 109, coloque 110)',
+      'Em "Série", mantenha 1 — exceto se você usa série diferente em outro sistema',
+      'Clique em "Salvar Numeração"',
+      'A configuração é sincronizada com a nuvem fiscal automaticamente',
+      'Confira no painel da Focus NFe se "Próximo número (Produção)" mostra o valor que você definiu',
+    ],
+    tip: 'NÃO precisa se preocupar se está começando do zero — o sistema já parte da nota nº 1 por padrão. Esse passo só é necessário se você TINHA outro sistema e quer manter a sequência fiscal continua para a contabilidade.',
+  },
+  {
+    number: 5,
     title: 'Cadastrar Serviços Fiscais (NFS-e)',
     description: 'Crie o catálogo dos serviços que você presta. Cada serviço tem um código da LC 116/2003 e uma alíquota de ISS definida pela prefeitura. Esses dados são obrigatórios na nota.',
     icon: Wrench,
@@ -117,7 +139,7 @@ const steps: Step[] = [
     tip: 'A alíquota ISS varia por município e tipo de serviço. Em Juiz de Fora, serviços de TI geralmente têm 2%. Consulte a tabela ISS da Prefeitura de JF para confirmar.',
   },
   {
-    number: 5,
+    number: 6,
     title: 'Cadastrar Produtos (NF-e)',
     description: 'Para emitir NF-e, cadastre os produtos que você vende com os dados fiscais obrigatórios: código NCM, CFOP e unidade de medida. Pule este passo se só emite NFS-e.',
     icon: ShoppingCart,
@@ -138,7 +160,7 @@ const steps: Step[] = [
     tip: 'O NCM de cada produto pode ser consultado na tabela TIPI (Tabela de Incidência do IPI) disponível no site da Receita Federal.',
   },
   {
-    number: 6,
+    number: 7,
     title: 'Cadastrar Clientes (Tomadores / Destinatários)',
     description: 'O destinatário (NF-e) ou tomador (NFS-e) é quem recebe a nota. Antes de emitir, o cliente precisa estar cadastrado com CNPJ/CPF e endereço corretos — esses dados vão impressos na nota.',
     icon: Users,
@@ -157,7 +179,7 @@ const steps: Step[] = [
     tip: 'Clientes com CNPJ têm os dados preenchidos automaticamente via BrasilAPI ao digitar o CNPJ. Para pessoa física, preencha o CPF e os dados manualmente.',
   },
   {
-    number: 7,
+    number: 8,
     title: 'Emitir a NFS-e (Nota de Serviços)',
     description: 'Com tudo configurado, você está pronto para emitir sua primeira Nota Fiscal de Serviços eletrônica, integrada diretamente à prefeitura — sem acessar portal separado.',
     icon: Receipt,
@@ -180,9 +202,9 @@ const steps: Step[] = [
     tip: 'Se o tomador for uma empresa que retém ISS, marque "ISS retido na fonte". O sistema calculará o valor líquido que você receberá descontado o ISS.',
   },
   {
-    number: 8,
+    number: 9,
     title: 'Emitir a NF-e (Nota de Produtos)',
-    description: 'Para venda de produtos, emita a NF-e com os itens, quantidades, valores e dados fiscais. A nota é transmitida à SEFAZ e autorizada automaticamente.',
+    description: 'Para venda de produtos, emita a NF-e com os itens, quantidades, valores e dados fiscais. A nota é transmitida automaticamente à SEFAZ e autorizada em segundos. O DANFE em PDF fica disponível para baixar e enviar ao cliente.',
     icon: FileText,
     color: '#0891B2',
     bg: '#ECFEFF',
@@ -192,14 +214,15 @@ const steps: Step[] = [
       'Acesse Fiscal → NF-e no menu lateral',
       'Clique em "Nova NF-e"',
       'Selecione a natureza da operação (ex: Venda de Mercadoria)',
-      'Informe o destinatário (cliente cadastrado)',
-      'Adicione os itens: selecione o produto, informe quantidade e valor',
-      'Confira os totais de ICMS, PIS, COFINS calculados automaticamente',
-      'Informe os dados de transporte (se houver frete)',
-      'Revise e clique em "Transmitir à SEFAZ"',
-      'A nota será autorizada — o DANFE ficará disponível para download',
+      'Informe o destinatário (cliente cadastrado) e confira o endereço',
+      'Adicione os itens: selecione o produto, informe quantidade, valor e desconto se houver',
+      'Confira os totais de ICMS, PIS, COFINS — calculados automaticamente conforme o regime tributário',
+      'Informe os dados de transporte (modalidade do frete, transportadora, placa)',
+      'Revise o resumo e clique em "Transmitir à SEFAZ"',
+      'Em poucos segundos a nota retorna AUTORIZADA — o DANFE fica disponível para download',
+      'Se o SEFAZ rejeitar (ex: dado incorreto do destinatário), aparece a mensagem do erro — corrija e reenvie',
     ],
-    tip: 'Para operações interestaduais (CFOP 6xxx), o ICMS interestadual é calculado automaticamente com base na UF do destinatário.',
+    tip: 'Notas rejeitadas pelo SEFAZ NÃO existem legalmente — você pode simplesmente corrigir os dados e emitir novamente com o mesmo número. Não há multa nem cancelamento envolvido.',
   },
 ]
 
@@ -235,6 +258,26 @@ const faqs: FAQ[] = [
   {
     question: 'Onde encontro o PDF da nota emitida?',
     answer: 'Vá em Fiscal → NFS-e (ou NF-e), localize a nota com status "Autorizada" e clique no ícone de download (seta para baixo). Para NF-e, o arquivo gerado é o DANFE (Documento Auxiliar da NF-e).',
+  },
+  {
+    question: 'Estou migrando de outro sistema. Como mantenho a sequência de notas?',
+    answer: 'No SyncroMoney você configura o próximo número da NF-e em Configurações → Fiscal → seção "Numeração da NF-e". Se você emitiu até a nota 109 no sistema anterior, coloque "110" como próximo número e salve. O sistema sincroniza automaticamente com a nuvem fiscal e a próxima nota emitida será a 110. Isso vale para NF-e — a NFS-e tem numeração controlada pela própria prefeitura.',
+  },
+  {
+    question: 'O SEFAZ rejeitou minha NF-e. O que fazer?',
+    answer: 'A nota rejeitada NÃO existe legalmente — ou seja, não há multa, cancelamento nem qualquer obrigação fiscal envolvida. Basta clicar em "Editar/Reenviar" na lista de NF-e, corrigir o dado apontado na mensagem do SEFAZ e transmitir de novo. A nota nova vai usar o mesmo número da rejeitada. Erros comuns: CNPJ do destinatário inválido, NCM incorreto, regime tributário do emitente errado.',
+  },
+  {
+    question: 'Posso editar uma NF-e já autorizada?',
+    answer: 'Não. Após o SEFAZ autorizar, a nota é imutável. Para corrigir, você tem duas opções: 1) Carta de Correção Eletrônica (CC-e) — para erros que NÃO mudam valores, destinatário, datas ou produtos; 2) Cancelamento dentro de 24h e emissão de uma nova nota. Após 24h, é necessário emitir uma NF-e de devolução ou substituição.',
+  },
+  {
+    question: 'Preciso enviar o certificado de novo a cada renovação?',
+    answer: 'Sim. O certificado A1 tem validade de 1 ou 3 anos. Ao renovar, acesse Configurações → Fiscal → Certificado Digital e envie o novo .pfx com a nova senha. O sistema substitui automaticamente o anterior, sem precisar cadastrar tudo novamente.',
+  },
+  {
+    question: 'O que é o DANFE?',
+    answer: 'DANFE (Documento Auxiliar da NF-e) é o "espelho" em PDF da NF-e que acompanha a mercadoria durante o transporte. Ele tem o número da nota, a chave de acesso (44 dígitos) e o código de barras. Não é a nota fiscal em si — a NF-e propriamente dita é o arquivo XML autorizado pelo SEFAZ. O DANFE serve para conferência visual e fiscalização nos postos.',
   },
 ]
 
