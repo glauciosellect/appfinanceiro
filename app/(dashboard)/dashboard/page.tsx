@@ -103,6 +103,7 @@ export default function DashboardPage() {
       rProxReceber,
       rProxPagar,
       rContasPagar,
+      rTransactions,
     ] = await Promise.all([
       supabase.from('parcelas_receber').select('valor,valor_recebido,status,data_vencimento,data_recebimento').eq('user_id', userId),
       supabase.from('parcelas_pagar').select('valor,valor_pago,status,data_vencimento,data_pagamento').eq('user_id', userId),
@@ -111,17 +112,23 @@ export default function DashboardPage() {
       supabase.from('parcelas_receber').select('valor,data_vencimento,conta_receber_id,contas_receber(descricao,clientes(nome))').eq('user_id', userId).in('status',['aberto','atrasado']).lte('data_vencimento', em7dias).order('data_vencimento').limit(5),
       supabase.from('parcelas_pagar').select('valor,data_vencimento,conta_pagar_id,contas_pagar(descricao,fornecedores(nome))').eq('user_id', userId).in('status',['aberto','atrasado']).lte('data_vencimento', em7dias).order('data_vencimento').limit(5),
       supabase.from('contas_pagar').select('descricao,valor_total,categorias(nome)').eq('user_id', userId).neq('status','cancelado'),
+      supabase.from('transactions').select('type,amount,date').eq('user_id', userId).gte('date', inicioMes),
     ])
 
     const precs = rParcelasReceber.data ?? []
     const ppags = rParcelasPagar.data ?? []
+    const txs = rTransactions.data ?? []
+
+    // Transações simples (tabela transactions) somadas ao mês
+    const txRecebidoMes = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+    const txPagoMes     = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
 
     const totalReceberAberto  = precs.filter(p => p.status === 'aberto').reduce((s,p) => s + p.valor, 0)
     const totalReceberAtrasado = precs.filter(p => p.status === 'atrasado').reduce((s,p) => s + p.valor, 0)
-    const totalRecebidoMes    = precs.filter(p => p.status === 'recebido' && (p.data_recebimento ?? p.data_vencimento) >= inicioMes).reduce((s,p) => s + (p.valor_recebido ?? p.valor), 0)
+    const totalRecebidoMes    = precs.filter(p => p.status === 'recebido' && (p.data_recebimento ?? p.data_vencimento) >= inicioMes).reduce((s,p) => s + (p.valor_recebido ?? p.valor), 0) + txRecebidoMes
     const totalPagarAberto    = ppags.filter(p => p.status === 'aberto').reduce((s,p) => s + p.valor, 0)
     const totalPagarAtrasado  = ppags.filter(p => p.status === 'atrasado').reduce((s,p) => s + p.valor, 0)
-    const totalPagoMes        = ppags.filter(p => p.status === 'pago' && (p.data_pagamento ?? p.data_vencimento) >= inicioMes).reduce((s,p) => s + (p.valor_pago ?? p.valor), 0)
+    const totalPagoMes        = ppags.filter(p => p.status === 'pago' && (p.data_pagamento ?? p.data_vencimento) >= inicioMes).reduce((s,p) => s + (p.valor_pago ?? p.valor), 0) + txPagoMes
     const qtdAlertasReceber   = precs.filter(p => p.status === 'aberto' && p.data_vencimento >= hoje && p.data_vencimento <= em7dias).length
     const qtdAlertasPagar     = ppags.filter(p => p.status === 'aberto' && p.data_vencimento >= hoje && p.data_vencimento <= em7dias).length
     const saldoContas         = (rContas.data ?? []).reduce((s,c) => s + c.saldo_atual, 0)
@@ -192,113 +199,115 @@ export default function DashboardPage() {
         <p className="text-sm text-gray-500 capitalize">{mesAtual}</p>
       </div>
 
-      {/* ── KPIs principais (6 cards) ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* ── KPIs principais — linha 1: A Receber | Recebido ── */}
+      <div className="grid grid-cols-2 gap-4">
         {/* A Receber */}
         <Link href="/contas-receber">
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-green-500 h-full">
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">A Receber</p>
-                  {loading ? <Skeleton className="h-7 w-28 mt-1" /> : (
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(resumo.totalReceberAberto)}</p>
+                  {loading ? <Skeleton className="h-6 w-full mt-1" /> : (
+                    <p className="text-base sm:text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5 truncate">{formatCurrency(resumo.totalReceberAberto)}</p>
                   )}
                   {resumo.totalReceberAtrasado > 0 && (
                     <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />{formatCurrency(resumo.totalReceberAtrasado)} atrasado
+                      <AlertTriangle className="h-3 w-3 shrink-0" /><span className="truncate">{formatCurrency(resumo.totalReceberAtrasado)} atrasado</span>
                     </p>
                   )}
                   {resumo.qtdAlertasReceber > 0 && (
                     <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />{resumo.qtdAlertasReceber} vence em 7 dias
+                      <Clock className="h-3 w-3 shrink-0" />{resumo.qtdAlertasReceber} vence em 7 dias
                     </p>
                   )}
                 </div>
-                <div className="p-2 bg-green-50 rounded-xl shrink-0"><TrendingUp className="h-5 w-5 text-green-600" /></div>
+                <div className="p-2 bg-green-50 rounded-xl shrink-0"><TrendingUp className="h-4 w-4 text-green-600" /></div>
               </div>
             </CardContent>
           </Card>
         </Link>
-
-        {/* A Pagar */}
-        <Link href="/contas-pagar">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-red-500 h-full">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">A Pagar</p>
-                  {loading ? <Skeleton className="h-7 w-28 mt-1" /> : (
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{formatCurrency(resumo.totalPagarAberto)}</p>
-                  )}
-                  {resumo.totalPagarAtrasado > 0 && (
-                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />{formatCurrency(resumo.totalPagarAtrasado)} atrasado
-                    </p>
-                  )}
-                  {resumo.qtdAlertasPagar > 0 && (
-                    <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />{resumo.qtdAlertasPagar} vence em 7 dias
-                    </p>
-                  )}
-                </div>
-                <div className="p-2 bg-red-50 rounded-xl shrink-0"><TrendingDown className="h-5 w-5 text-red-600" /></div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Saldo Líquido */}
-        <Card className={`border-l-4 ${saldoLiquido >= 0 ? 'border-l-blue-500' : 'border-l-orange-500'}`}>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Saldo Líquido</p>
-                {loading ? <Skeleton className="h-7 w-28 mt-1" /> : (
-                  <p className={`text-2xl font-bold mt-0.5 ${saldoLiquido >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                    {formatCurrency(saldoLiquido)}
-                  </p>
-                )}
-                <p className="text-xs text-gray-400 mt-0.5">Receber − Pagar</p>
-              </div>
-              <div className={`p-2 rounded-xl shrink-0 ${saldoLiquido >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                <BarChart3 className={`h-5 w-5 ${saldoLiquido >= 0 ? 'text-blue-600' : 'text-orange-500'}`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Recebido no mês */}
         <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="pt-4 pb-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Recebido (mês)</p>
-                {loading ? <Skeleton className="h-7 w-28 mt-1" /> : (
-                  <p className="text-2xl font-bold text-emerald-600 mt-0.5">{formatCurrency(resumo.totalRecebidoMes)}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Recebido</p>
+                {loading ? <Skeleton className="h-6 w-full mt-1" /> : (
+                  <p className="text-base sm:text-xl font-bold text-emerald-600 mt-0.5 truncate">{formatCurrency(resumo.totalRecebidoMes)}</p>
                 )}
-                <p className="text-xs text-gray-400 mt-0.5">Parcelas recebidas</p>
+                <p className="text-xs text-gray-400 mt-0.5">Recebido no mês</p>
               </div>
-              <div className="p-2 bg-emerald-50 rounded-xl shrink-0"><CheckCircle className="h-5 w-5 text-emerald-600" /></div>
+              <div className="p-2 bg-emerald-50 rounded-xl shrink-0"><CheckCircle className="h-4 w-4 text-emerald-600" /></div>
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* ── KPIs linha 2: A Pagar | Pago ── */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* A Pagar */}
+        <Link href="/contas-pagar">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-red-500 h-full">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">A Pagar</p>
+                  {loading ? <Skeleton className="h-6 w-full mt-1" /> : (
+                    <p className="text-base sm:text-xl font-bold text-gray-900 dark:text-gray-100 mt-0.5 truncate">{formatCurrency(resumo.totalPagarAberto)}</p>
+                  )}
+                  {resumo.totalPagarAtrasado > 0 && (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 shrink-0" /><span className="truncate">{formatCurrency(resumo.totalPagarAtrasado)} atrasado</span>
+                    </p>
+                  )}
+                  {resumo.qtdAlertasPagar > 0 && (
+                    <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
+                      <Clock className="h-3 w-3 shrink-0" />{resumo.qtdAlertasPagar} vence em 7 dias
+                    </p>
+                  )}
+                </div>
+                <div className="p-2 bg-red-50 rounded-xl shrink-0"><TrendingDown className="h-4 w-4 text-red-600" /></div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* Pago no mês */}
+        <Card className="border-l-4 border-l-rose-400">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Pago</p>
+                {loading ? <Skeleton className="h-6 w-full mt-1" /> : (
+                  <p className="text-base sm:text-xl font-bold text-rose-600 mt-0.5 truncate">{formatCurrency(resumo.totalPagoMes)}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-0.5">Pago no mês</p>
+              </div>
+              <div className="p-2 bg-rose-50 rounded-xl shrink-0"><TrendingDown className="h-4 w-4 text-rose-500" /></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── KPIs linha 3: Saldo em Contas | Alertas ── */}
+      <div className="grid grid-cols-2 gap-4">
         {/* Saldo em Contas */}
         <Link href="/contas-correntes">
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-indigo-500 h-full">
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Saldo em Contas</p>
-                  {loading ? <Skeleton className="h-7 w-28 mt-1" /> : (
-                    <p className={`text-2xl font-bold mt-0.5 ${resumo.saldoContas >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600'}`}>
+                  {loading ? <Skeleton className="h-6 w-full mt-1" /> : (
+                    <p className={`text-base sm:text-xl font-bold mt-0.5 truncate ${resumo.saldoContas >= 0 ? 'text-gray-900 dark:text-gray-100' : 'text-red-600'}`}>
                       {formatCurrency(resumo.saldoContas)}
                     </p>
                   )}
                   <p className="text-xs text-gray-400 mt-0.5">{contasSaldo.length} conta(s) ativa(s)</p>
                 </div>
-                <div className="p-2 bg-indigo-50 rounded-xl shrink-0"><Wallet className="h-5 w-5 text-indigo-600" /></div>
+                <div className="p-2 bg-indigo-50 rounded-xl shrink-0"><Wallet className="h-4 w-4 text-indigo-600" /></div>
               </div>
             </CardContent>
           </Card>
@@ -307,16 +316,16 @@ export default function DashboardPage() {
         {/* Alertas */}
         <Card className={`border-l-4 ${totalAlertas > 0 ? 'border-l-amber-500' : 'border-l-gray-200'}`}>
           <CardContent className="pt-4 pb-4">
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Alertas</p>
-                {loading ? <Skeleton className="h-7 w-16 mt-1" /> : (
-                  <p className={`text-2xl font-bold mt-0.5 ${totalAlertas > 0 ? 'text-amber-600' : 'text-gray-400'}`}>{totalAlertas}</p>
+                {loading ? <Skeleton className="h-6 w-16 mt-1" /> : (
+                  <p className={`text-base sm:text-xl font-bold mt-0.5 ${totalAlertas > 0 ? 'text-amber-600' : 'text-gray-400'}`}>{totalAlertas}</p>
                 )}
                 <p className="text-xs text-gray-400 mt-0.5">pendências</p>
               </div>
               <div className={`p-2 rounded-xl shrink-0 ${totalAlertas > 0 ? 'bg-amber-50' : 'bg-gray-50'}`}>
-                <AlertTriangle className={`h-5 w-5 ${totalAlertas > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
+                <AlertTriangle className={`h-4 w-4 ${totalAlertas > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
               </div>
             </div>
           </CardContent>

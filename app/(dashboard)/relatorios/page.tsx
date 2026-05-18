@@ -258,17 +258,19 @@ export default function RelatoriosPage() {
 
       {/* Filtros */}
       <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
-            <div>
-              <Label>Data Inicial</Label>
-              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-40" />
+        <CardContent className="pt-6 pb-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
+              <div>
+                <Label className="text-center block mb-1">Data Inicial</Label>
+                <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full" />
+              </div>
+              <div>
+                <Label className="text-center block mb-1">Data Final</Label>
+                <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full" />
+              </div>
             </div>
-            <div>
-              <Label>Data Final</Label>
-              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-40" />
-            </div>
-            <Button onClick={gerarRelatorio} disabled={loading}>
+            <Button onClick={gerarRelatorio} disabled={loading} className="w-full max-w-md">
               {loading ? 'Gerando...' : 'Gerar Relatório'}
             </Button>
           </div>

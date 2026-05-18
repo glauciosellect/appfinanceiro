@@ -17,6 +17,11 @@ import {
 } from 'recharts'
 import type { ContaCorrente, FluxoCaixaItem } from '@/types'
 
+function limparDescricao(descricao: string): string {
+  // Remove fragmentos como " — parcela #uuid" ou " — parcela #xxxx"
+  return descricao.replace(/\s*—\s*parcela\s*#[a-zA-Z0-9-]+/gi, '').trim()
+}
+
 function getMonthRange(offset = 0) {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
@@ -123,7 +128,7 @@ export default function FluxoCaixaPage() {
         const isCredito = m.tipo === 'credito' || m.tipo === 'transferencia_entrada'
         itens.push({
           data: m.data_movimentacao,
-          descricao: m.descricao,
+          descricao: limparDescricao(m.descricao ?? ''),
           conta_nome: m.contas_correntes?.nome_apelido ?? '',
           entrada: isCredito ? m.valor : 0,
           saida: !isCredito ? m.valor : 0,
@@ -135,9 +140,11 @@ export default function FluxoCaixaPage() {
       for (const p of parcelasReceber.data ?? []) {
         const cr = (p.contas_receber as unknown) as { descricao?: string; clientes?: { nome?: string } } | null
         const clienteNome = cr?.clientes?.nome ?? ''
+        const descr = cr?.descricao ?? ''
+        const parts = [clienteNome, descr].filter(Boolean)
         itens.push({
           data: p.data_vencimento,
-          descricao: `${clienteNome} — ${cr?.descricao ?? ''}`,
+          descricao: parts.join(' — '),
           conta_nome: '',
           entrada: p.valor,
           saida: 0,
@@ -149,9 +156,11 @@ export default function FluxoCaixaPage() {
       for (const p of parcelasPagar.data ?? []) {
         const cp = (p.contas_pagar as unknown) as { descricao?: string; fornecedores?: { nome?: string } } | null
         const fornNome = cp?.fornecedores?.nome ?? ''
+        const descr = cp?.descricao ?? ''
+        const parts = [fornNome, descr].filter(Boolean)
         itens.push({
           data: p.data_vencimento,
-          descricao: `${fornNome} — ${cp?.descricao ?? ''}`,
+          descricao: parts.join(' — '),
           conta_nome: '',
           entrada: 0,
           saida: p.valor,
@@ -247,39 +256,48 @@ export default function FluxoCaixaPage() {
       {/* Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-xl"><DollarSign className="h-5 w-5 text-blue-600" /></div>
-              <div><p className="text-xs text-gray-500">Saldo Atual</p><p className="font-bold text-gray-900">{formatCurrency(saldoTotal)}</p></div>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500">Saldo Atual</p>
+                <p className="font-bold text-gray-900 text-sm sm:text-base truncate">{formatCurrency(saldoTotal)}</p>
+              </div>
+              <div className="p-2 bg-blue-50 rounded-xl shrink-0"><DollarSign className="h-4 w-4 text-blue-600" /></div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-50 rounded-xl"><TrendingUp className="h-5 w-5 text-green-600" /></div>
-              <div><p className="text-xs text-gray-500">Entradas (real)</p><p className="font-bold text-green-600">{formatCurrency(totalEntradas)}</p></div>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500">Entradas (real)</p>
+                <p className="font-bold text-green-600 text-sm sm:text-base truncate">{formatCurrency(totalEntradas)}</p>
+              </div>
+              <div className="p-2 bg-green-50 rounded-xl shrink-0"><TrendingUp className="h-4 w-4 text-green-600" /></div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-50 rounded-xl"><TrendingDown className="h-5 w-5 text-red-600" /></div>
-              <div><p className="text-xs text-gray-500">Saídas (real)</p><p className="font-bold text-red-600">{formatCurrency(totalSaidas)}</p></div>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500">Saídas (real)</p>
+                <p className="font-bold text-red-600 text-sm sm:text-base truncate">{formatCurrency(totalSaidas)}</p>
+              </div>
+              <div className="p-2 bg-red-50 rounded-xl shrink-0"><TrendingDown className="h-4 w-4 text-red-600" /></div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-50 rounded-xl"><Calendar className="h-5 w-5 text-amber-600" /></div>
-              <div>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-gray-500">Projetado</p>
-                <p className={`font-bold ${totalEntradasProj - totalSaidasProj >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`font-bold text-sm sm:text-base truncate ${totalEntradasProj - totalSaidasProj >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(totalEntradasProj - totalSaidasProj)}
                 </p>
               </div>
+              <div className="p-2 bg-amber-50 rounded-xl shrink-0"><Calendar className="h-4 w-4 text-amber-600" /></div>
             </div>
           </CardContent>
         </Card>

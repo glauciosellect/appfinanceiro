@@ -19,6 +19,7 @@ export interface Transaction {
   description: string
   category: string
   date: string
+  conta_corrente_id?: string | null
   created_at: string
 }
 

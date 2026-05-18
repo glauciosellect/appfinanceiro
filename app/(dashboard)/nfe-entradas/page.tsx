@@ -3,24 +3,71 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Search, Eye, FileText, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { notasFiscaisEletronicas } from '@/lib/fiscal/mock-data'
+import { loadEntradasImportadas, type NFeEntradaImportada } from '@/lib/fiscal/nfe-entradas-storage'
 
-const entradas = notasFiscaisEletronicas.filter((n) => n.tipo === 'entrada')
+type EntradaRow = {
+  id: string
+  serie: string
+  numero: string
+  chaveAcesso?: string
+  dataEmissao: string
+  fornecedorNome: string
+  fornecedorCnpj: string
+  naturezaOperacao: string
+  valorTotal: number
+}
+
+function rowFromImportada(i: NFeEntradaImportada): EntradaRow {
+  return {
+    id: i.id,
+    serie: i.serie,
+    numero: i.numero,
+    chaveAcesso: i.chaveAcesso,
+    dataEmissao: i.dataEmissao,
+    fornecedorNome: i.fornecedorNome,
+    fornecedorCnpj: i.fornecedorCnpj,
+    naturezaOperacao: i.naturezaOperacao,
+    valorTotal: i.valorTotal,
+  }
+}
 
 export default function NFeEntradasPage() {
   const [busca, setBusca] = useState('')
+  const [tick, setTick] = useState(0)
 
-  const filtradas = entradas.filter(
-    (n) => !busca || n.numero.includes(busca) || n.naturezaOperacao.toLowerCase().includes(busca.toLowerCase())
+  const recarregar = useCallback(() => setTick((t) => t + 1), [])
+
+  useEffect(() => {
+    const handler = () => recarregar()
+    window.addEventListener('syncromoney:nfe-entradas', handler)
+    return () => window.removeEventListener('syncromoney:nfe-entradas', handler)
+  }, [recarregar])
+
+  const todas = useMemo(() => {
+    void tick
+    return loadEntradasImportadas().map(rowFromImportada)
+  }, [tick])
+
+  const buscaLower = busca.trim().toLowerCase()
+  const buscaCnpj = busca.replace(/\D/g, '')
+  const filtradas = todas.filter(
+    (n) =>
+      !buscaLower ||
+      n.numero.includes(busca) ||
+      n.naturezaOperacao.toLowerCase().includes(buscaLower) ||
+      (n.chaveAcesso?.toLowerCase().includes(buscaLower) ?? false) ||
+      n.fornecedorNome.toLowerCase().includes(buscaLower) ||
+      (buscaCnpj.length > 0 && n.fornecedorCnpj.replace(/\D/g, '').includes(buscaCnpj))
   )
 
-  const totalEntradas = entradas.reduce((s, n) => s + n.valorTotal, 0)
+  const totalEntradas = todas.reduce((s, n) => s + n.valorTotal, 0)
+  const fornecedoresUnicos = new Set(todas.map((n) => n.fornecedorCnpj.replace(/\D/g, '')).filter(Boolean)).size
 
   return (
     <div className="space-y-6">
@@ -28,7 +75,7 @@ export default function NFeEntradasPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">NF-e de Entrada</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Compras de fornecedores — estoque atualizado automaticamente
+            Compras de fornecedores — importações ficam salvas neste navegador até haver integração com banco de dados.
           </p>
         </div>
         <Button asChild>
@@ -38,9 +85,9 @@ export default function NFeEntradasPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'NF-e de Entrada no Mês', value: String(entradas.length) },
-          { label: 'Total de Compras',        value: formatCurrency(totalEntradas) },
-          { label: 'Fornecedores',            value: String(new Set(entradas.map(n => n.cnpjDestinatario)).size) },
+          { label: 'NF-e de Entrada', value: String(todas.length) },
+          { label: 'Total de Compras', value: formatCurrency(totalEntradas) },
+          { label: 'Fornecedores (CNPJ dist.)', value: String(fornecedoresUnicos) },
         ].map(({ label, value }) => (
           <Card key={label}>
             <CardContent className="pt-6">
@@ -55,7 +102,7 @@ export default function NFeEntradasPage() {
         <CardContent className="pt-4 pb-4">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input placeholder="Buscar por número ou operação..." className="pl-9" value={busca} onChange={(e) => setBusca(e.target.value)} />
+            <Input placeholder="Buscar por número, fornecedor, chave..." className="pl-9" value={busca} onChange={(e) => setBusca(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -85,16 +132,20 @@ export default function NFeEntradasPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <p className="font-medium text-gray-700 dark:text-gray-300">Fornecedor Externo</p>
-                      <p className="text-xs text-gray-400">CNPJ registrado na NF-e</p>
+                      <p className="font-medium text-gray-700 dark:text-gray-300">{n.fornecedorNome}</p>
+                      <p className="text-xs text-gray-400">{n.fornecedorCnpj}</p>
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{formatDate(n.dataEmissao)}</td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{n.naturezaOperacao}</td>
                     <td className="px-6 py-4 text-right font-bold text-gray-800 dark:text-gray-200">{formatCurrency(n.valorTotal)}</td>
                     <td className="px-6 py-4 text-right">
-                      <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+                      <Link
+                        href={`/nfe-entradas/${n.id}`}
+                        title="Visualizar"
+                        className="inline-flex p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      >
                         <Eye className="h-4 w-4" />
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}

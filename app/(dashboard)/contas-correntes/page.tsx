@@ -363,47 +363,46 @@ export default function ContasCorrentesPage() {
                 <p className="text-xs text-red-500 mt-1">{formConta.formState.errors.nome_apelido.message}</p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {formConta.watch('tipo_conta') !== 'caixa' && (
-                <div>
-                  <Label>Banco</Label>
-                  <Select
-                    value={formConta.watch('banco') ?? ''}
-                    onValueChange={(v) => formConta.setValue('banco', v)}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {BANCOS_BR.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {formConta.formState.errors.banco && (
-                    <p className="text-xs text-red-500 mt-1">{formConta.formState.errors.banco.message}</p>
-                  )}
-                </div>
-              )}
-              <div className={formConta.watch('tipo_conta') === 'caixa' ? 'col-span-2' : ''}>
-                <Label>Tipo</Label>
+            {/* Tipo primeiro — quando "Caixa" é selecionado, banco e agência somem */}
+            <div>
+              <Label>Tipo de Conta</Label>
+              <Select
+                value={formConta.watch('tipo_conta') ?? 'corrente'}
+                onValueChange={(v) => {
+                  formConta.setValue('tipo_conta', v as never)
+                  if (v === 'caixa') {
+                    formConta.setValue('banco', '')
+                    formConta.setValue('agencia', '')
+                    formConta.setValue('conta', '')
+                    formConta.setValue('digito', '')
+                  }
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TIPO_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {formConta.watch('tipo_conta') !== 'caixa' && (
+              <div>
+                <Label>Banco</Label>
                 <Select
-                  value={formConta.watch('tipo_conta') ?? 'corrente'}
-                  onValueChange={(v) => {
-                    formConta.setValue('tipo_conta', v as never)
-                    if (v === 'caixa') {
-                      formConta.setValue('banco', '')
-                      formConta.setValue('agencia', '')
-                      formConta.setValue('conta', '')
-                      formConta.setValue('digito', '')
-                    }
-                  }}
+                  value={formConta.watch('banco') ?? ''}
+                  onValueChange={(v) => formConta.setValue('banco', v)}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(TIPO_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
+                    {BANCOS_BR.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {formConta.formState.errors.banco && (
+                  <p className="text-xs text-red-500 mt-1">{formConta.formState.errors.banco.message}</p>
+                )}
               </div>
-            </div>
+            )}
             {formConta.watch('tipo_conta') !== 'caixa' && (
               <div className="grid grid-cols-3 gap-3">
                 <div>

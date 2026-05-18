@@ -22,9 +22,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
-import { CATEGORIES, getCategoriesByType } from '@/lib/categories'
+import { getCategoriesByType } from '@/lib/categories'
 import { Loader2 } from 'lucide-react'
-import type { Transaction } from '@/types'
+import type { Transaction, ContaCorrente } from '@/types'
 
 interface TransactionFormProps {
   open: boolean
@@ -42,7 +42,23 @@ export function TransactionForm({ open, onClose, onSuccess, transaction }: Trans
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [contaCorrenteId, setContaCorrenteId] = useState<string>('none')
+  const [contas, setContas] = useState<ContaCorrente[]>([])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    createClient().auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      const { data: contasData } = await createClient()
+        .from('contas_correntes')
+        .select('id,nome_apelido,saldo_atual,tipo_conta')
+        .eq('user_id', data.user.id)
+        .eq('ativo', true)
+        .order('nome_apelido')
+      setContas((contasData ?? []) as ContaCorrente[])
+    })
+  }, [open])
 
   useEffect(() => {
     if (transaction) {
@@ -51,12 +67,14 @@ export function TransactionForm({ open, onClose, onSuccess, transaction }: Trans
       setDescription(transaction.description)
       setCategory(transaction.category)
       setDate(transaction.date)
+      setContaCorrenteId(transaction.conta_corrente_id ?? 'none')
     } else {
       setType('expense')
       setAmount('')
       setDescription('')
       setCategory('')
       setDate(new Date().toISOString().split('T')[0])
+      setContaCorrenteId('none')
     }
   }, [transaction, open])
 
@@ -82,8 +100,9 @@ export function TransactionForm({ open, onClose, onSuccess, transaction }: Trans
 
     setLoading(true)
     const supabase = createClient()
+    const contaId = contaCorrenteId !== 'none' ? contaCorrenteId : null
 
-    const payload = { type, amount: parsedAmount, description, category, date }
+    const payload = { type, amount: parsedAmount, description, category, date, conta_corrente_id: contaId }
 
     let error
     if (isEditing) {
@@ -91,8 +110,29 @@ export function TransactionForm({ open, onClose, onSuccess, transaction }: Trans
       error = res.error
     } else {
       const { data: { user } } = await supabase.auth.getUser()
-      const res = await supabase.from('transactions').insert({ ...payload, user_id: user!.id })
+      if (!user) { setLoading(false); toast('Usuário não encontrado.', 'error'); return }
+      const res = await supabase.from('transactions').insert({ ...payload, user_id: user.id })
       error = res.error
+
+      // Criar movimentação na conta corrente selecionada
+      if (!error && contaId) {
+        const conta = contas.find(c => c.id === contaId)
+        if (conta) {
+          const isCredito = type === 'income'
+          const novoSaldo = conta.saldo_atual + (isCredito ? parsedAmount : -parsedAmount)
+          await supabase.from('movimentacoes_conta').insert({
+            user_id: user.id,
+            conta_corrente_id: contaId,
+            tipo: isCredito ? 'credito' : 'debito',
+            valor: parsedAmount,
+            saldo_anterior: conta.saldo_atual,
+            saldo_posterior: novoSaldo,
+            descricao: description,
+            data_movimentacao: date,
+          })
+          await supabase.from('contas_correntes').update({ saldo_atual: novoSaldo }).eq('id', contaId)
+        }
+      }
     }
 
     setLoading(false)
@@ -177,6 +217,24 @@ export function TransactionForm({ open, onClose, onSuccess, transaction }: Trans
                     </SelectItem>
                   ))}
                 </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Conta Corrente */}
+          <div className="space-y-2">
+            <Label>Conta Corrente</Label>
+            <Select value={contaCorrenteId} onValueChange={setContaCorrenteId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma conta (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma conta</SelectItem>
+                {contas.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nome_apelido}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

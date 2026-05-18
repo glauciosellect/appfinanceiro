@@ -22,7 +22,8 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 
 export default function NFSeVisualizarPage() {
   const { id } = useParams()
-  const nota = notasDeServico.find((n) => n.id === id) ?? notasDeServico[0]
+  const idStr = Array.isArray(id) ? id[0] : id
+  const nota = idStr ? notasDeServico.find((n) => n.id === idStr) : undefined
   const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
 
   useEffect(() => {
@@ -33,6 +34,18 @@ export default function NFSeVisualizarPage() {
       }
     })
   }, [])
+
+  if (!nota) {
+    return (
+      <div className="max-w-lg mx-auto mt-16 text-center space-y-4">
+        <p className="text-xl font-bold text-gray-900 dark:text-white">NFS-e não encontrada</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Não há nota com este identificador ou ela ainda não foi emitida.</p>
+        <Button asChild variant="outline">
+          <Link href="/nfse"><ArrowLeft className="h-4 w-4 mr-2" />Voltar às NFS-e</Link>
+        </Button>
+      </div>
+    )
+  }
 
   const nomeEmitente = perfil?.razao_social || perfil?.nome_fantasia || 'Empresa'
   const cnpjEmitente = perfil?.cnpj_cpf || '—'
@@ -58,7 +71,7 @@ export default function NFSeVisualizarPage() {
 
   function baixarPDF() {
     const titulo = document.title
-    document.title = `NFS-e-${nota.numero}`
+    document.title = `NFS-e-${nota!.numero}`
     window.print()
     document.title = titulo
   }
