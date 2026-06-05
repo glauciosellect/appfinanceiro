@@ -169,11 +169,16 @@ export default function NovaNFSePage() {
         }),
       })
       const json = await res.json() as Record<string, unknown>
+      console.log('[emitir-nfse frontend] resposta completa:', JSON.stringify(json, null, 2))
       setResultadoEmissao(json)
       if (json.ok) {
         setEtapa('sucesso')
       } else {
-        setErroMsg((json.error as string) ?? 'Erro ao emitir NFS-e')
+        const retorno = json.retorno as Record<string, unknown> | undefined
+        const erroDetalhado = retorno
+          ? `Focus NFe: ${JSON.stringify(retorno)}`
+          : (json.error as string) ?? 'Erro ao emitir NFS-e'
+        setErroMsg(erroDetalhado)
         setEtapa('erro')
       }
     } catch (e) {

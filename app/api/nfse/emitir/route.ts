@@ -81,6 +81,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
+  // Se a Focus NFe retornou erro (nota não criada), retorna erro imediatamente
+  if (retorno.erros && retorno.erros.length > 0) {
+    const erroMsg = retorno.erros.map(e => `${e.codigo}: ${e.mensagem}`).join('; ')
+    console.error('[emitir-nfse] erros Focus NFe:', erroMsg)
+    return NextResponse.json({ ok: false, error: erroMsg, retorno }, { status: 422 })
+  }
+
   const statusMap: Record<string, string> = {
     autorizado: 'autorizada',
     processando_autorizacao: 'processando',
@@ -89,8 +96,6 @@ export async function POST(req: NextRequest) {
   }
   const status = statusMap[retorno.status ?? ''] ?? 'processando'
   const erro = retorno.erros?.map(e => `${e.codigo}: ${e.mensagem}`).join('; ')
-
-  if (erro) console.error('[emitir-nfse] erros Focus NFe:', erro)
 
   const enderecoTomador = [tomador_logradouro, tomador_numero, tomador_complemento, tomador_bairro]
     .filter(Boolean).join(', ')
