@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Trash2, Send, Save, CheckCircle2, Info, AlertCircle, Loader2, Search } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Send, CheckCircle2, Info, AlertCircle, Loader2, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,14 +34,30 @@ interface ItemForm {
   aliquota: number
 }
 
+interface DadosTomador {
+  razaoSocial: string
+  email: string
+  telefone: string
+  logradouro: string
+  numero: string
+  complemento: string
+  bairro: string
+  municipio: string
+  uf: string
+  cep: string
+}
+
 type Etapa = 'form' | 'enviando' | 'sucesso' | 'erro'
 
 export default function NovaNFSePage() {
   const router = useRouter()
   const [etapa, setEtapa] = useState<Etapa>('form')
-  const [tomador, setTomador] = useState('')
   const [cnpjTomador, setCnpjTomador] = useState('')
-  const [emailTomador, setEmailTomador] = useState('')
+  const [tomador, setTomador] = useState<DadosTomador>({
+    razaoSocial: '', email: '', telefone: '',
+    logradouro: '', numero: '', complemento: '',
+    bairro: '', municipio: '', uf: '', cep: '',
+  })
   const [dataCompetencia, setDataCompetencia] = useState(new Date().toISOString().split('T')[0])
   const [itens, setItens] = useState<ItemForm[]>([
     { codigoServico: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 },
@@ -61,9 +77,20 @@ export default function NovaNFSePage() {
       try {
         const res = await fetch(`/api/cnpj/${digits}`)
         if (res.ok) {
-          const d = await res.json() as { razaoSocial?: string; email?: string }
-          if (d.razaoSocial) setTomador(d.razaoSocial)
-          if (d.email) setEmailTomador(d.email)
+          const d = await res.json() as Partial<DadosTomador>
+          setTomador(prev => ({
+            ...prev,
+            razaoSocial: d.razaoSocial ?? prev.razaoSocial,
+            email:       d.email       ?? prev.email,
+            telefone:    d.telefone    ?? prev.telefone,
+            logradouro:  d.logradouro  ?? prev.logradouro,
+            numero:      d.numero      ?? prev.numero,
+            complemento: d.complemento ?? prev.complemento,
+            bairro:      d.bairro      ?? prev.bairro,
+            municipio:   d.municipio   ?? prev.municipio,
+            uf:          d.uf          ?? prev.uf,
+            cep:         d.cep         ?? prev.cep,
+          }))
         }
       } catch {
         // silencia — usuário preenche manualmente
@@ -96,37 +123,49 @@ export default function NovaNFSePage() {
       ))
     }
   }
+  function setTomadorField(field: keyof DadosTomador, value: string) {
+    setTomador(prev => ({ ...prev, [field]: value }))
+  }
 
   const discriminacao = itens
     .map(i => `${i.descricao} - Qtd: ${i.quantidade} x ${formatCurrency(i.valorUnitario)}`)
     .join('\n')
 
   async function handleTransmitir() {
-    if (!tomador) { setErroMsg('Informe o nome do tomador'); return }
+    if (!tomador.razaoSocial) { setErroMsg('Informe o nome do tomador'); return }
     if (!itens[0]?.codigoServico) { setErroMsg('Selecione o serviço'); return }
     if (totalServicos <= 0) { setErroMsg('Valor total deve ser maior que zero'); return }
     setErroMsg('')
     setEtapa('enviando')
 
-    const isCnpj = cnpjTomador.replace(/\D/g, '').length === 14
-    const isCpf = cnpjTomador.replace(/\D/g, '').length === 11
+    const digits = cnpjTomador.replace(/\D/g, '')
+    const isCnpj = digits.length === 14
+    const isCpf  = digits.length === 11
 
     try {
       const res = await fetch('/api/nfse/emitir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tomador_razao_social: tomador,
-          tomador_cnpj: isCnpj ? cnpjTomador : undefined,
-          tomador_cpf: isCpf ? cnpjTomador : undefined,
-          tomador_email: emailTomador || undefined,
-          valor_servicos: totalServicos,
-          iss_retido: issRetidoFonte,
-          aliquota_iss: aliquotaPrincipal,
-          codigo_servico: itens[0].codigoServico,
-          codigo_lc116: itens[0].codigoServico,
+          tomador_razao_social: tomador.razaoSocial,
+          tomador_cnpj:         isCnpj ? cnpjTomador : undefined,
+          tomador_cpf:          isCpf  ? cnpjTomador : undefined,
+          tomador_email:        tomador.email || undefined,
+          tomador_telefone:     tomador.telefone || undefined,
+          tomador_logradouro:   tomador.logradouro || undefined,
+          tomador_numero:       tomador.numero || undefined,
+          tomador_complemento:  tomador.complemento || undefined,
+          tomador_bairro:       tomador.bairro || undefined,
+          tomador_municipio:    tomador.municipio || undefined,
+          tomador_uf:           tomador.uf || undefined,
+          tomador_cep:          tomador.cep || undefined,
+          valor_servicos:       totalServicos,
+          iss_retido:           issRetidoFonte,
+          aliquota_iss:         aliquotaPrincipal,
+          codigo_servico:       itens[0].codigoServico,
+          codigo_lc116:         itens[0].codigoServico,
           discriminacao,
-          data_competencia: dataCompetencia,
+          data_competencia:     dataCompetencia,
         }),
       })
       const json = await res.json() as Record<string, unknown>
@@ -141,11 +180,6 @@ export default function NovaNFSePage() {
       setErroMsg(String(e))
       setEtapa('erro')
     }
-  }
-
-  async function handleSalvarRascunho() {
-    // TODO: salvar como rascunho no banco
-    alert('Funcionalidade de rascunho em breve.')
   }
 
   if (etapa === 'enviando') {
@@ -178,11 +212,9 @@ export default function NovaNFSePage() {
             <span className="font-semibold">Status:</span>{' '}
             <span className="text-green-600 font-semibold capitalize">{String((nfse.status ?? retorno.status) ?? 'processando')}</span>
           </p>
-          <p className="text-xs text-amber-600 mt-1">
-            {retorno.status === 'processando_autorizacao'
-              ? 'A Prefeitura está processando — o número final chegará em instantes. Consulte a listagem.'
-              : ''}
-          </p>
+          {retorno.status === 'processando_autorizacao' && (
+            <p className="text-xs text-amber-600 mt-1">A Prefeitura está processando — consulte a listagem em instantes.</p>
+          )}
         </div>
         <div className="flex gap-3 justify-center">
           {!!retorno.link_nfse_pdf && (
@@ -231,39 +263,88 @@ export default function NovaNFSePage() {
       {/* Tomador */}
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Step n={1} />Tomador do Serviço</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ / CPF</label>
-            <div className="relative">
-              <Input
-                placeholder="00.000.000/0001-00"
-                value={cnpjTomador}
-                onChange={e => setCnpjTomador(e.target.value)}
-                className="pr-8"
-              />
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
-                {buscandoCnpj
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Search className="h-4 w-4" />}
+        <CardContent className="space-y-4">
+          {/* Linha 1: CNPJ + Razão Social */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ / CPF</label>
+              <div className="relative">
+                <Input
+                  placeholder="00.000.000/0001-00"
+                  value={cnpjTomador}
+                  onChange={e => setCnpjTomador(e.target.value)}
+                  className="pr-8"
+                />
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                  {buscandoCnpj ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </div>
               </div>
+              {buscandoCnpj && <p className="text-xs text-blue-500 mt-1">Consultando Receita Federal...</p>}
             </div>
-            {buscandoCnpj && <p className="text-xs text-blue-500 mt-1">Consultando Receita Federal...</p>}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
+              <Input
+                placeholder="Preenchido automaticamente pelo CNPJ"
+                value={tomador.razaoSocial}
+                onChange={e => setTomadorField('razaoSocial', e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
-            <Input
-              placeholder="Preenchido automaticamente pelo CNPJ"
-              value={tomador}
-              onChange={e => setTomador(e.target.value)}
-            />
+
+          {/* Linha 2: E-mail + Telefone */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+              <Input type="email" placeholder="email@empresa.com.br" value={tomador.email} onChange={e => setTomadorField('email', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+              <Input placeholder="(32) 99999-9999" value={tomador.telefone} onChange={e => setTomadorField('telefone', e.target.value)} />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-            <Input type="email" placeholder="email@empresa.com.br" value={emailTomador} onChange={e => setEmailTomador(e.target.value)} />
+
+          {/* Linha 3: Logradouro + Número + Complemento */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_100px_120px] gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Logradouro</label>
+              <Input placeholder="Av. Brasil" value={tomador.logradouro} onChange={e => setTomadorField('logradouro', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Número</label>
+              <Input placeholder="1000" value={tomador.numero} onChange={e => setTomadorField('numero', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+              <Input placeholder="Sala 10" value={tomador.complemento} onChange={e => setTomadorField('complemento', e.target.value)} />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Competência *</label>
-            <Input type="date" value={dataCompetencia} onChange={e => setDataCompetencia(e.target.value)} />
+
+          {/* Linha 4: Bairro + Cidade + UF + CEP */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_80px_120px] gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+              <Input placeholder="Centro" value={tomador.bairro} onChange={e => setTomadorField('bairro', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Município</label>
+              <Input placeholder="Juiz de Fora" value={tomador.municipio} onChange={e => setTomadorField('municipio', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">UF</label>
+              <Input placeholder="MG" maxLength={2} value={tomador.uf} onChange={e => setTomadorField('uf', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+              <Input placeholder="36000-000" value={tomador.cep} onChange={e => setTomadorField('cep', e.target.value)} />
+            </div>
+          </div>
+
+          {/* Competência */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Competência *</label>
+              <Input type="date" value={dataCompetencia} onChange={e => setDataCompetencia(e.target.value)} />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -300,7 +381,7 @@ export default function NovaNFSePage() {
                 <textarea
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={2}
-                  placeholder="Descrição detalhada..."
+                  placeholder="Descrição detalhada do serviço prestado..."
                   value={item.descricao}
                   onChange={e => updateItem(idx, 'descricao', e.target.value)}
                 />
@@ -378,7 +459,6 @@ export default function NovaNFSePage() {
           </div>
 
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={handleSalvarRascunho}><Save className="h-4 w-4 mr-1" />Salvar Rascunho</Button>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
               onClick={handleTransmitir}

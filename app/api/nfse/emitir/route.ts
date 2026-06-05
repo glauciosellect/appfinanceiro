@@ -13,6 +13,14 @@ export async function POST(req: NextRequest) {
     tomador_cnpj,
     tomador_cpf,
     tomador_email,
+    tomador_telefone,
+    tomador_logradouro,
+    tomador_numero,
+    tomador_complemento,
+    tomador_bairro,
+    tomador_municipio,
+    tomador_uf,
+    tomador_cep,
     valor_servicos,
     iss_retido,
     aliquota_iss,
@@ -22,7 +30,7 @@ export async function POST(req: NextRequest) {
     data_competencia,
   } = body
 
-  // Próximo número RPS para este usuário
+  // Próximo número RPS
   const { data: ultimaRow } = await supabase
     .from('nfse')
     .select('numero_rps')
@@ -43,6 +51,14 @@ export async function POST(req: NextRequest) {
     tomador_cnpj,
     tomador_cpf,
     tomador_email,
+    tomador_telefone,
+    tomador_logradouro,
+    tomador_numero,
+    tomador_complemento,
+    tomador_bairro,
+    tomador_municipio,
+    tomador_uf,
+    tomador_cep,
     valor_servicos: Number(valor_servicos),
     iss_retido: Boolean(iss_retido),
     aliquota_iss: aliquota_iss ? Number(aliquota_iss) : undefined,
@@ -62,7 +78,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
-  // Determina status com base no retorno
   const statusMap: Record<string, string> = {
     autorizado: 'autorizada',
     processando_autorizacao: 'processando',
@@ -71,6 +86,12 @@ export async function POST(req: NextRequest) {
   }
   const status = statusMap[retorno.status ?? ''] ?? 'processando'
   const erro = retorno.erros?.map(e => e.mensagem).join('; ')
+
+  const enderecoTomador = [tomador_logradouro, tomador_numero, tomador_complemento, tomador_bairro]
+    .filter(Boolean).join(', ')
+  const cidadeTomador = tomador_municipio
+    ? `${tomador_municipio}${tomador_uf ? '/' + tomador_uf : ''}${tomador_cep ? ' - ' + tomador_cep : ''}`
+    : null
 
   const { data: nfseRow, error: dbError } = await supabase
     .from('nfse')
@@ -85,6 +106,9 @@ export async function POST(req: NextRequest) {
       tomador_razao_social,
       tomador_cnpj_cpf: tomador_cnpj ?? tomador_cpf,
       tomador_email,
+      tomador_telefone: tomador_telefone ?? null,
+      tomador_endereco: enderecoTomador || null,
+      tomador_cidade: cidadeTomador ?? null,
       valor_servicos: Number(valor_servicos),
       valor_iss: aliquota_iss ? (Number(valor_servicos) * Number(aliquota_iss)) / 100 : null,
       valor_liquido: iss_retido

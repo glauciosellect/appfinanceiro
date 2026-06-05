@@ -49,6 +49,14 @@ export interface EmitirNFSeParams {
   tomador_cnpj?: string
   tomador_cpf?: string
   tomador_email?: string
+  tomador_telefone?: string
+  tomador_logradouro?: string
+  tomador_numero?: string
+  tomador_complemento?: string
+  tomador_bairro?: string
+  tomador_municipio?: string
+  tomador_uf?: string
+  tomador_cep?: string
   valor_servicos: number
   iss_retido: boolean
   aliquota_iss?: number
@@ -94,6 +102,18 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       ...(params.tomador_cnpj ? { cnpj: params.tomador_cnpj.replace(/\D/g, '') } : {}),
       ...(params.tomador_cpf ? { cpf: params.tomador_cpf.replace(/\D/g, '') } : {}),
       ...(params.tomador_email ? { email: params.tomador_email } : {}),
+      ...(params.tomador_telefone ? { telefone: params.tomador_telefone.replace(/\D/g, '') } : {}),
+      ...(params.tomador_logradouro ? {
+        endereco: {
+          logradouro: params.tomador_logradouro,
+          numero: params.tomador_numero ?? 'S/N',
+          ...(params.tomador_complemento ? { complemento: params.tomador_complemento } : {}),
+          bairro: params.tomador_bairro ?? '',
+          codigo_municipio: params.tomador_municipio ?? '',
+          uf: params.tomador_uf ?? '',
+          cep: (params.tomador_cep ?? '').replace(/\D/g, ''),
+        },
+      } : {}),
     },
     servico: {
       valor_servicos: params.valor_servicos,

@@ -18,6 +18,9 @@ interface NfseRow {
   tomador_razao_social: string
   tomador_cnpj_cpf?: string
   tomador_email?: string
+  tomador_telefone?: string
+  tomador_endereco?: string
+  tomador_cidade?: string
   valor_servicos: number
   valor_iss?: number
   valor_liquido?: number
@@ -301,8 +304,13 @@ export default function NFSeVisualizarPage() {
           </div>
           <div className="p-3 space-y-0.5 text-[11px]">
             <p>Razão Social: <strong>{nota.tomador_razao_social}</strong></p>
-            {nota.tomador_cnpj_cpf && <p>CNPJ/CPF: <strong>{nota.tomador_cnpj_cpf}</strong></p>}
-            {nota.tomador_email && <p>E-mail: <strong>{nota.tomador_email}</strong></p>}
+            {nota.tomador_cnpj_cpf && <p>CPF/CNPJ: <strong>{nota.tomador_cnpj_cpf}</strong></p>}
+            {nota.tomador_endereco && <p>Endereço: <strong>{nota.tomador_endereco}</strong></p>}
+            {nota.tomador_cidade && <p>Município: <strong>{nota.tomador_cidade}</strong></p>}
+            <div className="flex gap-6">
+              {nota.tomador_telefone && <p>Telefone: <strong>{nota.tomador_telefone}</strong></p>}
+              {nota.tomador_email && <p>E-mail: <strong>{nota.tomador_email}</strong></p>}
+            </div>
           </div>
         </div>
 
