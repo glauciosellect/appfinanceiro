@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Trash2, Send, Save, CheckCircle2, Info, AlertCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Send, Save, CheckCircle2, Info, AlertCircle, Loader2, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,6 +49,30 @@ export default function NovaNFSePage() {
   const [issRetidoFonte, setIssRetidoFonte] = useState(false)
   const [resultadoEmissao, setResultadoEmissao] = useState<Record<string, unknown> | null>(null)
   const [erroMsg, setErroMsg] = useState('')
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false)
+  const cnpjTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const digits = cnpjTomador.replace(/\D/g, '')
+    if (digits.length !== 14) return
+    if (cnpjTimerRef.current) clearTimeout(cnpjTimerRef.current)
+    cnpjTimerRef.current = setTimeout(async () => {
+      setBuscandoCnpj(true)
+      try {
+        const res = await fetch(`https://publica.cnpj.ws/cnpj/${digits}`)
+        if (res.ok) {
+          const d = await res.json()
+          setTomador(d.razao_social ?? '')
+          setEmailTomador(d.estabelecimento?.email ?? '')
+        }
+      } catch {
+        // silencia — usuário preenche manualmente
+      } finally {
+        setBuscandoCnpj(false)
+      }
+    }, 600)
+    return () => { if (cnpjTimerRef.current) clearTimeout(cnpjTimerRef.current) }
+  }, [cnpjTomador])
 
   const totalServicos = itens.reduce((s, i) => s + i.quantidade * i.valorUnitario, 0)
   const aliquotaPrincipal = itens[0]?.aliquota ?? 2
@@ -210,11 +234,28 @@ export default function NovaNFSePage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ / CPF</label>
-            <Input placeholder="00.000.000/0001-00" value={cnpjTomador} onChange={e => setCnpjTomador(e.target.value)} />
+            <div className="relative">
+              <Input
+                placeholder="00.000.000/0001-00"
+                value={cnpjTomador}
+                onChange={e => setCnpjTomador(e.target.value)}
+                className="pr-8"
+              />
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                {buscandoCnpj
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Search className="h-4 w-4" />}
+              </div>
+            </div>
+            {buscandoCnpj && <p className="text-xs text-blue-500 mt-1">Consultando Receita Federal...</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
-            <Input placeholder="Nome do tomador" value={tomador} onChange={e => setTomador(e.target.value)} />
+            <Input
+              placeholder="Preenchido automaticamente pelo CNPJ"
+              value={tomador}
+              onChange={e => setTomador(e.target.value)}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
