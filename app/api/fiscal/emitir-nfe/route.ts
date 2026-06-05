@@ -254,8 +254,12 @@ export async function POST(req: NextRequest) {
     valor_total: valorTotal,
     status: autorizado ? 'emitida' : (resultado.status ?? 'processando'),
     tipo: 'saida',
-    danfe_url: resultado.caminho_danfe ?? null,
-    xml_url: resultado.caminho_xml_nota_fiscal ?? null,
+    danfe_url: resultado.caminho_danfe
+      ? (resultado.caminho_danfe.startsWith('http') ? resultado.caminho_danfe : `https://api.focusnfe.com.br${resultado.caminho_danfe}`)
+      : null,
+    xml_url: resultado.caminho_xml_nota_fiscal
+      ? (resultado.caminho_xml_nota_fiscal.startsWith('http') ? resultado.caminho_xml_nota_fiscal : `https://api.focusnfe.com.br${resultado.caminho_xml_nota_fiscal}`)
+      : null,
     itens,
     transportadora: body.frete.transportadora_nome || null,
     focus_ref: ref,
