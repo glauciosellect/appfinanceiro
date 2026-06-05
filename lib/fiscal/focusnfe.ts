@@ -127,7 +127,7 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       codigo_tributacao_municipio: params.codigo_servico,
       discriminacao: params.discriminacao,
       codigo_municipio: codigoMunicipio,
-      ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss / 100 } : {}),
+      ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
     },
     numero_rps: String(params.numero_rps),
     serie_rps: params.serie_rps ?? 'RPS',
