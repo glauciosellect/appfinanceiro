@@ -231,8 +231,7 @@ export default function FiscalProdutosPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estoque Atual</label>
-                <Input type="number" min="0" value={form.estoque ?? 0} onChange={(e) => setForm({ ...form, estoque: Number(e.target.value) })} disabled={modo === 'editar'} />
-                {modo === 'editar' && <p className="text-xs text-gray-400 mt-1">Atualizado automaticamente pelas NF-e</p>}
+                <Input type="number" min="0" value={form.estoque ?? 0} onChange={(e) => setForm({ ...form, estoque: Number(e.target.value) })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estoque Mínimo</label>
