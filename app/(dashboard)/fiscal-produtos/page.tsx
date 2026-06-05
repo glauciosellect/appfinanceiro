@@ -222,10 +222,16 @@ export default function FiscalProdutosPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preço de Venda (R$)</label>
-                <Input type="number" step="0.01" min="0" readOnly
+                <Input type="number" step="0.01" min="0"
                   value={Math.round((form.preco_unitario ?? 0) * (1 + (form.margem_lucro ?? 0) / 100) * 100) / 100 || ''}
-                  className="bg-gray-50 dark:bg-gray-800 text-green-700 dark:text-green-400 font-semibold cursor-not-allowed" />
-                <p className="text-xs text-gray-400 mt-1">Calculado automaticamente</p>
+                  onChange={(e) => {
+                    const preco = Number(e.target.value)
+                    const custo = form.preco_unitario ?? 0
+                    const margem = custo > 0 ? Math.round(((preco / custo) - 1) * 100) : 0
+                    setForm({ ...form, margem_lucro: Math.max(0, margem) })
+                  }}
+                  className="text-green-700 dark:text-green-400 font-semibold" />
+                <p className="text-xs text-gray-400 mt-1">Ou ajuste pela margem acima</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
