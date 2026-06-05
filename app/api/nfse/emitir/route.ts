@@ -74,7 +74,10 @@ export async function POST(req: NextRequest) {
   let retorno
   try {
     retorno = await emitirNFSe(payload)
+    console.log('[emitir-nfse] payload:', JSON.stringify(payload))
+    console.log('[emitir-nfse] retorno Focus NFe:', JSON.stringify(retorno))
   } catch (err) {
+    console.error('[emitir-nfse] erro:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
@@ -85,7 +88,9 @@ export async function POST(req: NextRequest) {
     cancelado: 'cancelada',
   }
   const status = statusMap[retorno.status ?? ''] ?? 'processando'
-  const erro = retorno.erros?.map(e => e.mensagem).join('; ')
+  const erro = retorno.erros?.map(e => `${e.codigo}: ${e.mensagem}`).join('; ')
+
+  if (erro) console.error('[emitir-nfse] erros Focus NFe:', erro)
 
   const enderecoTomador = [tomador_logradouro, tomador_numero, tomador_complemento, tomador_bairro]
     .filter(Boolean).join(', ')
