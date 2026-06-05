@@ -13,11 +13,12 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(dateString: string): string {
+  const normalized = dateString.includes('T') ? dateString : dateString + 'T00:00:00'
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  }).format(new Date(dateString + 'T00:00:00'))
+  }).format(new Date(normalized))
 }
 
 export function getCurrentMonthRange(): { start: string; end: string } {
