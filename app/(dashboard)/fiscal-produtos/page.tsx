@@ -71,7 +71,10 @@ export default function FiscalProdutosPage() {
 
     const margem = form.margem_lucro ?? 0
     const custo = form.preco_unitario ?? 0
-    const precoVenda = Math.round(custo * (1 + margem / 100) * 100) / 100
+    // Preço de venda: usa o calculado pela margem, mas se custo=0 usa o preco_venda do form diretamente
+    const precoVenda = custo > 0
+      ? Math.round(custo * (1 + margem / 100) * 100) / 100
+      : (form.preco_venda ?? 0)
 
     if (modo === 'novo') {
       const novoCodigo = String(produtos.length + 1).padStart(4, '0')
@@ -85,8 +88,8 @@ export default function FiscalProdutosPage() {
         preco_unitario: custo,
         margem_lucro: margem,
         preco_venda: precoVenda,
-        estoque: form.estoque || 0,
-        estoque_minimo: form.estoque_minimo || 0,
+        estoque: form.estoque ?? 0,
+        estoque_minimo: form.estoque_minimo ?? 0,
         ativo: true,
       })
     } else {
@@ -98,7 +101,8 @@ export default function FiscalProdutosPage() {
         preco_unitario: custo,
         margem_lucro: margem,
         preco_venda: precoVenda,
-        estoque_minimo: form.estoque_minimo || 0,
+        estoque: form.estoque ?? 0,
+        estoque_minimo: form.estoque_minimo ?? 0,
         updated_at: new Date().toISOString(),
       }).eq('id', form.id!)
     }
@@ -223,12 +227,20 @@ export default function FiscalProdutosPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preço de Venda (R$)</label>
                 <Input type="number" step="0.01" min="0"
-                  value={Math.round((form.preco_unitario ?? 0) * (1 + (form.margem_lucro ?? 0) / 100) * 100) / 100 || ''}
+                  value={(() => {
+                    const custo = form.preco_unitario ?? 0
+                    const margem = form.margem_lucro ?? 0
+                    return custo > 0 ? (Math.round(custo * (1 + margem / 100) * 100) / 100 || '') : (form.preco_venda || '')
+                  })()}
                   onChange={(e) => {
                     const preco = Number(e.target.value)
                     const custo = form.preco_unitario ?? 0
-                    const margem = custo > 0 ? Math.round(((preco / custo) - 1) * 100) : 0
-                    setForm({ ...form, margem_lucro: Math.max(0, margem) })
+                    if (custo > 0) {
+                      const margem = Math.round(((preco / custo) - 1) * 100)
+                      setForm({ ...form, margem_lucro: Math.max(0, margem) })
+                    } else {
+                      setForm({ ...form, preco_venda: preco })
+                    }
                   }}
                   className="text-green-700 dark:text-green-400 font-semibold" />
                 <p className="text-xs text-gray-400 mt-1">Ou ajuste pela margem acima</p>
