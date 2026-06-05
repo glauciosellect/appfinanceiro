@@ -87,9 +87,10 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
   const emitenteCNPJ = process.env.EMITENTE_CNPJ ?? ''
   const codigoMunicipio = process.env.EMITENTE_CODIGO_MUNICIPIO ?? '3136702'
 
-  // data_competencia: Focus NFe NFS-e aceita YYYY-MM ou YYYY-MM-DD
-  // data_emissao: deve ser ISO com timezone
-  const dataCompetencia = params.data_competencia.slice(0, 7) // YYYY-MM
+  // data_competencia: prefeitura de JF exige data completa YYYY-MM-DD
+  const dataCompetencia = params.data_competencia.length === 7
+    ? params.data_competencia + '-01'
+    : params.data_competencia.slice(0, 10)
 
   const body: Record<string, unknown> = {
     data_emissao: params.data_emissao,
