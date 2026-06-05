@@ -222,13 +222,8 @@ export default function NFSeVisualizarPage() {
           <div className="p-3 border-r border-gray-700 flex items-center gap-3">
             <div className="w-16 h-16 shrink-0 flex items-center justify-center">
               {cidadeKey === 'juiz de fora' ? (
-                <svg viewBox="0 0 100 100" className="w-16 h-16" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="50" cy="50" r="48" fill="#003580" stroke="#c8a400" strokeWidth="4"/>
-                  <text x="50" y="38" textAnchor="middle" fill="#c8a400" fontSize="9" fontWeight="bold" fontFamily="serif">PREFEITURA</text>
-                  <text x="50" y="50" textAnchor="middle" fill="white" fontSize="7" fontFamily="serif">JUIZ DE FORA</text>
-                  <text x="50" y="62" textAnchor="middle" fill="#c8a400" fontSize="7" fontFamily="serif">MG · BRASIL</text>
-                  <path d="M30 70 Q50 80 70 70" stroke="#c8a400" strokeWidth="2" fill="none"/>
-                </svg>
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src="/brasao-juiz-de-fora.png" alt="Brasão Juiz de Fora" className="w-16 h-16 object-contain" />
               ) : logoMunicipio ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={logoMunicipio} alt={`Brasão ${cidadeEmit}`} className="w-16 h-16 object-contain" />
