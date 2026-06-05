@@ -82,9 +82,10 @@ export default function NFSeVisualizarPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ref: nota.focus_ref, id: nota.id }),
       })
-      const json = await res.json() as { ok?: boolean; error?: string; status?: string }
+      const json = await res.json() as { ok?: boolean; error?: string; status?: string; retorno?: Record<string, unknown> }
+      console.log('[sincronizar retorno]', json)
       if (json.ok) {
-        toast(`Status atualizado: ${json.status ?? 'ok'}`, 'success')
+        toast(`Status: ${json.status ?? 'ok'}${json.retorno?.numero ? ` — Nº ${json.retorno.numero}` : ''}`, 'success')
         fetchNota()
       } else {
         toast(json.error ?? 'Erro ao sincronizar', 'error')
@@ -151,13 +152,16 @@ export default function NFSeVisualizarPage() {
   const isProcessando = nota.status === 'processando'
   const isAutorizada  = nota.status === 'autorizada'
 
+  function normalizarCidade(cidade: string) {
+    return cidade.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  }
   const brasoesPrefeitura: Record<string, string> = {
     'juiz de fora': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Brasao_juiz_de_fora.png/120px-Brasao_juiz_de_fora.png',
     'belo horizonte': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Coat_of_arms_of_Belo_Horizonte.svg/120px-Coat_of_arms_of_Belo_Horizonte.svg.png',
     'sao paulo': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Coat_of_arms_of_S%C3%A3o_Paulo_city.svg/120px-Coat_of_arms_of_S%C3%A3o_Paulo_city.svg.png',
     'rio de janeiro': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Bras%C3%A3o_do_Rio_de_Janeiro.svg/120px-Bras%C3%A3o_do_Rio_de_Janeiro.svg.png',
   }
-  const cidadeKey     = cidadeEmit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const cidadeKey     = normalizarCidade(cidadeEmit)
   const logoMunicipio = brasoesPrefeitura[cidadeKey] ?? null
 
   return (

@@ -41,5 +41,7 @@ export async function POST(req: NextRequest) {
     .eq('id', id)
     .eq('user_id', user.id)
 
+  console.log('[sincronizar-nfse] ref:', ref, '| retorno:', JSON.stringify(retorno))
+
   return NextResponse.json({ ok: true, status, retorno })
 }
