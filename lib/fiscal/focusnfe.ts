@@ -87,11 +87,15 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
   const emitenteCNPJ = process.env.EMITENTE_CNPJ ?? ''
   const codigoMunicipio = process.env.EMITENTE_CODIGO_MUNICIPIO ?? '3136702'
 
+  // data_competencia: Focus NFe NFS-e aceita YYYY-MM ou YYYY-MM-DD
+  // data_emissao: deve ser ISO com timezone
+  const dataCompetencia = params.data_competencia.slice(0, 7) // YYYY-MM
+
   const body: Record<string, unknown> = {
     data_emissao: params.data_emissao,
-    data_competencia: params.data_competencia,
+    data_competencia: dataCompetencia,
     prestador: {
-      cnpj: emitenteCNPJ,
+      cnpj: emitenteCNPJ.replace(/\D/g, ''),
       codigo_municipio: codigoMunicipio,
       ...(params.inscricao_municipal_prestador
         ? { inscricao_municipal: params.inscricao_municipal_prestador }
@@ -109,7 +113,8 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
           numero: params.tomador_numero ?? 'S/N',
           ...(params.tomador_complemento ? { complemento: params.tomador_complemento } : {}),
           bairro: params.tomador_bairro ?? '',
-          codigo_municipio: params.tomador_municipio ?? '',
+          // codigo_municipio deve ser o código IBGE numérico
+          codigo_municipio: codigoMunicipio,
           uf: params.tomador_uf ?? '',
           cep: (params.tomador_cep ?? '').replace(/\D/g, ''),
         },
