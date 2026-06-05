@@ -67,6 +67,14 @@ export default function NFSePage() {
 
   useEffect(() => { fetchNotas() }, [fetchNotas])
 
+  // Polling automático: recarrega a cada 15s enquanto houver notas processando
+  useEffect(() => {
+    const temProcessando = notas.some(n => n.status === 'processando')
+    if (!temProcessando) return
+    const timer = setInterval(() => { fetchNotas() }, 15000)
+    return () => clearInterval(timer)
+  }, [notas, fetchNotas])
+
   async function handleExcluir(nota: NfseRow) {
     if (!confirm(`Excluir o registro RPS ${nota.numero_rps} do banco? Esta ação não pode ser desfeita.`)) return
     const { error } = await createClient()

@@ -144,6 +144,17 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
 
   const json = await safeJson(res) as unknown as FocusNFSeRetorno
 
+  // Registra webhook para ser notificado quando a prefeitura autorizar
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  if (appUrl) {
+    const webhookUrl = `${appUrl}/api/nfse/webhook`
+    fetch(`${BASE_URL}/nfse/${encodeURIComponent(params.ref)}/hook`, {
+      method: 'POST',
+      headers: authHeader(),
+      body: JSON.stringify({ url: webhookUrl }),
+    }).catch(() => {}) // silencia erro — polling garante atualização como fallback
+  }
+
   return { ...json, ref: params.ref }
 }
 
