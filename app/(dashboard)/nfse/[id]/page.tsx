@@ -155,14 +155,8 @@ export default function NFSeVisualizarPage() {
   function normalizarCidade(cidade: string) {
     return cidade.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   }
-  const brasoesPrefeitura: Record<string, string> = {
-    'juiz de fora': 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Brasao_juiz_de_fora.png/120px-Brasao_juiz_de_fora.png',
-    'belo horizonte': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Coat_of_arms_of_Belo_Horizonte.svg/120px-Coat_of_arms_of_Belo_Horizonte.svg.png',
-    'sao paulo': 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Coat_of_arms_of_S%C3%A3o_Paulo_city.svg/120px-Coat_of_arms_of_S%C3%A3o_Paulo_city.svg.png',
-    'rio de janeiro': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Bras%C3%A3o_do_Rio_de_Janeiro.svg/120px-Bras%C3%A3o_do_Rio_de_Janeiro.svg.png',
-  }
-  const cidadeKey     = normalizarCidade(cidadeEmit)
-  const logoMunicipio = brasoesPrefeitura[cidadeKey] ?? null
+  const cidadeKey = normalizarCidade(cidadeEmit)
+  const logoMunicipio: string | null = null // brasões via URL externa bloqueiam hotlink
 
   return (
     <div className="max-w-3xl mx-auto space-y-3 print:max-w-none print:space-y-0">
@@ -224,7 +218,15 @@ export default function NFSeVisualizarPage() {
         <div className="grid grid-cols-[1fr_180px] border-b-2 border-gray-700">
           <div className="p-3 border-r border-gray-700 flex items-center gap-3">
             <div className="w-16 h-16 shrink-0 flex items-center justify-center">
-              {logoMunicipio ? (
+              {cidadeKey === 'juiz de fora' ? (
+                <svg viewBox="0 0 100 100" className="w-16 h-16" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="50" cy="50" r="48" fill="#003580" stroke="#c8a400" strokeWidth="4"/>
+                  <text x="50" y="38" textAnchor="middle" fill="#c8a400" fontSize="9" fontWeight="bold" fontFamily="serif">PREFEITURA</text>
+                  <text x="50" y="50" textAnchor="middle" fill="white" fontSize="7" fontFamily="serif">JUIZ DE FORA</text>
+                  <text x="50" y="62" textAnchor="middle" fill="#c8a400" fontSize="7" fontFamily="serif">MG · BRASIL</text>
+                  <path d="M30 70 Q50 80 70 70" stroke="#c8a400" strokeWidth="2" fill="none"/>
+                </svg>
+              ) : logoMunicipio ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={logoMunicipio} alt={`Brasão ${cidadeEmit}`} className="w-16 h-16 object-contain" />
               ) : (
