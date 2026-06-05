@@ -3,52 +3,76 @@
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Download, XCircle, Printer } from 'lucide-react'
+import { ArrowLeft, Download, XCircle, Printer, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { notasFiscaisEletronicas } from '@/lib/fiscal/mock-data'
+import { getNFe, type NFeRecord } from '@/lib/supabase/nfe'
 import { createClient } from '@/lib/supabase/client'
 import { getPerfilEmpresa, perfilVazio, type PerfilEmpresa } from '@/lib/supabase/perfil-empresa'
 
-/* ─── helpers ─── */
 function Cell({ label, value, mono, className = '' }: { label: string; value?: string | null; mono?: boolean; className?: string }) {
   return (
-    <div className={`border border-gray-400 dark:border-gray-600 p-1 ${className}`}>
-      <p className="text-[8px] font-bold uppercase text-gray-500 dark:text-gray-400 leading-none mb-0.5">{label}</p>
-      <p className={`text-xs text-gray-900 dark:text-white leading-tight ${mono ? 'font-mono' : 'font-medium'}`}>{value || '—'}</p>
+    <div className={`border border-gray-400 p-1 ${className}`}>
+      <p className="text-[8px] font-bold uppercase text-gray-500 leading-none mb-0.5">{label}</p>
+      <p className={`text-xs text-gray-900 leading-tight ${mono ? 'font-mono' : 'font-medium'}`}>{value || '—'}</p>
     </div>
   )
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-gray-100 dark:bg-gray-800 border border-gray-400 dark:border-gray-600 px-2 py-0.5">
-      <p className="text-[9px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">{children}</p>
+    <div className="bg-gray-100 border border-gray-400 px-2 py-0.5">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-gray-700">{children}</p>
     </div>
   )
+}
+
+interface ItemNFe {
+  codigo?: string
+  descricao?: string
+  ncm?: string
+  cfop?: string
+  unidade?: string
+  quantidade?: number
+  valor_unitario?: number
+  valor_total?: number
+  icms_aliquota?: number
 }
 
 export default function NFeVisualizarPage() {
   const { id } = useParams()
   const idStr = Array.isArray(id) ? id[0] : id
-  const nota = idStr ? notasFiscaisEletronicas.find((n) => n.id === idStr) : undefined
-  const itens = nota && nota.itens.length > 0 ? nota.itens : []
+  const [nota, setNota] = useState<NFeRecord | null>(null)
   const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!idStr) return
     createClient().auth.getUser().then(async ({ data }) => {
-      if (data.user) {
-        const p = await getPerfilEmpresa(data.user.id)
-        setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
-      }
+      if (!data.user) return
+      const [n, p] = await Promise.all([
+        getNFe(data.user.id, idStr),
+        getPerfilEmpresa(data.user.id),
+      ])
+      setNota(n)
+      setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
+      setLoading(false)
     })
-  }, [])
+  }, [idStr])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-gray-400">
+        <Loader2 className="h-6 w-6 animate-spin mr-2" />Carregando...
+      </div>
+    )
+  }
 
   if (!nota) {
     return (
       <div className="max-w-lg mx-auto mt-16 text-center space-y-4">
-        <p className="text-xl font-bold text-gray-900 dark:text-white">NF-e não encontrada</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Não há nota com este identificador ou ela ainda não foi emitida.</p>
+        <p className="text-xl font-bold text-gray-900">NF-e não encontrada</p>
+        <p className="text-sm text-gray-500">Não há nota com este identificador ou ela foi removida.</p>
         <Button asChild variant="outline">
           <Link href="/nfe"><ArrowLeft className="h-4 w-4 mr-2" />Voltar às NF-e</Link>
         </Button>
@@ -56,31 +80,30 @@ export default function NFeVisualizarPage() {
     )
   }
 
-  const nome       = perfil?.razao_social || perfil?.nome_fantasia || 'Empresa'
-  const cnpj       = perfil?.cnpj_cpf || '—'
-  const ie         = perfil?.inscricao_estadual || '—'
-  const im         = perfil?.inscricao_municipal || '—'
-  const end        = [perfil?.logradouro, perfil?.numero].filter(Boolean).join(', ')
-  const bairro     = perfil?.bairro || '—'
-  const cidadeUf   = [perfil?.cidade, perfil?.uf].filter(Boolean).join(' / ')
-  const cep        = perfil?.cep || '—'
-  const tel        = perfil?.telefone || '—'
+  const nome     = perfil?.razao_social || perfil?.nome_fantasia || 'Empresa'
+  const cnpj     = perfil?.cnpj_cpf || '—'
+  const ie       = perfil?.inscricao_estadual || '—'
+  const im       = perfil?.inscricao_municipal || '—'
+  const end      = [perfil?.logradouro, perfil?.numero].filter(Boolean).join(', ')
+  const bairro   = perfil?.bairro || '—'
+  const cidadeUf = [perfil?.cidade, perfil?.uf].filter(Boolean).join(' / ')
+  const cep      = perfil?.cep || '—'
+  const tel      = perfil?.telefone || '—'
 
-  const totalProdutos = itens.reduce((s, i) => s + i.total, 0)
+  const itens: ItemNFe[] = Array.isArray(nota.itens) ? nota.itens as ItemNFe[] : []
+  const totalProdutos = itens.reduce((s, i) => s + (i.valor_total ?? 0), 0) || nota.valor_total
   const valorICMS     = totalProdutos * 0.12
   const valorPIS      = totalProdutos * 0.0065
   const valorCOFINS   = totalProdutos * 0.03
-  const totalNota     = totalProdutos
 
-  function baixarPDF() {
-    const titulo = document.title
-    document.title = `NF-e-${nota!.numero}`
-    window.print()
-    document.title = titulo
-  }
-
-  const chave = nota.chaveAcesso ?? ''
+  const chave          = nota.chave_acesso ?? ''
   const chaveFormatada = chave.length >= 44 ? chave.replace(/(\d{4})/g, '$1 ').trim() : (chave || '—')
+
+  const endDest    = [nota.logradouro_destinatario, nota.numero_destinatario].filter(Boolean).join(', ')
+  const cidadeDest = nota.municipio_destinatario || '—'
+  const ufDest     = nota.uf_destinatario || '—'
+  const cepDest    = nota.cep_destinatario || '—'
+  const bairroDest = nota.bairro_destinatario || '—'
 
   return (
     <div className="max-w-5xl mx-auto space-y-3 print:max-w-none print:space-y-0">
@@ -91,30 +114,33 @@ export default function NFeVisualizarPage() {
           <Link href="/nfe"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Link>
         </Button>
         <div className="flex gap-2">
+          {nota.danfe_url && (
+            <a href={nota.danfe_url} target="_blank" rel="noreferrer">
+              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar DANFE</Button>
+            </a>
+          )}
+          {nota.xml_url && (
+            <a href={nota.xml_url} target="_blank" rel="noreferrer">
+              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar XML</Button>
+            </a>
+          )}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" />Imprimir
-          </Button>
-          <Button variant="outline" size="sm" onClick={baixarPDF}>
-            <Download className="h-4 w-4" />Baixar PDF
+            <Printer className="h-4 w-4 mr-1" />Imprimir
           </Button>
           {nota.status !== 'cancelada' && (
             <Button variant="destructive" size="sm">
-              <XCircle className="h-4 w-4" />Cancelar NF-e
+              <XCircle className="h-4 w-4 mr-1" />Cancelar NF-e
             </Button>
           )}
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════
-          DANFE
-      ══════════════════════════════════════════════ */}
-      <div className="bg-white dark:bg-gray-950 border-2 border-gray-800 dark:border-gray-300 text-[11px]" id="danfe">
+      {/* DANFE */}
+      <div className="bg-white border-2 border-gray-800 text-[11px]" id="danfe">
 
-        {/* ── CABEÇALHO ── */}
-        <div className="grid grid-cols-[1fr_200px_1fr] border-b-2 border-gray-800 dark:border-gray-300">
-
-          {/* Emitente */}
-          <div className="p-3 border-r border-gray-800 dark:border-gray-300 flex items-center justify-center">
+        {/* Cabeçalho */}
+        <div className="grid grid-cols-[1fr_200px_1fr] border-b-2 border-gray-800">
+          <div className="p-3 border-r border-gray-800 flex items-center justify-center">
             <div className="flex flex-col items-center text-center gap-2">
               {perfil?.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -125,239 +151,171 @@ export default function NFeVisualizarPage() {
                 </div>
               )}
               <div className="space-y-0.5">
-                <p className="font-bold text-gray-900 dark:text-white text-sm leading-tight">{nome}</p>
-                {end && <p className="text-gray-600 dark:text-gray-400 text-[10px]">{end}</p>}
-                {bairro !== '—' && <p className="text-gray-600 dark:text-gray-400 text-[10px]">{bairro}</p>}
-                {cidadeUf && <p className="text-gray-600 dark:text-gray-400 text-[10px]">{cidadeUf} — CEP {cep}</p>}
-                {tel !== '—' && <p className="text-gray-600 dark:text-gray-400 text-[10px]">Tel: {tel}</p>}
+                <p className="font-bold text-gray-900 text-sm leading-tight">{nome}</p>
+                {end && <p className="text-gray-600 text-[10px]">{end}</p>}
+                {bairro !== '—' && <p className="text-gray-600 text-[10px]">{bairro}</p>}
+                {cidadeUf && <p className="text-gray-600 text-[10px]">{cidadeUf} — CEP {cep}</p>}
+                {tel !== '—' && <p className="text-gray-600 text-[10px]">Tel: {tel}</p>}
               </div>
             </div>
           </div>
 
-          {/* Centro */}
-          <div className="p-3 border-r border-gray-800 dark:border-gray-300 flex flex-col items-center justify-between text-center">
+          <div className="p-3 border-r border-gray-800 flex flex-col items-center justify-between text-center">
             <div>
-              <p className="font-bold text-gray-800 dark:text-gray-200 text-sm tracking-wide">DANFE</p>
-              <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">Documento Auxiliar da Nota Fiscal Eletrônica</p>
+              <p className="font-bold text-gray-800 text-sm tracking-wide">DANFE</p>
+              <p className="text-[9px] text-gray-500 mt-0.5 leading-tight">Documento Auxiliar da Nota Fiscal Eletrônica</p>
             </div>
-            <div className="border border-gray-400 dark:border-gray-500 rounded px-3 py-1 my-2 w-full">
-              <div className="flex items-center justify-between text-[9px] text-gray-500 dark:text-gray-400 mb-1">
-                <span>0 - Entrada</span>
-                <span>1 - Saída</span>
+            <div className="border border-gray-400 rounded px-3 py-1 my-2 w-full">
+              <div className="flex items-center justify-between text-[9px] text-gray-500 mb-1">
+                <span>0 - Entrada</span><span>1 - Saída</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-gray-400">□</span>
-                <span className="font-bold text-gray-900 dark:text-white text-base w-8 h-8 border-2 border-blue-600 rounded-full flex items-center justify-center mx-auto">
+              <div className="flex items-center justify-center">
+                <span className="font-bold text-gray-900 text-base w-8 h-8 border-2 border-blue-600 rounded-full flex items-center justify-center">
                   {nota.tipo === 'entrada' ? '0' : '1'}
                 </span>
-                <span className="text-[10px] text-blue-600">■</span>
               </div>
             </div>
             <div>
-              <p className="text-[9px] text-gray-500 dark:text-gray-400">Nº</p>
-              <p className="font-bold text-gray-900 dark:text-white text-base">{nota.numero}</p>
-              <p className="text-[9px] text-gray-500 dark:text-gray-400">SÉRIE {nota.serie}</p>
+              <p className="text-[9px] text-gray-500">Nº</p>
+              <p className="font-bold text-gray-900 text-base">{String(nota.numero).padStart(9, '0')}</p>
+              <p className="text-[9px] text-gray-500">SÉRIE {nota.serie}</p>
               <p className="text-[9px] text-gray-400 mt-1">Página 1 de 1</p>
             </div>
           </div>
 
-          {/* Chave de acesso + status */}
           <div className="p-3 flex flex-col justify-between">
             <div>
-              <p className="text-[8px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Chave de Acesso</p>
-              {/* Barcode visual simples */}
+              <p className="text-[8px] font-bold uppercase text-gray-500 mb-1">Chave de Acesso</p>
               <div className="flex gap-px h-8 mb-1">
-                {Array.from({ length: chave.length >= 44 ? 44 : 0 }).map((_, i) => (
-                  <div key={i} className="bg-gray-900 dark:bg-gray-100 flex-1" style={{ opacity: (i % 3 === 0) ? 1 : i % 2 === 0 ? 0.6 : 0.3 }} />
+                {chave.length >= 44 && Array.from({ length: 44 }).map((_, i) => (
+                  <div key={i} className="bg-gray-900 flex-1" style={{ opacity: i % 3 === 0 ? 1 : i % 2 === 0 ? 0.6 : 0.3 }} />
                 ))}
               </div>
-              {chave.length < 44 && (
-                <p className="text-[9px] text-gray-500 mb-1">Sem chave de acesso (rascunho ou nota local).</p>
-              )}
-              <p className="font-mono text-[9px] text-gray-700 dark:text-gray-300 break-all leading-relaxed tracking-wider">{chaveFormatada}</p>
-              <p className="text-[8px] text-gray-400 dark:text-gray-500 mt-1">
-                Consulta em <span className="text-blue-600">www.nfe.fazenda.gov.br</span> ou site da SEFAZ
-              </p>
+              <p className="font-mono text-[9px] text-gray-700 break-all leading-relaxed tracking-wider">{chaveFormatada}</p>
+              <p className="text-[8px] text-gray-400 mt-1">Consulta em <span className="text-blue-600">www.nfe.fazenda.gov.br</span></p>
             </div>
-            <div>
-              <p className="text-[8px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Protocolo de Autorização de Uso</p>
-              <p className="font-mono text-[9px] text-gray-700 dark:text-gray-300">
-                135240000000001 — {formatDate(nota.dataEmissao)} 14:32:15
-              </p>
-              <div className={`mt-1.5 px-2 py-1 rounded text-center text-[10px] font-bold ${
-                nota.status === 'emitida'   ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                nota.status === 'rascunho'  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-              }`}>
-                {nota.status === 'emitida'  ? '✓ AUTORIZADA PELA SEFAZ' :
-                 nota.status === 'rascunho' ? '⚠ NÃO TRANSMITIDA' : '✕ CANCELADA'}
-              </div>
+            <div className={`mt-2 px-2 py-1 rounded text-center text-[10px] font-bold ${
+              nota.status === 'emitida'   ? 'bg-green-100 text-green-800' :
+              nota.status === 'rascunho'  ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {nota.status === 'emitida'  ? '✓ AUTORIZADA PELA SEFAZ' :
+               nota.status === 'rascunho' ? '⚠ NÃO TRANSMITIDA' : '✕ CANCELADA'}
             </div>
           </div>
         </div>
 
-        {/* ── NATUREZA / IE / CNPJ ── */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Natureza da Operação" value={nota.naturezaOperacao} />
+        {/* Natureza / IE / CNPJ */}
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr] border-b border-gray-400">
+          <Cell label="Natureza da Operação" value={nota.natureza_operacao} />
           <Cell label="Inscrição Estadual" value={ie} mono />
           <Cell label="Insc. Est. Subst. Tributário" value="—" mono />
           <Cell label="CNPJ" value={cnpj} mono />
         </div>
 
-        {/* ── DESTINATÁRIO ── */}
+        {/* Destinatário */}
         <SectionTitle>Destinatário / Remetente</SectionTitle>
-        <div className="grid grid-cols-[2fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
+        <div className="grid grid-cols-[2fr_1fr_1fr] border-b border-gray-400">
           <Cell label="Nome / Razão Social" value={nota.destinatario} />
-          <Cell label="CNPJ / CPF" value={nota.cnpjDestinatario} mono />
-          <Cell label="Data de Emissão" value={formatDate(nota.dataEmissao)} />
+          <Cell label="CNPJ / CPF" value={nota.cnpj_destinatario} mono />
+          <Cell label="Data de Emissão" value={formatDate(nota.data_emissao)} />
         </div>
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Endereço" value="Av. Barão do Rio Branco, 2000 Ap 04" />
-          <Cell label="Bairro / Distrito" value="Centro" />
-          <Cell label="CEP" value="36010-000" mono />
-          <Cell label="Data Entrada / Saída" value={formatDate(nota.dataEmissao)} />
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr] border-b border-gray-400">
+          <Cell label="Endereço" value={endDest || '—'} />
+          <Cell label="Bairro / Distrito" value={bairroDest} />
+          <Cell label="CEP" value={cepDest} mono />
+          <Cell label="Data Entrada / Saída" value={formatDate(nota.data_emissao)} />
         </div>
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Município" value="Juiz de Fora" />
-          <Cell label="Fone / Fax" value="(32) 99999-0000" />
-          <Cell label="UF" value="MG" />
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] border-b border-gray-400">
+          <Cell label="Município" value={cidadeDest} />
+          <Cell label="Fone / Fax" value="—" />
+          <Cell label="UF" value={ufDest} />
           <Cell label="Inscrição Estadual" value="—" mono />
-          <Cell label="Hora Entrada / Saída" value="14:32:10" />
+          <Cell label="Hora Entrada / Saída" value="—" />
         </div>
 
-        {/* ── FATURA ── */}
-        <SectionTitle>Fatura</SectionTitle>
-        <div className="border-b border-gray-400 dark:border-gray-600 px-2 py-1.5 flex gap-4">
-          <p className="text-[9px] text-gray-400 dark:text-gray-500 italic">Sem fatura (pagamento à vista)</p>
-        </div>
-
-        {/* ── CÁLCULO DO IMPOSTO ── */}
+        {/* Cálculo do Imposto */}
         <SectionTitle>Cálculo do Imposto</SectionTitle>
-        <div className="grid grid-cols-6 border-b border-gray-400 dark:border-gray-600">
+        <div className="grid grid-cols-6 border-b border-gray-400">
           <Cell label="Base de Cálculo do ICMS"   value={formatCurrency(totalProdutos)} />
           <Cell label="Valor do ICMS"              value={formatCurrency(valorICMS)} />
           <Cell label="BC ICMS ST"                 value={formatCurrency(0)} />
           <Cell label="Valor do ICMS ST"           value={formatCurrency(0)} />
           <Cell label="Valor Total dos Produtos"   value={formatCurrency(totalProdutos)} />
-          <Cell label="Valor Total da Nota"        value={formatCurrency(totalNota)} className="font-bold" />
+          <Cell label="Valor Total da Nota"        value={formatCurrency(nota.valor_total)} className="font-bold" />
         </div>
-        <div className="grid grid-cols-6 border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Valor do Frete"             value={formatCurrency(0)} />
-          <Cell label="Valor do Seguro"            value={formatCurrency(0)} />
-          <Cell label="Desconto"                   value={formatCurrency(0)} />
-          <Cell label="Outras Despesas Acess."     value={formatCurrency(0)} />
-          <Cell label="Valor do IPI"               value={formatCurrency(0)} />
-          <Cell label="Valor do PIS / COFINS"      value={formatCurrency(valorPIS + valorCOFINS)} />
+        <div className="grid grid-cols-6 border-b border-gray-400">
+          <Cell label="Valor do Frete"         value={formatCurrency(0)} />
+          <Cell label="Valor do Seguro"        value={formatCurrency(0)} />
+          <Cell label="Desconto"               value={formatCurrency(0)} />
+          <Cell label="Outras Despesas"        value={formatCurrency(0)} />
+          <Cell label="Valor do IPI"           value={formatCurrency(0)} />
+          <Cell label="Valor PIS / COFINS"     value={formatCurrency(valorPIS + valorCOFINS)} />
         </div>
 
-        {/* ── TRANSPORTADOR ── */}
+        {/* Transportador */}
         <SectionTitle>Transportador / Volumes Transportados</SectionTitle>
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Razão Social do Transportador" value="—" />
+        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] border-b border-gray-400">
+          <Cell label="Razão Social do Transportador" value={nota.transportadora || '—'} />
           <Cell label="Frete por Conta" value="9 — Sem transporte" />
-          <Cell label="Código ANTT / RNTRC" value="—" mono />
+          <Cell label="Código ANTT" value="—" mono />
           <Cell label="Placa do Veículo" value="—" />
           <Cell label="UF da Placa" value="—" />
         </div>
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr] border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Endereço do Transportador" value="—" />
-          <Cell label="Município" value="—" />
-          <Cell label="UF" value="—" />
-          <Cell label="CNPJ / CPF do Transportador" value="—" mono />
-        </div>
-        <div className="grid grid-cols-6 border-b-2 border-gray-800 dark:border-gray-300">
-          <Cell label="Quantidade" value="—" />
-          <Cell label="Espécie" value="—" />
-          <Cell label="Marca" value="—" />
-          <Cell label="Numeração" value="—" />
-          <Cell label="Peso Bruto (kg)" value="—" />
-          <Cell label="Peso Líquido (kg)" value="—" />
-        </div>
 
-        {/* ── PRODUTOS ── */}
+        {/* Produtos */}
         <SectionTitle>Dados dos Produtos / Serviços</SectionTitle>
-        <div className="overflow-x-auto border-b border-gray-400 dark:border-gray-600">
+        <div className="overflow-x-auto border-b border-gray-400">
           <table className="w-full text-[9px] border-collapse">
             <thead>
-              <tr className="bg-gray-100 dark:bg-gray-800">
-                {[
-                  ['Código',      'w-16'],
-                  ['Descrição do Produto / Serviço', 'min-w-[180px]'],
-                  ['NCM/SH',      'w-20'],
-                  ['CST',         'w-10'],
-                  ['CFOP',        'w-12'],
-                  ['Unid.',       'w-10'],
-                  ['Qtd.',        'w-12'],
-                  ['Vlr. Unit.',  'w-20 text-right'],
-                  ['Vlr. Total',  'w-20 text-right'],
-                  ['BC ICMS',     'w-20 text-right'],
-                  ['Vlr. ICMS',   'w-20 text-right'],
-                  ['Vlr. IPI',    'w-16 text-right'],
-                  ['Alíq. ICMS', 'w-16 text-right'],
-                  ['Alíq. IPI',  'w-14 text-right'],
-                ].map(([h, cls]) => (
-                  <th key={h} className={`border border-gray-300 dark:border-gray-600 px-1 py-1 font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide text-left ${cls}`}>{h}</th>
+              <tr className="bg-gray-100">
+                {[['Código','w-16'],['Descrição','min-w-[180px]'],['NCM','w-20'],['CFOP','w-12'],['Un.','w-10'],['Qtd.','w-12'],['Vlr. Unit.','w-20 text-right'],['Vlr. Total','w-20 text-right'],['BC ICMS','w-20 text-right'],['Vlr. ICMS','w-20 text-right']].map(([h, cls]) => (
+                  <th key={h} className={`border border-gray-300 px-1 py-1 font-bold text-gray-600 uppercase tracking-wide text-left ${cls}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {itens.length === 0 ? (
-                <tr>
-                  <td colSpan={14} className="border border-gray-200 dark:border-gray-700 px-2 py-6 text-center text-gray-500 dark:text-gray-400 text-xs">
-                    Nenhum item nesta nota.
-                  </td>
-                </tr>
-              ) : (
-              itens.map((item, i) => {
-                const bcIcms = item.total
-                const vlrIcms = item.total * 0.12
+                <tr><td colSpan={10} className="border border-gray-200 px-2 py-6 text-center text-gray-500 text-xs">Nenhum item.</td></tr>
+              ) : itens.map((item, i) => {
+                const total   = item.valor_total ?? 0
+                const bcIcms  = total
+                const vlrIcms = total * ((item.icms_aliquota ?? 12) / 100)
                 return (
-                  <tr key={i} className={i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/40'}>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-mono text-gray-700 dark:text-gray-300">{item.produto.codigo}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-medium text-gray-800 dark:text-gray-200">{item.produto.descricao}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-mono text-gray-600 dark:text-gray-400">{item.produto.ncm}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-mono text-gray-600 dark:text-gray-400">000</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 font-mono text-gray-600 dark:text-gray-400">{item.produto.cfop}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-gray-600 dark:text-gray-400">{item.produto.unidade}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-gray-700 dark:text-gray-300">{item.quantidade.toFixed(4)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-700 dark:text-gray-300">{formatCurrency(item.valorUnitario)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(item.total)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">{formatCurrency(bcIcms)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">{formatCurrency(vlrIcms)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">{formatCurrency(0)}</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">12,00</td>
-                    <td className="border border-gray-200 dark:border-gray-700 px-1 py-1 text-right text-gray-600 dark:text-gray-400">0,00</td>
+                  <tr key={i} className={i % 2 === 0 ? '' : 'bg-gray-50'}>
+                    <td className="border border-gray-200 px-1 py-1 font-mono text-gray-700">{item.codigo || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 font-medium text-gray-800">{item.descricao || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 font-mono text-gray-600">{item.ncm || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 font-mono text-gray-600">{item.cfop || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-gray-600">{item.unidade || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-gray-700">{(item.quantidade ?? 0).toFixed(4)}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-right text-gray-700">{formatCurrency(item.valor_unitario ?? 0)}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-right font-semibold text-gray-900">{formatCurrency(total)}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-right text-gray-600">{formatCurrency(bcIcms)}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-right text-gray-600">{formatCurrency(vlrIcms)}</td>
                   </tr>
                 )
-              })
-              )}
+              })}
             </tbody>
           </table>
         </div>
 
-        {/* ── CÁLCULO DO ISSQN ── */}
-        <SectionTitle>Cálculo do ISSQN</SectionTitle>
-        <div className="grid grid-cols-4 border-b border-gray-400 dark:border-gray-600">
-          <Cell label="Inscrição Municipal" value={im} mono />
-          <Cell label="Valor Total dos Serviços" value={formatCurrency(0)} />
-          <Cell label="Base de Cálculo do ISSQN"  value={formatCurrency(0)} />
-          <Cell label="Valor do ISSQN"             value={formatCurrency(0)} />
-        </div>
-
-        {/* ── DADOS ADICIONAIS ── */}
+        {/* Dados Adicionais */}
         <SectionTitle>Dados Adicionais</SectionTitle>
-        <div className="grid grid-cols-[3fr_1fr] border-b border-gray-400 dark:border-gray-600 min-h-[60px]">
-          <div className="border-r border-gray-400 dark:border-gray-600 p-2">
-            <p className="text-[8px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Informações Complementares</p>
-            <p className="text-[10px] text-gray-700 dark:text-gray-300 leading-relaxed">
+        <div className="grid grid-cols-[3fr_1fr] border-b border-gray-400 min-h-[60px]">
+          <div className="border-r border-gray-400 p-2">
+            <p className="text-[8px] font-bold uppercase text-gray-500 mb-1">Informações Complementares</p>
+            <p className="text-[10px] text-gray-700 leading-relaxed">
               {perfil?.regime_tributario === 'simples' || perfil?.regime_tributario === 'mei'
                 ? 'Documento emitido por ME ou EPP optante pelo Simples Nacional. Não gera direito a crédito de ICMS, ISS, PIS e COFINS. '
                 : ''}
-              Emitido pelo sistema Syncromoney PREMIUM — syncromoney.com.br
+              Emitido pelo sistema Syncromoney — syncromoney.com.br
+              {nota.erro_mensagem ? ` | Obs: ${nota.erro_mensagem}` : ''}
             </p>
           </div>
           <div className="p-2">
-            <p className="text-[8px] font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Reserva ao Fisco</p>
+            <p className="text-[8px] font-bold uppercase text-gray-500 mb-1">Reserva ao Fisco</p>
+            <Cell label="Inscrição Municipal" value={im} mono />
           </div>
         </div>
 
