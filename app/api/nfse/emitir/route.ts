@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .single()
 
-  const numero_rps = ((ultimaRow?.numero_rps ?? 0) as number) + 1
+  const baseRps = parseInt(process.env.NFSE_PROXIMO_RPS ?? '0', 10)
+  const ultimoRps = (ultimaRow?.numero_rps ?? 0) as number
+  const numero_rps = Math.max(baseRps, ultimoRps + 1)
   const ref = `nfse-${user.id.slice(0, 8)}-${numero_rps}`
   const data_emissao = new Date().toISOString()
 
