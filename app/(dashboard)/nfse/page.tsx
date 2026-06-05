@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Eye, Download, XCircle, Receipt, CheckCircle2, Loader2 } from 'lucide-react'
+import { Plus, Search, Eye, Download, XCircle, Receipt, CheckCircle2, Loader2, Printer, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -66,6 +66,21 @@ export default function NFSePage() {
   }, [userId])
 
   useEffect(() => { fetchNotas() }, [fetchNotas])
+
+  async function handleExcluir(nota: NfseRow) {
+    if (!confirm(`Excluir o registro RPS ${nota.numero_rps} do banco? Esta ação não pode ser desfeita.`)) return
+    const { error } = await createClient()
+      .from('nfse')
+      .delete()
+      .eq('id', nota.id)
+      .eq('user_id', userId)
+    if (error) {
+      toast('Erro ao excluir: ' + error.message, 'error')
+    } else {
+      toast('Registro excluído', 'success')
+      fetchNotas()
+    }
+  }
 
   async function handleCancelar(nota: NfseRow) {
     if (!confirm(`Cancelar NFS-e RPS ${nota.numero_rps}?`)) return
@@ -166,7 +181,7 @@ export default function NFSePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtradas.map(nota => <NFSeLine key={nota.id} nota={nota} onCancelar={handleCancelar} />)}
+                  {filtradas.map(nota => <NFSeLine key={nota.id} nota={nota} onCancelar={handleCancelar} onExcluir={handleExcluir} />)}
                   {filtradas.length === 0 && (
                     <tr><td colSpan={8} className="px-6 py-12 text-center">
                       <Receipt className="h-10 w-10 text-gray-300 mx-auto mb-2" />
@@ -184,9 +199,10 @@ export default function NFSePage() {
   )
 }
 
-function NFSeLine({ nota, onCancelar }: { nota: NfseRow; onCancelar: (n: NfseRow) => void }) {
+function NFSeLine({ nota, onCancelar, onExcluir }: { nota: NfseRow; onCancelar: (n: NfseRow) => void; onExcluir: (n: NfseRow) => void }) {
   const st = STATUS_CFG[nota.status] ?? STATUS_CFG['processando']
   const isHom = nota.ambiente === 'homologacao'
+  const podeExcluir = ['processando', 'erro', 'cancelada'].includes(nota.status)
   return (
     <tr className="hover:bg-gray-50 transition-colors">
       <td className="px-4 py-3">
@@ -215,17 +231,30 @@ function NFSeLine({ nota, onCancelar }: { nota: NfseRow; onCancelar: (n: NfseRow
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
-          <Link href={`/nfse/${nota.id}`} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg inline-flex">
+          {/* Visualizar */}
+          <Link href={`/nfse/${nota.id}`} title="Visualizar" className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg inline-flex">
             <Eye className="h-4 w-4" />
           </Link>
+          {/* Imprimir */}
+          <Link href={`/nfse/${nota.id}`} title="Imprimir" onClick={() => setTimeout(() => window.print(), 800)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg inline-flex">
+            <Printer className="h-4 w-4" />
+          </Link>
+          {/* Download PDF */}
           {nota.link_pdf && (
-            <a href={nota.link_pdf} target="_blank" rel="noreferrer" className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg inline-flex">
+            <a href={nota.link_pdf} target="_blank" rel="noreferrer" title="Baixar PDF" className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg inline-flex">
               <Download className="h-4 w-4" />
             </a>
           )}
+          {/* Cancelar (só autorizada) */}
           {nota.status === 'autorizada' && (
-            <button onClick={() => onCancelar(nota)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+            <button onClick={() => onCancelar(nota)} title="Cancelar NFS-e" className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg">
               <XCircle className="h-4 w-4" />
+            </button>
+          )}
+          {/* Excluir (processando / erro / cancelada) */}
+          {podeExcluir && (
+            <button onClick={() => onExcluir(nota)} title="Excluir registro" className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+              <Trash2 className="h-4 w-4" />
             </button>
           )}
         </div>
