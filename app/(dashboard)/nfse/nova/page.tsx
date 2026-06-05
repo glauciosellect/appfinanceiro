@@ -59,11 +59,11 @@ export default function NovaNFSePage() {
     cnpjTimerRef.current = setTimeout(async () => {
       setBuscandoCnpj(true)
       try {
-        const res = await fetch(`https://publica.cnpj.ws/cnpj/${digits}`)
+        const res = await fetch(`/api/cnpj/${digits}`)
         if (res.ok) {
-          const d = await res.json()
-          setTomador(d.razao_social ?? '')
-          setEmailTomador(d.estabelecimento?.email ?? '')
+          const d = await res.json() as { razaoSocial?: string; email?: string }
+          if (d.razaoSocial) setTomador(d.razaoSocial)
+          if (d.email) setEmailTomador(d.email)
         }
       } catch {
         // silencia — usuário preenche manualmente
