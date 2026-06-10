@@ -151,10 +151,10 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       // campos específicos de JF (IBS/CBS) — só enviados para municípios que usam o novo padrão
       ...(isJuizDeFora && params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
       ...(isJuizDeFora && params.codigo_nbs ? { codigo_nbs: params.codigo_nbs } : {}),
-      // CST determinado pela cClassTrib: '000001' → '101' (integral), '200052' → '200' (especial)
+      // CST = primeiros 3 dígitos do cClassTrib: '000001'→'000', '200052'→'200'
       ...(isJuizDeFora ? {
         ibs_cbs_situacao_tributaria: (params.ibs_cbs_situacao_tributaria
-          ?? (params.ibs_cbs_classificacao_tributaria?.startsWith('2') ? '200' : '101')
+          ?? (params.ibs_cbs_classificacao_tributaria?.slice(0, 3) ?? '000')
         ).padStart(3, '0'),
       } : {}),
       ...(isJuizDeFora && params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
