@@ -74,6 +74,7 @@ export interface EmitirNFSeParams {
   ibs_cbs_situacao_tributaria?: string
   ibs_cbs_classificacao_tributaria?: string
   codigo_indicador_operacao?: string
+  finalidade_nfse?: string // '1'=Normal '2'=Complementar '3'=Substituta
 }
 
 export interface FocusNFSeRetorno {
@@ -149,6 +150,8 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
     numero_rps: String(params.numero_rps),
     serie_rps: params.serie_rps ?? 'RPS',
     tipo_rps: '1',
+    // finalidade_nfse gera <finNFSe> no IBSCBS — deve vir antes de cIndOp no schema ABRASF
+    ...(isJuizDeFora ? { finalidade_nfse: params.finalidade_nfse ?? '1' } : {}),
     ...(isJuizDeFora && params.codigo_indicador_operacao ? { codigo_indicador_operacao: params.codigo_indicador_operacao } : {}),
   }
 
