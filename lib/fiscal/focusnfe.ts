@@ -127,7 +127,7 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
     servico: {
       valor_servicos: params.valor_servicos,
       iss_retido: params.iss_retido ? '1' : '2',
-      item_lista_servico: params.codigo_servico,
+      item_lista_servico: params.codigo_lc116 || params.codigo_servico,
       codigo_tributacao_municipio: params.codigo_lc116 || params.codigo_servico.replace('.', ''),
       codigo_municipio: codigoMunicipio,
       discriminacao: params.discriminacao,
