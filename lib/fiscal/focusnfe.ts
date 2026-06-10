@@ -102,9 +102,9 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       ...(params.inscricao_municipal_prestador
         ? { inscricao_municipal: params.inscricao_municipal_prestador }
         : {}),
-      // regime: '1'=Simples/MEI → optante=1; '3'=Normal → optante=2
-      optante_simples_nacional: (params.regime_tributario_prestador ?? '1') === '1' ? '1' : '2',
     },
+    // campo raiz — Focus NFe usa este nível para gerar <OptanteSimplesNacional> no XML
+    optante_simples_nacional: (params.regime_tributario_prestador ?? '1') === '1' ? '1' : '2',
     tomador: {
       razao_social: params.tomador_razao_social,
       ...(params.tomador_cnpj ? { cnpj: params.tomador_cnpj.replace(/\D/g, '') } : {}),
@@ -127,8 +127,7 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
     servico: {
       valor_servicos: params.valor_servicos,
       iss_retido: params.iss_retido ? '1' : '2',
-      item_lista_servico: params.codigo_lc116,
-      codigo_servico: params.codigo_servico.replace('.', ''),
+      item_lista_servico: params.codigo_servico.replace('.', ''),
       codigo_tributacao_municipio: params.codigo_servico.replace('.', ''),
       codigo_municipio: codigoMunicipio,
       discriminacao: params.discriminacao,
