@@ -127,7 +127,7 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
     servico: {
       valor_servicos: params.valor_servicos,
       iss_retido: params.iss_retido ? '1' : '2',
-      item_lista_servico: params.codigo_servico.replace('.', ''),
+      item_lista_servico: params.codigo_lc116,
       codigo_servico: params.codigo_servico.replace('.', ''),
       codigo_tributacao_municipio: params.codigo_servico.replace('.', ''),
       codigo_municipio: codigoMunicipio,
@@ -366,6 +366,8 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
     inscricao_estadual: params.inscricao_estadual ?? '',
     inscricao_municipal: params.inscricao_municipal ?? '',
     regime_tributario: params.regime_tributario ?? '1',
+    // '1'=Simples/MEI → optante=true; '3'=Normal → optante=false
+    optante_simples_nacional: (params.regime_tributario ?? '1') === '1',
     cep: params.cep?.replace(/\D/g, '') ?? '',
     logradouro: params.logradouro ?? '',
     numero: params.numero ?? '',
