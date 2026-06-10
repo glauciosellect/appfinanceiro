@@ -110,7 +110,7 @@ export default function NovaNFSePage() {
   const valorLiquido = issRetidoFonte ? totalServicos - valorIss : totalServicos
 
   function addItem() {
-    setItens([...itens, { codigoServico: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 }])
+    setItens([...itens, { codigoServico: '', codigoMunicipal: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 }])
   }
   function removeItem(idx: number) {
     setItens(itens.filter((_, i) => i !== idx))
