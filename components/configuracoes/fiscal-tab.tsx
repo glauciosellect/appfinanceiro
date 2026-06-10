@@ -19,6 +19,8 @@ interface FiscalConfig {
   cnpj?: string
   numero_proximo_nfe?: number
   serie_nfe?: string
+  numero_proximo_nfse?: number
+  serie_nfse?: string
 }
 
 export default function FiscalTab({ userId }: { userId: string }) {
@@ -30,6 +32,9 @@ export default function FiscalTab({ userId }: { userId: string }) {
   const [numeroProximo, setNumeroProximo] = useState('')
   const [serieNfe, setSerieNfe] = useState('1')
   const [salvandoNum, setSalvandoNum] = useState(false)
+  const [numeroProximoNfse, setNumeroProximoNfse] = useState('')
+  const [serieNfse, setSerieNfse] = useState('RPS')
+  const [salvandoNumNfse, setSalvandoNumNfse] = useState(false)
   const [senhaCert, setSenhaCert] = useState('')
   const [arquivoCert, setArquivoCert] = useState<File | null>(null)
   const certInputRef = useRef<HTMLInputElement>(null)
@@ -38,13 +43,15 @@ export default function FiscalTab({ userId }: { userId: string }) {
   useEffect(() => {
     if (!userId) return
     Promise.all([
-      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj,numero_proximo_nfe,serie_nfe').eq('user_id', userId).single(),
+      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj,numero_proximo_nfe,serie_nfe,numero_proximo_nfse,serie_nfse').eq('user_id', userId).single(),
       createClient().from('perfil_empresa').select('cnpj_cpf, razao_social').eq('user_id', userId).single(),
     ]).then(([{ data: fiscal }, { data: perfil }]) => {
       if (fiscal) {
         setConfig(fiscal as FiscalConfig)
         setNumeroProximo(String(fiscal.numero_proximo_nfe ?? 1))
         setSerieNfe(fiscal.serie_nfe ?? '1')
+        setNumeroProximoNfse(String(fiscal.numero_proximo_nfse ?? 1))
+        setSerieNfse(fiscal.serie_nfse ?? 'RPS')
       }
       setPerfilOk(!!(perfil?.cnpj_cpf && perfil?.razao_social))
       setLoading(false)
@@ -125,6 +132,30 @@ export default function FiscalTab({ userId }: { userId: string }) {
       toast('Erro de conexão', 'error')
     } finally {
       setSalvandoNum(false)
+    }
+  }
+
+  async function handleSalvarNumeracaoNfse() {
+    const num = parseInt(numeroProximoNfse)
+    if (!num || num < 1) { toast('Informe um número válido (mínimo 1)', 'error'); return }
+    setSalvandoNumNfse(true)
+    try {
+      const res = await fetch('/api/fiscal/numeracao-nfse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numero_proximo_nfse: num, serie_nfse: serieNfse }),
+      })
+      const json = await res.json() as { ok?: boolean; error?: string }
+      if (json.ok) {
+        toast('Numeração da NFS-e salva com sucesso!', 'success')
+        setConfig(c => ({ ...c, numero_proximo_nfse: num, serie_nfse: serieNfse }))
+      } else {
+        toast(json.error ?? 'Erro ao salvar numeração', 'error')
+      }
+    } catch {
+      toast('Erro de conexão', 'error')
+    } finally {
+      setSalvandoNumNfse(false)
     }
   }
 
@@ -248,6 +279,62 @@ export default function FiscalTab({ userId }: { userId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Numeração NFS-e — só aparece se NFS-e estiver habilitada e módulo ativo */}
+      {config.habilita_nfse && isAtivo && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Hash className="h-5 w-5 text-green-600" />
+              Numeração da NFS-e
+            </CardTitle>
+            <p className="text-sm text-gray-500">
+              Configure o próximo número do RPS. Se veio de outro sistema, informe o número seguinte ao último emitido.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-[2fr_1fr] gap-3">
+              <div>
+                <Label>Próximo número do RPS</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="Ex: 239"
+                  value={numeroProximoNfse}
+                  onChange={e => setNumeroProximoNfse(e.target.value)}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Último número emitido + 1
+                </p>
+              </div>
+              <div>
+                <Label>Série</Label>
+                <Input
+                  placeholder="Ex: RPS"
+                  value={serieNfse}
+                  onChange={e => setSerieNfse(e.target.value)}
+                />
+              </div>
+            </div>
+            {config.numero_proximo_nfse && (
+              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                <p className="text-xs text-green-700">
+                  Configuração atual: Nº <strong>{config.numero_proximo_nfse}</strong> / Série <strong>{config.serie_nfse ?? 'RPS'}</strong>
+                </p>
+              </div>
+            )}
+            <Button
+              className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleSalvarNumeracaoNfse}
+              disabled={salvandoNumNfse || !numeroProximoNfse}
+            >
+              {salvandoNumNfse ? <Loader2 className="h-4 w-4 animate-spin" /> : <Hash className="h-4 w-4" />}
+              Salvar numeração da NFS-e
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Numeração NF-e — só aparece se NF-e estiver habilitada e módulo ativo */}
       {config.habilita_nfe && isAtivo && (

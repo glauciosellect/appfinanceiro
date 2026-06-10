@@ -30,6 +30,13 @@ export async function POST(req: NextRequest) {
     data_competencia,
   } = body
 
+  // Dados fiscais do prestador (por cliente — multi-tenant)
+  const { data: fiscalConfig } = await supabase
+    .from('fiscal_config')
+    .select('inscricao_municipal, cnpj, numero_proximo_nfse, serie_nfse')
+    .eq('user_id', user.id)
+    .single()
+
   // Próximo número RPS
   const { data: ultimaRow } = await supabase
     .from('nfse')
@@ -39,7 +46,7 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .single()
 
-  const baseRps = parseInt(process.env.NFSE_PROXIMO_RPS ?? '0', 10)
+  const baseRps = fiscalConfig?.numero_proximo_nfse ?? parseInt(process.env.NFSE_PROXIMO_RPS ?? '1', 10)
   const ultimoRps = (ultimaRow?.numero_rps ?? 0) as number
   const numero_rps = Math.max(baseRps, ultimoRps + 1)
   const ref = `nfse_${user.id.replace(/-/g, '').slice(0, 8)}_${numero_rps}`
@@ -68,7 +75,8 @@ export async function POST(req: NextRequest) {
     data_emissao,
     data_competencia,
     numero_rps,
-    serie_rps: 'RPS',
+    serie_rps: fiscalConfig?.serie_nfse ?? 'RPS',
+    inscricao_municipal_prestador: fiscalConfig?.inscricao_municipal ?? process.env.EMITENTE_INSCRICAO_MUNICIPAL ?? undefined,
   }
 
   let retorno
