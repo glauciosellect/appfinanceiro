@@ -69,6 +69,7 @@ export interface EmitirNFSeParams {
   serie_rps?: string
   inscricao_municipal_prestador?: string
   regime_tributario_prestador?: string // '1'=Simples/MEI '3'=Normal
+  codigo_municipio_prestador?: string  // código IBGE do município do prestador
   codigo_cnae?: string
   ibs_cbs_situacao_tributaria?: string
   ibs_cbs_classificacao_tributaria?: string
@@ -90,7 +91,11 @@ export interface FocusNFSeRetorno {
 
 export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRetorno> {
   const emitenteCNPJ = process.env.EMITENTE_CNPJ ?? ''
-  const codigoMunicipio = process.env.EMITENTE_CODIGO_MUNICIPIO ?? '3136702'
+  // Usa o município do tenant; fallback para variável de ambiente (legado single-tenant)
+  const codigoMunicipio = params.codigo_municipio_prestador
+    ?? process.env.EMITENTE_CODIGO_MUNICIPIO
+    ?? '3136702'
+  const isJuizDeFora = codigoMunicipio === '3136702'
 
   // data_competencia: prefeitura de JF exige data completa YYYY-MM-DD
   const dataCompetencia = params.data_competencia.length === 7
@@ -136,14 +141,15 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       codigo_municipio: codigoMunicipio,
       discriminacao: params.discriminacao,
       ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
-      ...(params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
-      ...(params.ibs_cbs_situacao_tributaria ? { ibs_cbs_situacao_tributaria: params.ibs_cbs_situacao_tributaria } : {}),
-      ...(params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
+      // campos específicos de JF (IBS/CBS) — só enviados para municípios que usam o novo padrão
+      ...(isJuizDeFora && params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
+      ...(isJuizDeFora && params.ibs_cbs_situacao_tributaria ? { ibs_cbs_situacao_tributaria: params.ibs_cbs_situacao_tributaria } : {}),
+      ...(isJuizDeFora && params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
     },
     numero_rps: String(params.numero_rps),
     serie_rps: params.serie_rps ?? 'RPS',
     tipo_rps: '1',
-    ...(params.codigo_indicador_operacao ? { codigo_indicador_operacao: params.codigo_indicador_operacao } : {}),
+    ...(isJuizDeFora && params.codigo_indicador_operacao ? { codigo_indicador_operacao: params.codigo_indicador_operacao } : {}),
   }
 
   const url = `${BASE_URL}/nfse?ref=${encodeURIComponent(params.ref)}`

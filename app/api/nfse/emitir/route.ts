@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   // Dados fiscais do prestador (por cliente — multi-tenant)
   const { data: fiscalConfig } = await supabase
     .from('fiscal_config')
-    .select('inscricao_municipal, cnpj, numero_proximo_nfse, serie_nfse, regime_tributario')
+    .select('inscricao_municipal, cnpj, numero_proximo_nfse, serie_nfse, regime_tributario, codigo_municipio')
     .eq('user_id', user.id)
     .single()
 
@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
     serie_rps: fiscalConfig?.serie_nfse ?? 'RPS',
     inscricao_municipal_prestador: fiscalConfig?.inscricao_municipal ?? process.env.EMITENTE_INSCRICAO_MUNICIPAL ?? undefined,
     regime_tributario_prestador: fiscalConfig?.regime_tributario ?? '1',
+    codigo_municipio_prestador: fiscalConfig?.codigo_municipio ?? process.env.EMITENTE_CODIGO_MUNICIPIO ?? undefined,
     codigo_cnae: codigo_cnae ?? undefined,
     ibs_cbs_situacao_tributaria: ibs_cbs_situacao_tributaria ?? undefined,
     ibs_cbs_classificacao_tributaria: ibs_cbs_classificacao_tributaria ?? undefined,
