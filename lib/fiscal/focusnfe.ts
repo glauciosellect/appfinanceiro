@@ -74,7 +74,8 @@ export interface EmitirNFSeParams {
   ibs_cbs_situacao_tributaria?: string  // CST — padrão '07' para Simples/JF
   ibs_cbs_classificacao_tributaria?: string
   codigo_indicador_operacao?: string
-  finalidade_emissao?: string           // '1'=Normal '2'=Complementar '3'=Substituta → <finNFSe>
+  finalidade_emissao?: string           // '0'=Normal (único valor aceito pelo schema JF) → <finNFSe>
+  consumidor_final?: string             // '0'=Não '1'=Sim → <indFinal> (obrigatório antes de cIndOp)
   indicador_destinatario?: string       // '0'=Dentro município '1'=Fora município → <indDest>
 }
 
@@ -151,10 +152,11 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
     numero_rps: String(params.numero_rps),
     serie_rps: params.serie_rps ?? 'RPS',
     tipo_rps: '1',
-    // campos obrigatórios para JF no bloco IBSCBS (schema ABRASF exige ordem: finNFSe → cIndOp)
-    ...(isJuizDeFora ? { finalidade_emissao: params.finalidade_emissao ?? '1' } : {}),
-    ...(isJuizDeFora ? { indicador_destinatario: params.indicador_destinatario ?? '0' } : {}),
+    // campos obrigatórios para JF — schema ABRASF exige ordem: finNFSe → indFinal → cIndOp → indDest
+    ...(isJuizDeFora ? { finalidade_emissao: params.finalidade_emissao ?? '0' } : {}),
+    ...(isJuizDeFora ? { consumidor_final: params.consumidor_final ?? '0' } : {}),
     ...(isJuizDeFora && params.codigo_indicador_operacao ? { codigo_indicador_operacao: params.codigo_indicador_operacao } : {}),
+    ...(isJuizDeFora ? { indicador_destinatario: params.indicador_destinatario ?? '0' } : {}),
   }
 
   const url = `${BASE_URL}/nfse?ref=${encodeURIComponent(params.ref)}`
