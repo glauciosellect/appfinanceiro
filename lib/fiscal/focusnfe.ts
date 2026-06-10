@@ -71,12 +71,11 @@ export interface EmitirNFSeParams {
   regime_tributario_prestador?: string // '1'=Simples/MEI '3'=Normal
   codigo_municipio_prestador?: string  // código IBGE do município do prestador
   codigo_cnae?: string
-  ibs_cbs_situacao_tributaria?: string
+  ibs_cbs_situacao_tributaria?: string  // CST — padrão '07' para Simples/JF
   ibs_cbs_classificacao_tributaria?: string
   codigo_indicador_operacao?: string
-  finalidade_emissao?: string  // '1'=Normal '2'=Complementar '3'=Substituta → <finNFSe>
-  indicador_destinatario?: string // '0'=Dentro município '1'=Fora município → <indDest>
-  ibs_cbs_situacao_tributaria?: string // CST obrigatório para JF
+  finalidade_emissao?: string           // '1'=Normal '2'=Complementar '3'=Substituta → <finNFSe>
+  indicador_destinatario?: string       // '0'=Dentro município '1'=Fora município → <indDest>
 }
 
 export interface FocusNFSeRetorno {
