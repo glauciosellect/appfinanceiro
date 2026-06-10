@@ -141,14 +141,22 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       valor_servicos: params.valor_servicos,
       iss_retido: params.iss_retido ? '1' : '2',
       item_lista_servico: params.codigo_lc116 || params.codigo_servico,
-      codigo_tributacao_municipio: params.codigo_lc116 || params.codigo_servico.replace('.', ''),
+      // campo correto para JF new-standard: gera <CodigoServico> (não codigo_tributacao_municipio)
+      ...(isJuizDeFora
+        ? { codigo_tributario_municipio: params.codigo_lc116 || params.codigo_servico.replace('.', '') }
+        : { codigo_tributacao_municipio: params.codigo_lc116 || params.codigo_servico.replace('.', '') }),
       codigo_municipio: codigoMunicipio,
       discriminacao: params.discriminacao,
       ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
       // campos específicos de JF (IBS/CBS) — só enviados para municípios que usam o novo padrão
       ...(isJuizDeFora && params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
       ...(isJuizDeFora && params.codigo_nbs ? { codigo_nbs: params.codigo_nbs } : {}),
-      ...(isJuizDeFora ? { ibs_cbs_situacao_tributaria: (params.ibs_cbs_situacao_tributaria ?? '200').padStart(3, '0') } : {}),
+      // CST determinado pela cClassTrib: '000001' → '101' (integral), '200052' → '200' (especial)
+      ...(isJuizDeFora ? {
+        ibs_cbs_situacao_tributaria: (params.ibs_cbs_situacao_tributaria
+          ?? (params.ibs_cbs_classificacao_tributaria?.startsWith('2') ? '200' : '101')
+        ).padStart(3, '0'),
+      } : {}),
       ...(isJuizDeFora && params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
     },
     numero_rps: String(params.numero_rps),
