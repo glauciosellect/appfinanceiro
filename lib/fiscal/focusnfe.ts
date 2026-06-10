@@ -146,7 +146,7 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
       // campos específicos de JF (IBS/CBS) — só enviados para municípios que usam o novo padrão
       ...(isJuizDeFora && params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
-      ...(isJuizDeFora ? { ibs_cbs_situacao_tributaria: params.ibs_cbs_situacao_tributaria ?? '07' } : {}),
+      ...(isJuizDeFora ? { ibs_cbs_situacao_tributaria: (params.ibs_cbs_situacao_tributaria ?? '007').padStart(3, '0') } : {}),
       ...(isJuizDeFora && params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
     },
     numero_rps: String(params.numero_rps),
