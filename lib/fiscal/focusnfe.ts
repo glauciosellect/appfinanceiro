@@ -71,9 +71,10 @@ export interface EmitirNFSeParams {
   regime_tributario_prestador?: string // '1'=Simples/MEI '3'=Normal
   codigo_municipio_prestador?: string  // código IBGE do município do prestador
   codigo_cnae?: string
-  ibs_cbs_situacao_tributaria?: string  // CST — padrão '07' para Simples/JF
+  ibs_cbs_situacao_tributaria?: string  // CST IBS/CBS — padrão '200' (tributado integralmente)
   ibs_cbs_classificacao_tributaria?: string
   codigo_indicador_operacao?: string
+  codigo_nbs?: string                   // NBS 9 dígitos (sem pontos) — obrigatório para JF
   finalidade_emissao?: string           // '0'=Normal (único valor aceito pelo schema JF) → <finNFSe>
   consumidor_final?: string             // '0'=Não '1'=Sim → <indFinal> (obrigatório antes de cIndOp)
   indicador_destinatario?: string       // '0'=Dentro município '1'=Fora município → <indDest>
@@ -146,7 +147,8 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
       // campos específicos de JF (IBS/CBS) — só enviados para municípios que usam o novo padrão
       ...(isJuizDeFora && params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
-      ...(isJuizDeFora ? { ibs_cbs_situacao_tributaria: (params.ibs_cbs_situacao_tributaria ?? '007').padStart(3, '0') } : {}),
+      ...(isJuizDeFora && params.codigo_nbs ? { codigo_nbs: params.codigo_nbs } : {}),
+      ...(isJuizDeFora ? { ibs_cbs_situacao_tributaria: (params.ibs_cbs_situacao_tributaria ?? '200').padStart(3, '0') } : {}),
       ...(isJuizDeFora && params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
     },
     numero_rps: String(params.numero_rps),

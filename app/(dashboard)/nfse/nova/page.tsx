@@ -10,22 +10,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 
 const SERVICOS_LC116 = [
-  { codigo: '1.01', descricao: 'Análise e desenvolvimento de sistemas', aliquota: 2, codigoMunicipal: '010100100', cnae: '6201501', indop: '100301', cClassTrib: '000001' },
-  { codigo: '1.02', descricao: 'Programação', aliquota: 2, codigoMunicipal: '010200100', cnae: '6201501', indop: '100301', cClassTrib: '000001' },
-  { codigo: '1.03', descricao: 'Processamento de dados e congêneres', aliquota: 2, codigoMunicipal: '010300100', cnae: '6311900', indop: '100301', cClassTrib: '000001' },
-  { codigo: '1.04', descricao: 'Elaboração de programas de computadores', aliquota: 2, codigoMunicipal: '010400100', cnae: '6201501', indop: '100301', cClassTrib: '000001' },
-  { codigo: '1.05', descricao: 'Licenciamento ou cessão de direito de uso de programas', aliquota: 2, codigoMunicipal: '010500100', cnae: '5820901', indop: '100301', cClassTrib: '000001' },
-  { codigo: '1.07', descricao: 'Suporte técnico em informática', aliquota: 2, codigoMunicipal: '010700100', cnae: '6209100', indop: '100301', cClassTrib: '000001' },
-  { codigo: '6.02', descricao: 'Medicina e biomedicina', aliquota: 3, codigoMunicipal: '060200100', cnae: '8630501', indop: '050101', cClassTrib: '000001' },
-  { codigo: '6.09', descricao: 'Psicologia, psicanálise, terapia ocupacional', aliquota: 3, codigoMunicipal: '060900100', cnae: '8650006', indop: '050101', cClassTrib: '000001' },
-  { codigo: '7.01', descricao: 'Engenharia, agronomia, agrimensura, arquitetura', aliquota: 3, codigoMunicipal: '070100100', cnae: '7112000', indop: '050101', cClassTrib: '000001' },
-  { codigo: '10.01', descricao: 'Agenciamento, corretagem de seguros', aliquota: 5, codigoMunicipal: '100100100', cnae: '6622300', indop: '050101', cClassTrib: '000001' },
-  { codigo: '14.01', descricao: 'Manutenção e conservação de aparelhos e equipamentos', aliquota: 2, codigoMunicipal: '140100900', cnae: '9521500', indop: '050101', cClassTrib: '000001' },
-  { codigo: '14.06', descricao: 'Instalação e montagem de aparelhos, máquinas e equipamentos', aliquota: 2, codigoMunicipal: '140600100', cnae: '4321500', indop: '050101', cClassTrib: '000001' },
-  { codigo: '17.01', descricao: 'Assessoria ou consultoria de qualquer natureza', aliquota: 2, codigoMunicipal: '170100100', cnae: '7020400', indop: '050101', cClassTrib: '000001' },
-  { codigo: '17.06', descricao: 'Propaganda e publicidade', aliquota: 2, codigoMunicipal: '170600100', cnae: '7311400', indop: '050101', cClassTrib: '000001' },
-  { codigo: '17.19', descricao: 'Contabilidade, auditoria, guarda-livros', aliquota: 2, codigoMunicipal: '171900100', cnae: '6920601', indop: '050101', cClassTrib: '000001' },
-  { codigo: '25.01', descricao: 'Estúdios fotográficos e cinematográficos', aliquota: 2, codigoMunicipal: '250100100', cnae: '7420001', indop: '050101', cClassTrib: '000001' },
+  { codigo: '1.01',  descricao: 'Análise e desenvolvimento de sistemas',                    aliquota: 2, codigoMunicipal: '010100100', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
+  { codigo: '1.02',  descricao: 'Programação',                                               aliquota: 2, codigoMunicipal: '010200100', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
+  { codigo: '1.03',  descricao: 'Processamento de dados e congêneres',                       aliquota: 2, codigoMunicipal: '010300100', cnae: '6311900', indop: '100301', cClassTrib: '000001', nbs: '115061000' },
+  { codigo: '1.04',  descricao: 'Elaboração de programas de computadores',                   aliquota: 2, codigoMunicipal: '010400100', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
+  { codigo: '1.05',  descricao: 'Licenciamento ou cessão de direito de uso de programas',    aliquota: 2, codigoMunicipal: '010500100', cnae: '5820901', indop: '100501', cClassTrib: '000001', nbs: '110332100' },
+  { codigo: '1.07',  descricao: 'Suporte técnico em informática',                            aliquota: 2, codigoMunicipal: '010700100', cnae: '6209100', indop: '050101', cClassTrib: '000001', nbs: '115013000' },
+  { codigo: '6.02',  descricao: 'Medicina e biomedicina',                                    aliquota: 3, codigoMunicipal: '060200100', cnae: '8630501', indop: '030101', cClassTrib: '000001', nbs: '126022000' },
+  { codigo: '6.09',  descricao: 'Psicologia, psicanálise, terapia ocupacional',              aliquota: 3, codigoMunicipal: '060900100', cnae: '8650006', indop: '030101', cClassTrib: '000001', nbs: '126023000' },
+  { codigo: '7.01',  descricao: 'Engenharia, agronomia, agrimensura, arquitetura',           aliquota: 3, codigoMunicipal: '070100100', cnae: '7112000', indop: '100301', cClassTrib: '200052', nbs: '114021100' },
+  { codigo: '10.01', descricao: 'Agenciamento, corretagem de seguros',                       aliquota: 5, codigoMunicipal: '100100100', cnae: '6622300', indop: '100301', cClassTrib: '000001', nbs: '109061100' },
+  { codigo: '14.01', descricao: 'Manutenção e conservação de aparelhos e equipamentos',      aliquota: 2, codigoMunicipal: '140100900', cnae: '9521500', indop: '050101', cClassTrib: '000001', nbs: '120011000' },
+  { codigo: '14.06', descricao: 'Instalação e montagem de aparelhos, máquinas e equipamentos', aliquota: 2, codigoMunicipal: '140600100', cnae: '4321500', indop: '050101', cClassTrib: '000001', nbs: '101061200' },
+  { codigo: '17.01', descricao: 'Assessoria ou consultoria de qualquer natureza',            aliquota: 2, codigoMunicipal: '170100100', cnae: '7020400', indop: '100301', cClassTrib: '000001', nbs: '106084000' },
+  { codigo: '17.06', descricao: 'Propaganda e publicidade',                                  aliquota: 2, codigoMunicipal: '170600100', cnae: '7311400', indop: '100301', cClassTrib: '000001', nbs: '114061100' },
+  { codigo: '17.19', descricao: 'Contabilidade, auditoria, guarda-livros',                   aliquota: 2, codigoMunicipal: '171900100', cnae: '6920601', indop: '100301', cClassTrib: '200052', nbs: '113022100' },
+  { codigo: '25.01', descricao: 'Estúdios fotográficos e cinematográficos',                  aliquota: 2, codigoMunicipal: '250100100', cnae: '7420001', indop: '100301', cClassTrib: '000001', nbs: '114053000' },
 ]
 
 interface ItemForm {
@@ -34,6 +34,7 @@ interface ItemForm {
   cnae: string
   indop: string
   cClassTrib: string
+  nbs: string
   descricao: string
   quantidade: number
   valorUnitario: number
@@ -66,7 +67,7 @@ export default function NovaNFSePage() {
   })
   const [dataCompetencia, setDataCompetencia] = useState(new Date().toISOString().split('T')[0])
   const [itens, setItens] = useState<ItemForm[]>([
-    { codigoServico: '', codigoMunicipal: '', cnae: '', indop: '', cClassTrib: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 },
+    { codigoServico: '', codigoMunicipal: '', cnae: '', indop: '', cClassTrib: '', nbs: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 },
   ])
   const [issRetidoFonte, setIssRetidoFonte] = useState(false)
   const [resultadoEmissao, setResultadoEmissao] = useState<Record<string, unknown> | null>(null)
@@ -113,7 +114,7 @@ export default function NovaNFSePage() {
   const valorLiquido = issRetidoFonte ? totalServicos - valorIss : totalServicos
 
   function addItem() {
-    setItens([...itens, { codigoServico: '', codigoMunicipal: '', cnae: '', indop: '', cClassTrib: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 }])
+    setItens([...itens, { codigoServico: '', codigoMunicipal: '', cnae: '', indop: '', cClassTrib: '', nbs: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 }])
   }
   function removeItem(idx: number) {
     setItens(itens.filter((_, i) => i !== idx))
@@ -125,7 +126,7 @@ export default function NovaNFSePage() {
     const svc = SERVICOS_LC116.find(s => s.codigo === codigo)
     if (svc) {
       setItens(itens.map((it, i) =>
-        i === idx ? { ...it, codigoServico: svc.codigo, codigoMunicipal: svc.codigoMunicipal, cnae: svc.cnae, indop: svc.indop ?? '', cClassTrib: svc.cClassTrib ?? '', descricao: svc.descricao, aliquota: svc.aliquota } : it
+        i === idx ? { ...it, codigoServico: svc.codigo, codigoMunicipal: svc.codigoMunicipal, cnae: svc.cnae, indop: svc.indop ?? '', cClassTrib: svc.cClassTrib ?? '', nbs: svc.nbs ?? '', descricao: svc.descricao, aliquota: svc.aliquota } : it
       ))
     }
   }
@@ -171,8 +172,9 @@ export default function NovaNFSePage() {
           codigo_servico:       itens[0].codigoServico,
           codigo_lc116:                    itens[0].codigoMunicipal || itens[0].codigoServico,
           codigo_cnae:                     itens[0].cnae || undefined,
-          codigo_indicador_operacao:       itens[0].indop || undefined,
+          codigo_indicador_operacao:        itens[0].indop || undefined,
           ibs_cbs_classificacao_tributaria: itens[0].cClassTrib || undefined,
+          codigo_nbs:                       itens[0].nbs || undefined,
           discriminacao,
           data_competencia:     dataCompetencia,
         }),

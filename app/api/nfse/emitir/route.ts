@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     ibs_cbs_situacao_tributaria,
     ibs_cbs_classificacao_tributaria,
     codigo_indicador_operacao,
+    codigo_nbs,
   } = body
 
   // Dados fiscais do prestador (por cliente — multi-tenant)
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
     ibs_cbs_situacao_tributaria: ibs_cbs_situacao_tributaria ?? undefined,
     ibs_cbs_classificacao_tributaria: ibs_cbs_classificacao_tributaria ?? undefined,
     codigo_indicador_operacao: codigo_indicador_operacao ?? undefined,
+    codigo_nbs: codigo_nbs ?? undefined,
   }
 
   let retorno
