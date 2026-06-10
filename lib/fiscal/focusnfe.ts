@@ -74,7 +74,9 @@ export interface EmitirNFSeParams {
   ibs_cbs_situacao_tributaria?: string
   ibs_cbs_classificacao_tributaria?: string
   codigo_indicador_operacao?: string
-  finalidade_nfse?: string // '1'=Normal '2'=Complementar '3'=Substituta
+  finalidade_emissao?: string  // '1'=Normal '2'=Complementar '3'=Substituta → <finNFSe>
+  indicador_destinatario?: string // '0'=Dentro município '1'=Fora município → <indDest>
+  ibs_cbs_situacao_tributaria?: string // CST obrigatório para JF
 }
 
 export interface FocusNFSeRetorno {
@@ -144,14 +146,15 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
       // campos específicos de JF (IBS/CBS) — só enviados para municípios que usam o novo padrão
       ...(isJuizDeFora && params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
-      ...(isJuizDeFora && params.ibs_cbs_situacao_tributaria ? { ibs_cbs_situacao_tributaria: params.ibs_cbs_situacao_tributaria } : {}),
+      ...(isJuizDeFora ? { ibs_cbs_situacao_tributaria: params.ibs_cbs_situacao_tributaria ?? '07' } : {}),
       ...(isJuizDeFora && params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
     },
     numero_rps: String(params.numero_rps),
     serie_rps: params.serie_rps ?? 'RPS',
     tipo_rps: '1',
-    // finalidade_nfse gera <finNFSe> no IBSCBS — deve vir antes de cIndOp no schema ABRASF
-    ...(isJuizDeFora ? { finalidade_nfse: params.finalidade_nfse ?? '1' } : {}),
+    // campos obrigatórios para JF no bloco IBSCBS (schema ABRASF exige ordem: finNFSe → cIndOp)
+    ...(isJuizDeFora ? { finalidade_emissao: params.finalidade_emissao ?? '1' } : {}),
+    ...(isJuizDeFora ? { indicador_destinatario: params.indicador_destinatario ?? '0' } : {}),
     ...(isJuizDeFora && params.codigo_indicador_operacao ? { codigo_indicador_operacao: params.codigo_indicador_operacao } : {}),
   }
 
