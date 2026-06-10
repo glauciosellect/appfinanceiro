@@ -68,6 +68,7 @@ export interface EmitirNFSeParams {
   numero_rps: number
   serie_rps?: string
   inscricao_municipal_prestador?: string
+  regime_tributario_prestador?: string // '1'=Simples/MEI '3'=Normal
 }
 
 export interface FocusNFSeRetorno {
@@ -101,6 +102,8 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       ...(params.inscricao_municipal_prestador
         ? { inscricao_municipal: params.inscricao_municipal_prestador }
         : {}),
+      // regime: '1'=Simples/MEI → optante=1; '3'=Normal → optante=2
+      optante_simples_nacional: (params.regime_tributario_prestador ?? '1') === '1' ? '1' : '2',
     },
     tomador: {
       razao_social: params.tomador_razao_social,
@@ -124,9 +127,9 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
     servico: {
       valor_servicos: params.valor_servicos,
       iss_retido: params.iss_retido ? '1' : '2',
-      item_lista_servico: params.codigo_servico,
-      codigo_servico: params.codigo_servico,
-      codigo_tributacao_municipio: params.codigo_servico,
+      item_lista_servico: params.codigo_servico.replace('.', ''),
+      codigo_servico: params.codigo_servico.replace('.', ''),
+      codigo_tributacao_municipio: params.codigo_servico.replace('.', ''),
       codigo_municipio: codigoMunicipio,
       discriminacao: params.discriminacao,
       ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
