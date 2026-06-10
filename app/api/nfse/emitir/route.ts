@@ -28,6 +28,10 @@ export async function POST(req: NextRequest) {
     codigo_lc116,
     discriminacao,
     data_competencia,
+    codigo_cnae,
+    ibs_cbs_situacao_tributaria,
+    ibs_cbs_classificacao_tributaria,
+    codigo_indicador_operacao,
   } = body
 
   // Dados fiscais do prestador (por cliente — multi-tenant)
@@ -78,6 +82,10 @@ export async function POST(req: NextRequest) {
     serie_rps: fiscalConfig?.serie_nfse ?? 'RPS',
     inscricao_municipal_prestador: fiscalConfig?.inscricao_municipal ?? process.env.EMITENTE_INSCRICAO_MUNICIPAL ?? undefined,
     regime_tributario_prestador: fiscalConfig?.regime_tributario ?? '1',
+    codigo_cnae: codigo_cnae ?? undefined,
+    ibs_cbs_situacao_tributaria: ibs_cbs_situacao_tributaria ?? undefined,
+    ibs_cbs_classificacao_tributaria: ibs_cbs_classificacao_tributaria ?? undefined,
+    codigo_indicador_operacao: codigo_indicador_operacao ?? undefined,
   }
 
   let retorno

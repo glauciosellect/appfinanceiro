@@ -69,6 +69,10 @@ export interface EmitirNFSeParams {
   serie_rps?: string
   inscricao_municipal_prestador?: string
   regime_tributario_prestador?: string // '1'=Simples/MEI '3'=Normal
+  codigo_cnae?: string
+  ibs_cbs_situacao_tributaria?: string
+  ibs_cbs_classificacao_tributaria?: string
+  codigo_indicador_operacao?: string
 }
 
 export interface FocusNFSeRetorno {
@@ -132,10 +136,14 @@ export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRet
       codigo_municipio: codigoMunicipio,
       discriminacao: params.discriminacao,
       ...(params.aliquota_iss !== undefined ? { aliquota: params.aliquota_iss } : {}),
+      ...(params.codigo_cnae ? { codigo_cnae: params.codigo_cnae } : {}),
+      ...(params.ibs_cbs_situacao_tributaria ? { ibs_cbs_situacao_tributaria: params.ibs_cbs_situacao_tributaria } : {}),
+      ...(params.ibs_cbs_classificacao_tributaria ? { ibs_cbs_classificacao_tributaria: params.ibs_cbs_classificacao_tributaria } : {}),
     },
     numero_rps: String(params.numero_rps),
     serie_rps: params.serie_rps ?? 'RPS',
     tipo_rps: '1',
+    ...(params.codigo_indicador_operacao ? { codigo_indicador_operacao: params.codigo_indicador_operacao } : {}),
   }
 
   const url = `${BASE_URL}/nfse?ref=${encodeURIComponent(params.ref)}`
