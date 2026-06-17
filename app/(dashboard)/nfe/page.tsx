@@ -203,6 +203,24 @@ function NFeLine({ nota, onExcluir }: { nota: NFeRecord; onExcluir: (id: string)
               <Download className="h-4 w-4" />
             </button>
           )}
+          {nota.xml_url && (
+            <button
+              title="Baixar XML"
+              onClick={async () => {
+                const filename = `nfe_${nota.numero || nota.id}.xml`
+                const res = await fetch(`/api/fiscal/download-xml?url=${encodeURIComponent(nota.xml_url!)}&filename=${filename}`)
+                const blob = await res.blob()
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = filename
+                link.click()
+                URL.revokeObjectURL(link.href)
+              }}
+              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+            >
+              <FileText className="h-4 w-4" />
+            </button>
+          )}
           <Link
             href={`/nfe/nova?reenviar=${nota.id}`}
             title="Editar / Reenviar"

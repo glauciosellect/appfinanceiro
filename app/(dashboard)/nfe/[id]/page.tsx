@@ -120,9 +120,18 @@ export default function NFeVisualizarPage() {
             </a>
           )}
           {nota.xml_url && (
-            <a href={nota.xml_url} target="_blank" rel="noreferrer">
-              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar XML</Button>
-            </a>
+            <Button variant="outline" size="sm" onClick={async () => {
+              const filename = `nfe_${nota.numero || nota.id}.xml`
+              const res = await fetch(`/api/fiscal/download-xml?url=${encodeURIComponent(nota.xml_url!)}&filename=${filename}`)
+              const blob = await res.blob()
+              const link = document.createElement('a')
+              link.href = URL.createObjectURL(blob)
+              link.download = filename
+              link.click()
+              URL.revokeObjectURL(link.href)
+            }}>
+              <Download className="h-4 w-4 mr-1" />Baixar XML
+            </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4 mr-1" />Imprimir
