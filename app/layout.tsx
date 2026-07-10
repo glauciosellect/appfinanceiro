@@ -27,6 +27,9 @@ export const metadata: Metadata = {
   authors: [{ name: 'SyncroMoney' }],
   creator: 'SyncroMoney',
   metadataBase: new URL('https://syncromoney.com.br'),
+  verification: {
+    google: '2LSNMbWoGbza9SLoOnD8dkiHk5ctw66hWyPT87TQIQQ',
+  },
   alternates: {
     canonical: '/',
   },
