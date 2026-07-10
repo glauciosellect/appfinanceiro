@@ -18,8 +18,43 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'SyncroMoney',
-  description: 'Controle Financeiro Inteligente.',
+  title: {
+    default: 'SyncroMoney — Sistema de Gestão Financeira e Emissor de Nota Fiscal',
+    template: '%s | SyncroMoney',
+  },
+  description: 'Sistema SaaS completo de gestão financeira com emissão de nota fiscal eletrônica (NF-e e NFS-e). Controle contas, fluxo de caixa, clientes, fornecedores e emita notas fiscais em segundos.',
+  keywords: ['software gestão financeira', 'emissor nota fiscal eletrônica', 'sistema financeiro empresa', 'emitir NF-e online', 'emitir NFS-e', 'controle financeiro SaaS', 'fluxo de caixa online', 'contas a pagar e receber', 'sistema financeiro pequena empresa', 'nota fiscal eletrônica', 'gestão financeira online', 'software financeiro'],
+  authors: [{ name: 'SyncroMoney' }],
+  creator: 'SyncroMoney',
+  metadataBase: new URL('https://syncromoney.com.br'),
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-snippet': -1,
+      'max-image-preview': 'large',
+    },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    url: 'https://syncromoney.com.br',
+    siteName: 'SyncroMoney',
+    title: 'SyncroMoney — Sistema de Gestão Financeira e Emissor de Nota Fiscal',
+    description: 'Controle financeiro completo com emissão de NF-e e NFS-e. Fluxo de caixa, contas a pagar/receber e muito mais.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'SyncroMoney — Gestão Financeira e Nota Fiscal' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SyncroMoney — Sistema de Gestão Financeira e Emissor de Nota Fiscal',
+    description: 'Controle financeiro completo com emissão de NF-e e NFS-e.',
+    images: ['/og-image.png'],
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
