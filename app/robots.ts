@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/dashboard/'],
     },
-    sitemap: 'https://syncromoney.com.br/sitemap.xml',
+    sitemap: 'https://www.syncromoney.com.br/sitemap.xml',
   }
 }

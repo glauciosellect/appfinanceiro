@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   keywords: ['software gestão financeira', 'emissor nota fiscal eletrônica', 'sistema financeiro empresa', 'emitir NF-e online', 'emitir NFS-e', 'controle financeiro SaaS', 'fluxo de caixa online', 'contas a pagar e receber', 'sistema financeiro pequena empresa', 'nota fiscal eletrônica', 'gestão financeira online', 'software financeiro'],
   authors: [{ name: 'SyncroMoney' }],
   creator: 'SyncroMoney',
-  metadataBase: new URL('https://syncromoney.com.br'),
+  metadataBase: new URL('https://www.syncromoney.com.br'),
   verification: {
     google: '2LSNMbWoGbza9SLoOnD8dkiHk5ctw66hWyPT87TQIQQ',
   },
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    url: 'https://syncromoney.com.br',
+    url: 'https://www.syncromoney.com.br',
     siteName: 'SyncroMoney',
     title: 'SyncroMoney — Sistema de Gestão Financeira e Emissor de Nota Fiscal',
     description: 'Controle financeiro completo com emissão de NF-e e NFS-e. Fluxo de caixa, contas a pagar/receber e muito mais.',

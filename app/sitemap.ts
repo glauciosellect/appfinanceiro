@@ -3,13 +3,13 @@ import type { MetadataRoute } from 'next'
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: 'https://syncromoney.com.br',
+      url: 'https://www.syncromoney.com.br',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: 'https://syncromoney.com.br/login',
+      url: 'https://www.syncromoney.com.br/login',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.5,
