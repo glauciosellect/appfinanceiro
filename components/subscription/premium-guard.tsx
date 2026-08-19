@@ -38,9 +38,9 @@ export function PremiumGuard({ children }: Props) {
             {[
               'Emissão de NFS-e integrada à Prefeitura',
               'Emissão de NF-e (SEFAZ)',
-              'Controle de estoque',
-              'Cadastro de produtos e serviços',
               'NF-e de entrada',
+              'PDV — Ponto de Venda',
+              'Caixa (abertura, sangria, fechamento)',
             ].map(f => (
               <div key={f} className="flex items-center gap-2 text-sm text-amber-800">
                 <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />

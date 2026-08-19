@@ -6,6 +6,7 @@ import {
   criarAssinaturaPix,
   buscarPagamentosDaAssinatura,
   buscarQrCodePix,
+  cancelarAssinatura,
 } from '@/lib/asaas'
 
 const VALORES: Record<'pro' | 'premium', number> = {
@@ -41,11 +42,25 @@ export async function POST(req: NextRequest) {
 
     const { data: existente } = await supabase
       .from('assinaturas')
-      .select('asaas_customer_id')
+      .select('asaas_customer_id, asaas_subscription_id, plano, status')
       .eq('user_id', user.id)
       .single()
 
     let customerId = existente?.asaas_customer_id as string | undefined
+
+    // Troca de plano (ex: PRO → PREMIUM): cancela a assinatura recorrente
+    // anterior no Asaas antes de criar a nova, para não cobrar as duas.
+    if (
+      existente?.asaas_subscription_id &&
+      existente.plano !== plano &&
+      existente.status !== 'canceled'
+    ) {
+      try {
+        await cancelarAssinatura(existente.asaas_subscription_id)
+      } catch (err) {
+        console.error('Falha ao cancelar assinatura anterior no Asaas:', err)
+      }
+    }
 
     if (!customerId) {
       const customer = await criarClienteAsaas({

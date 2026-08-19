@@ -157,6 +157,13 @@ export async function buscarAssinatura(subscriptionId: string): Promise<AsaasSub
   return asaasFetch<AsaasSubscriptionDetails>(`/subscriptions/${encodeURIComponent(subscriptionId)}`)
 }
 
+// Cancela uma assinatura recorrente no Asaas. Usado ao trocar de plano
+// (ex: PRO → PREMIUM) para não deixar duas assinaturas cobrando o
+// cliente ao mesmo tempo. Cobranças já pagas não são estornadas.
+export async function cancelarAssinatura(subscriptionId: string): Promise<void> {
+  await asaasFetch(`/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: 'DELETE' })
+}
+
 // Utilitário de configuração ÚNICA (one-time setup), NÃO chamado
 // automaticamente em nenhum lugar da aplicação. Registrar o mesmo webhook
 // duas vezes cria registros duplicados na Asaas (limite de 10 por conta).
