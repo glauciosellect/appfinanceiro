@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         .from('produtos_fiscais')
         .update({
           estoque: (existente.estoque as number) + item.quantidade,
-          preco_unitario: item.valorUnitario,
+          preco_custo: item.valorUnitario,
           margem_lucro: item.margem,
           preco_venda: item.precoVenda,
           updated_at: new Date().toISOString(),
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
           ncm: item.ncm,
           cfop: item.cfop,
           unidade: item.unidade,
-          preco_unitario: item.valorUnitario,
+          preco_custo: item.valorUnitario,
           margem_lucro: item.margem,
           preco_venda: item.precoVenda,
           estoque: item.quantidade,

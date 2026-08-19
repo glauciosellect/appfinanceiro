@@ -20,7 +20,7 @@ interface ProdutoRow {
   ncm: string
   cfop: string
   unidade: string
-  preco_unitario: number
+  preco_custo: number
   preco_venda: number
   estoque: number
   estoque_minimo: number
@@ -155,7 +155,7 @@ export default function NovaNFePage() {
               ncm: it.codigo_ncm ?? '00000000',
               cfop: it.cfop ?? '5102',
               unidade: it.unidade_comercial ?? 'UN',
-              preco_unitario: it.valor_unitario_comercial ?? 0,
+              preco_custo: it.valor_unitario_comercial ?? 0,
               preco_venda: it.valor_unitario_comercial ?? 0,
               estoque: 0, estoque_minimo: 0,
             },
@@ -172,7 +172,7 @@ export default function NovaNFePage() {
     if (!userId) return
     supabase
       .from('produtos_fiscais')
-      .select('id,codigo,descricao,ncm,cfop,unidade,preco_unitario,preco_venda,estoque,estoque_minimo')
+      .select('id,codigo,descricao,ncm,cfop,unidade,preco_custo,preco_venda,estoque,estoque_minimo')
       .eq('user_id', userId)
       .eq('ativo', true)
       .order('descricao')
@@ -232,7 +232,7 @@ export default function NovaNFePage() {
   }
   function selecionarProduto(idx: number, produto: ProdutoRow) {
     setItens(itens.map((it, i) =>
-      i === idx ? { ...it, produto, valorUnitario: produto.preco_venda || produto.preco_unitario } : it
+      i === idx ? { ...it, produto, valorUnitario: produto.preco_venda || produto.preco_custo } : it
     ))
     setBuscaIdx(null)
     setTermoBusca('')
@@ -596,7 +596,7 @@ export default function NovaNFePage() {
                           <p className="text-xs text-gray-400">Cód: {p.codigo} | NCM: {p.ncm} | Estoque: {p.estoque} {p.unidade}</p>
                         </div>
                         <div className="text-right ml-4 shrink-0">
-                          <p className="text-sm font-semibold text-green-600">{formatCurrency(p.preco_venda || p.preco_unitario)}</p>
+                          <p className="text-sm font-semibold text-green-600">{formatCurrency(p.preco_venda || p.preco_custo)}</p>
                           {p.preco_venda > 0 && <p className="text-xs text-gray-400">venda</p>}
                         </div>
                       </button>

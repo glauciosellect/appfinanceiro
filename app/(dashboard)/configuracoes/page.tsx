@@ -18,7 +18,7 @@ import { z } from 'zod'
 import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle, Upload, Building2, Save, X, Zap, Receipt } from 'lucide-react'
 import FiscalTab from '@/components/configuracoes/fiscal-tab'
 import type { Categoria, TipoCategoria } from '@/types'
-import { assinaturaAtiva, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
+import { assinaturaAtiva, type Assinatura } from '@/lib/supabase/assinatura'
 import {
   getPerfilEmpresa, upsertPerfilEmpresa, uploadLogo, perfilVazio,
   type PerfilEmpresa,
@@ -54,7 +54,6 @@ export default function ConfiguracoesPage() {
   const [userId, setUserId] = useState('')
   const [userEmail, setUserEmail] = useState('')
   const [assinatura, setAssinatura] = useState<Assinatura | null>(null)
-  const [loadingPortal, setLoadingPortal] = useState(false)
   const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
   const [savingPerfil, setSavingPerfil] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -558,28 +557,28 @@ export default function ConfiguracoesPage() {
             {/* Status atual */}
             <div className={`rounded-2xl p-4 flex items-center gap-4 ${
               assinatura?.status === 'active' ? 'bg-green-50 border border-green-200' :
-              assinatura?.status === 'trialing' ? 'bg-blue-50 border border-blue-200' :
+              assinatura?.status === 'pending' ? 'bg-blue-50 border border-blue-200' :
               'bg-red-50 border border-red-200'
             }`}>
               {assinatura?.status === 'active' && <CheckCircle className="h-8 w-8 text-green-600 shrink-0" />}
-              {assinatura?.status === 'trialing' && <Clock className="h-8 w-8 text-blue-600 shrink-0" />}
+              {assinatura?.status === 'pending' && <Clock className="h-8 w-8 text-blue-600 shrink-0" />}
               {(!assinatura || assinatura.status === 'canceled' || assinatura.status === 'past_due') && <AlertTriangle className="h-8 w-8 text-red-600 shrink-0" />}
               <div>
                 {assinatura?.status === 'active' && (
                   <>
                     <p className="font-bold text-green-800">Assinatura ativa</p>
                     <p className="text-sm text-green-700">
-                      {assinatura.current_period_end
-                        ? `Próxima renovação: ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`
+                      {assinatura.proximo_vencimento
+                        ? `Próximo vencimento: ${new Date(assinatura.proximo_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}`
                         : 'Plano SyncroMoney'}
                     </p>
                   </>
                 )}
-                {assinatura?.status === 'trialing' && (
+                {assinatura?.status === 'pending' && (
                   <>
-                    <p className="font-bold text-blue-800">Período de teste</p>
+                    <p className="font-bold text-blue-800">Pagamento pendente</p>
                     <p className="text-sm text-blue-700">
-                      {diasRestantesTrial(assinatura)} dia(s) restante(s) — aproveite todos os recursos!
+                      Assim que o pagamento for confirmado pela Asaas, seu plano é ativado automaticamente.
                     </p>
                   </>
                 )}
@@ -591,8 +590,8 @@ export default function ConfiguracoesPage() {
                 )}
                 {assinatura?.status === 'past_due' && (
                   <>
-                    <p className="font-bold text-red-800">Pagamento pendente</p>
-                    <p className="text-sm text-red-700">Atualize seu método de pagamento para continuar</p>
+                    <p className="font-bold text-red-800">Pagamento em atraso</p>
+                    <p className="text-sm text-red-700">Regularize seu pagamento para continuar</p>
                   </>
                 )}
               </div>
@@ -600,13 +599,12 @@ export default function ConfiguracoesPage() {
 
             {/* Plano atual */}
             {(() => {
-              const isPremium = assinatura?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM
-              const isYearly  = assinatura?.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRICE_YEARLY
-              const planName  = isPremium ? 'SyncroMoney Premium Fiscal' : isYearly ? 'SyncroMoney Essencial Anual' : 'SyncroMoney Essencial Mensal'
-              const planPrice = isPremium ? 'R$ 99,90/mês' : isYearly ? 'R$ 358,80/ano (R$ 29,90/mês)' : 'R$ 39,90/mês'
+              const isPremium = assinatura?.plano === 'premium'
+              const planName  = isPremium ? 'SyncroMoney PREMIUM' : 'SyncroMoney PRO'
+              const planPrice = isPremium ? 'R$ 147,00/mês' : 'R$ 97,00/mês'
               const features  = isPremium
-                ? ['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios', 'NF-e de Produtos (DANFE)', 'NFS-e de Serviços', 'Controle de Estoque', 'Transportadoras']
-                : ['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios']
+                ? ['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios', 'Produtos, Serviços e Estoque', 'PDV e Caixa', 'NF-e de Produtos (DANFE)', 'NFS-e de Serviços']
+                : ['Dashboard completo', 'Contas a pagar e receber', 'Controle de cartões', 'Clientes e fornecedores', 'Fluxo de caixa', 'Relatórios', 'Produtos, Serviços e Estoque']
 
               return (
                 <div className={`rounded-2xl border p-5 space-y-3 ${isPremium ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10' : 'border-gray-200'}`}>
@@ -615,15 +613,15 @@ export default function ConfiguracoesPage() {
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-gray-900 text-lg">{planName}</p>
                         {isPremium && (
-                          <Badge className="bg-amber-400 text-amber-900 text-[10px] font-bold">PREMIUM FISCAL</Badge>
+                          <Badge className="bg-amber-400 text-amber-900 text-[10px] font-bold">PREMIUM</Badge>
                         )}
                       </div>
                       <p className="text-sm text-gray-500">{planPrice}</p>
-                      {assinatura?.current_period_end && (
+                      {assinatura?.proximo_vencimento && (
                         <p className="text-xs text-amber-600 mt-1 font-medium">
                           {assinatura.status === 'active'
-                            ? `Válido até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`
-                            : `Acesso até ${new Date(assinatura.current_period_end).toLocaleDateString('pt-BR')}`}
+                            ? `Próximo vencimento: ${new Date(assinatura.proximo_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}`
+                            : `Vencimento: ${new Date(assinatura.proximo_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}`}
                         </p>
                       )}
                     </div>
@@ -641,20 +639,20 @@ export default function ConfiguracoesPage() {
               )
             })()}
 
-            {/* Banner upgrade para Premium — só aparece se não for premium */}
-            {assinatura?.status === 'active' && assinatura?.stripe_price_id !== process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM && (
+            {/* Banner upgrade para Premium — só aparece se estiver no PRO */}
+            {assinatura?.status === 'active' && assinatura?.plano !== 'premium' && (
               <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-5">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400">
                     <Zap className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-amber-900 dark:text-amber-300">Ative o Módulo Fiscal Premium</p>
+                    <p className="font-bold text-amber-900 dark:text-amber-300">Ative o PREMIUM</p>
                     <p className="text-sm text-amber-800 dark:text-amber-400 mt-1">
-                      Emita NF-e e NFS-e sem sair do Syncromoney. Controle de estoque, DANFE, ISS automático e muito mais.
+                      Emita NF-e e NFS-e, use o PDV e o Caixa sem sair do SyncroMoney.
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {['NF-e (Produtos)', 'NFS-e (Serviços)', 'Estoque', 'Transportadoras'].map(f => (
+                      {['PDV e Caixa', 'NF-e (Produtos)', 'NFS-e (Serviços)'].map(f => (
                         <span key={f} className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-800/40 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
                           <CheckCircle className="h-3 w-3" />{f}
                         </span>
@@ -663,7 +661,7 @@ export default function ConfiguracoesPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs text-amber-600 font-medium">por apenas</p>
-                    <p className="text-xl font-bold text-amber-900 dark:text-amber-300">R$ 99,90</p>
+                    <p className="text-xl font-bold text-amber-900 dark:text-amber-300">R$ 147,00</p>
                     <p className="text-xs text-amber-600">/mês</p>
                   </div>
                 </div>
@@ -672,30 +670,33 @@ export default function ConfiguracoesPage() {
                   onClick={() => window.location.href = '/assinar'}
                 >
                   <Zap className="h-4 w-4 mr-2" />
-                  Fazer upgrade para Premium Fiscal
+                  Fazer upgrade para PREMIUM
                 </Button>
               </div>
             )}
 
             {/* Botões de ação */}
-            {!assinaturaAtiva(assinatura) || assinatura?.status === 'trialing' ? (
+            {!assinaturaAtiva(assinatura) ? (
               <Button className="w-full" onClick={() => window.location.href = '/assinar'}>
                 <Crown className="h-4 w-4 mr-2" />
-                {assinatura?.status === 'trialing' ? 'Assinar agora' : 'Ver planos e assinar'}
+                {assinatura?.status === 'pending' ? 'Concluir pagamento' : 'Ver planos e assinar'}
               </Button>
             ) : null}
 
-            {assinatura?.stripe_customer_id && (
-              <Button variant="outline" className="w-full" disabled={loadingPortal}
-                onClick={async () => {
-                  setLoadingPortal(true)
-                  const res = await fetch('/api/stripe/portal', { method: 'POST' })
-                  const json = await res.json()
-                  if (json.url) window.location.href = json.url
-                  setLoadingPortal(false)
-                }}>
-                {loadingPortal ? 'Abrindo...' : 'Gerenciar assinatura no Stripe'}
-              </Button>
+            {assinaturaAtiva(assinatura) && (
+              <div className="rounded-xl border border-gray-200 p-4 text-sm text-gray-600">
+                <p className="font-medium text-gray-800 mb-1">Precisa alterar sua forma de pagamento ou cancelar?</p>
+                <p className="mb-3">Fale com a gente que resolvemos rapidinho.</p>
+                <a
+                  href={`https://wa.me/55?text=${encodeURIComponent('Olá! Preciso alterar/cancelar minha assinatura do SyncroMoney.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="outline" className="w-full">
+                    Falar sobre minha assinatura
+                  </Button>
+                </a>
+              </div>
             )}
           </CardContent>
         </Card>

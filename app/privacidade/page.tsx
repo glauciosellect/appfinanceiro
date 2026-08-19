@@ -38,7 +38,7 @@ export default function PrivacidadePage() {
             ['Dados da empresa', 'Razão social, endereço, regime tributário, inscrições estadual/municipal'],
             ['Dados financeiros', 'Lançamentos, contas, cartões, fluxo de caixa inseridos por você'],
             ['Dados fiscais', 'Tomadores, serviços/produtos, notas emitidas (NFS-e / NF-e)'],
-            ['Dados de pagamento', 'Plano ativo e histórico de cobranças (via Stripe — não armazenamos número do cartão)'],
+            ['Dados de pagamento', 'Plano ativo e histórico de cobranças (via Asaas — não armazenamos número do cartão)'],
             ['Dados de uso', 'Endereço IP, navegador, páginas acessadas, data/hora das ações'],
             ['Cookies e rastreamento', 'Sessão autenticada, preferências de interface (ver Política de Cookies)'],
           ]}
@@ -72,7 +72,7 @@ export default function PrivacidadePage() {
         <p className="mb-3">Não vendemos seus dados. Compartilhamos apenas com fornecedores essenciais ao serviço:</p>
         <Table
           rows={[
-            ['Stripe', 'Processamento de pagamentos e assinaturas', 'stripe.com/br/privacy'],
+            ['Asaas', 'Processamento de pagamentos e assinaturas', 'asaas.com'],
             ['Supabase', 'Banco de dados e autenticação (infraestrutura em nuvem)', 'supabase.com/privacy'],
             ['Focus NFe', 'Transmissão de NFS-e e NF-e às prefeituras e SEFAZ', 'focusnfe.com.br'],
             ['Vercel', 'Hospedagem da aplicação web', 'vercel.com/legal/privacy-policy'],
@@ -134,7 +134,7 @@ export default function PrivacidadePage() {
 
       <Section title="9. Transferência internacional">
         <p>
-          Alguns fornecedores (Stripe, Supabase, Vercel) processam dados nos EUA. As transferências são
+          Alguns fornecedores (Supabase, Vercel) processam dados nos EUA. As transferências são
           realizadas com garantias contratuais adequadas (cláusulas-padrão ou certificações equivalentes),
           conforme Art. 33 da LGPD.
         </p>

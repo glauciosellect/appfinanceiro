@@ -80,7 +80,7 @@ export default function CookiesPage() {
             </thead>
             <tbody>
               {[
-                ['Stripe', 'Processar pagamentos de assinatura com segurança', 'stripe.com/cookies-policy'],
+                ['Asaas', 'Processar pagamentos de assinatura com segurança', 'asaas.com'],
                 ['Supabase', 'Gerenciar sessão de autenticação', 'supabase.com/privacy'],
               ].map(([servico, finalidade, politica], i) => (
                 <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#F9FAFB]'}>

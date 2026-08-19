@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
-import { VoiceButton } from '@/components/voice/voice-button'
 import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 
 interface DashboardLayoutProps {
@@ -26,9 +25,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">
             {children}
           </main>
-        </div>
-        <div className="print:hidden">
-          <VoiceButton />
         </div>
       </div>
     </SubscriptionGuard>

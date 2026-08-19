@@ -79,7 +79,7 @@ export default function DashboardPage() {
     })
     fetch('/api/estoque').then(r => r.json()).then(({ produtos }) => {
       if (!produtos) return
-      const total = produtos.reduce((s: number, p: { estoque: number; estoque_minimo: number; preco_unitario: number }) => s + p.estoque * p.preco_unitario, 0)
+      const total = produtos.reduce((s: number, p: { estoque: number; estoque_minimo: number; preco_custo: number }) => s + p.estoque * p.preco_custo, 0)
       const abaixo = produtos.filter((p: { estoque: number; estoque_minimo: number }) => p.estoque <= p.estoque_minimo).length
       setEstoque({ totalProdutos: produtos.length, abaixoMinimo: abaixo, valorTotal: total })
     }).catch(() => {})

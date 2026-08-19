@@ -68,7 +68,7 @@ export default function TermosPage() {
       <Section title="4. Planos e pagamentos">
         <p className="mb-3">
           O SyncroMoney oferece planos gratuitos e pagos. Os planos pagos são cobrados via cartão de
-          crédito processado pelo Stripe.
+          crédito ou PIX, processados pelo processador de pagamentos Asaas.
         </p>
         <Highlight>
           <strong>Renovação automática:</strong> Planos pagos renovam automaticamente no período
@@ -182,7 +182,7 @@ export default function TermosPage() {
         </p>
         <p className="mt-3 text-[#6B7280]">
           Meta de disponibilidade: 99,5% ao mês, excluídas manutenções programadas e indisponibilidades
-          de terceiros (prefeituras, SEFAZ, Stripe).
+          de terceiros (prefeituras, SEFAZ, Asaas).
         </p>
       </Section>
 

@@ -23,7 +23,17 @@ import {
   Wrench,
   CheckCircle2,
   Building2,
+  MessageCircle,
 } from 'lucide-react'
+
+/* ─────────────────────────────────────────────────────────────
+   WHATSAPP — número e helper de link
+──────────────────────────────────────────────────────────────── */
+const WHATSAPP_NUMBER = '5532982022232'
+
+function waLink(message: string) {
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
+}
 
 /* ─────────────────────────────────────────────────────────────
    DASHBOARD MOCKUP — HTML estático, zero JS
@@ -182,12 +192,12 @@ const FEATURES = [
 
 const PLANS = [
   {
-    name: 'Essencial',
-    price: 'R$ 39,90',
+    name: 'PRO',
+    price: 'R$ 97,00',
     period: '/mês',
-    description: 'Acesso completo sem compromisso de longo prazo',
+    description: 'Controle financeiro completo para o seu negócio',
     savings: null,
-    badge: null,
+    badge: 'Mais popular',
     features: [
       'Dashboard financeiro completo',
       'Contas a Pagar e Receber',
@@ -196,52 +206,42 @@ const PLANS = [
       'Fluxo de Caixa',
       'Relatórios e Exportação CSV',
       'Alertas de vencimento',
+      'Orçamentos (criação, PDF, envio e aceite online)',
+      'Catálogo de Produtos e Serviços',
+      'Controle de Estoque',
       'Suporte por e-mail',
     ],
+    trial: true,
     cta: 'Começar 14 dias grátis',
-    href: '/register',
-    highlight: false,
-    premium: false,
-  },
-  {
-    name: 'Anual',
-    price: 'R$ 29,90',
-    period: '/mês',
-    description: 'Cobrado anualmente — R$ 358,80/ano',
-    savings: 'Economize R$ 120,00 por ano',
-    badge: 'Mais popular',
-    features: [
-      'Tudo do plano Essencial',
-      'Prioridade no suporte',
-      'Acesso antecipado a novidades',
-      '2 meses grátis por ano',
-    ],
-    cta: 'Começar 14 dias grátis',
-    href: '/register',
+    waMessage: 'Olá, Jarbas! Quero começar o plano PRO do SyncroMoney.',
     highlight: true,
     premium: false,
   },
   {
-    name: 'Premium Fiscal',
-    price: 'R$ 99,90',
+    name: 'PREMIUM',
+    price: 'R$ 147,00',
     period: '/mês',
-    description: 'Para empresas que emitem notas fiscais',
+    description: 'Tudo do PRO + emissão fiscal e PDV completo',
     savings: null,
-    badge: 'Módulo Fiscal',
+    badge: 'Módulo Fiscal + PDV',
     features: [
-      'Tudo do plano Anual',
+      'Tudo do PRO',
+      'PDV — Ponto de Venda',
+      'Caixa (abertura, sangria, suprimento, fechamento)',
       'Emissão de NF-e (Produtos)',
       'Emissão de NFS-e (Serviços)',
+      'NFC-e / Cupom Fiscal (Em breve)',
       'NF-e de Entrada (Compras)',
       'DANFE completo para impressão/PDF',
-      'Controle de Estoque integrado',
       'Cadastro de Produtos com NCM/CFOP',
       'Cadastro de Transportadoras (RNTRC)',
-      'Cálculo automático ICMS, IPI, ISS',
-      'ISS retido na fonte automático',
+      'Cálculo automático ICMS/IPI/ISS',
+      'ISS retido na fonte',
+      'Suporte prioritário',
     ],
-    cta: 'Ativar módulo fiscal',
-    href: '/register',
+    trial: false,
+    cta: 'Ativar módulo Premium',
+    waMessage: 'Olá, Jarbas! Quero ativar o plano PREMIUM do SyncroMoney (fiscal + PDV).',
     highlight: false,
     premium: true,
   },
@@ -331,10 +331,14 @@ export function LandingPageContent() {
                   asChild
                   className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2 px-7 shadow-md shadow-[#2563EB]/25 w-full sm:w-auto"
                 >
-                  <Link href="/register">
+                  <a
+                    href={waLink('Olá, Jarbas! Quero começar meus 14 dias grátis no SyncroMoney.')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     Começar 14 dias grátis
                     <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  </a>
                 </Button>
                 <Button
                   size="lg"
@@ -453,12 +457,12 @@ export function LandingPageContent() {
 
           <div className="mb-4 text-center">
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-              Emita NF-e e NFS-e{' '}
+              PDV, NF-e e NFS-e{' '}
               <span className="text-[#60A5FA]">sem sair do sistema</span>
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-400 max-w-2xl mx-auto">
-              Chega de depender de sistemas separados. O Syncromoney Premium integra emissão fiscal
-              diretamente ao seu controle financeiro — tudo sincronizado, tudo em um lugar.
+              Chega de depender de sistemas separados. O SyncroMoney Premium integra ponto de venda,
+              caixa e emissão fiscal diretamente ao seu controle financeiro — tudo sincronizado, tudo em um lugar.
             </p>
           </div>
 
@@ -569,9 +573,11 @@ export function LandingPageContent() {
 
               {/* checklist de recursos */}
               <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">O que está incluso no Premium Fiscal</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">O que está incluso no Premium</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                   {[
+                    'PDV — Ponto de Venda',
+                    'Caixa (abertura, sangria, fechamento)',
                     'NF-e com DANFE oficial',
                     'NFS-e modelo Prefeitura',
                     'NF-e de Entrada (compras)',
@@ -595,14 +601,18 @@ export function LandingPageContent() {
                 </div>
                 <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
                   <div>
-                    <p className="text-white font-bold text-xl">R$ 99,90<span className="text-slate-400 text-sm font-normal">/mês</span></p>
-                    <p className="text-slate-400 text-xs mt-0.5">Inclui todos os recursos do plano Anual</p>
+                    <p className="text-white font-bold text-xl">R$ 147,00<span className="text-slate-400 text-sm font-normal">/mês</span></p>
+                    <p className="text-slate-400 text-xs mt-0.5">Inclui todos os recursos do plano PRO</p>
                   </div>
                   <Button asChild size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold gap-1.5 shadow-lg shadow-[#FBBF24]/25">
-                    <Link href="/register">
+                    <a
+                      href={waLink('Olá, Jarbas! Quero ativar o plano PREMIUM do SyncroMoney (fiscal + PDV).')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <Zap className="h-3.5 w-3.5" />
                       Ativar Premium
-                    </Link>
+                    </a>
                   </Button>
                 </div>
               </div>
@@ -729,11 +739,11 @@ export function LandingPageContent() {
               Simples e transparente
             </h2>
             <p className="mt-3 text-[#6B7280]">
-              14 dias grátis em qualquer plano. Sem cartão de crédito para começar.
+              14 dias grátis no plano PRO. Sem cartão de crédito para começar.
             </p>
           </div>
 
-          <div className="mx-auto grid max-w-5xl gap-6 pt-6 sm:grid-cols-3">
+          <div className="mx-auto grid max-w-3xl gap-6 pt-6 sm:grid-cols-2">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
@@ -805,11 +815,13 @@ export function LandingPageContent() {
                   }
                   variant={plan.premium || plan.highlight ? 'default' : 'outline'}
                 >
-                  <Link href={plan.href}>{plan.cta}</Link>
+                  <a href={waLink(plan.waMessage)} target="_blank" rel="noopener noreferrer">
+                    {plan.cta}
+                  </a>
                 </Button>
 
                 <p className={`mt-3 text-center text-xs ${plan.premium ? 'text-slate-500' : 'text-[#9CA3AF]'}`}>
-                  14 dias grátis · Cancele quando quiser
+                  {plan.trial ? '14 dias grátis · Cancele quando quiser' : 'Cobrança desde o primeiro dia · Cancele quando quiser'}
                 </p>
               </div>
             ))}
@@ -817,10 +829,15 @@ export function LandingPageContent() {
 
           <p className="mt-10 text-center text-sm text-[#9CA3AF]">
             Dúvidas?{' '}
-            <a href="mailto:syncromoney@gmail.com" className="font-medium text-[#2563EB] hover:underline">
-              Fale com a gente
+            <a
+              href={waLink('Olá, Jarbas! Tenho uma dúvida sobre os planos do SyncroMoney.')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[#2563EB] hover:underline"
+            >
+              Fale com a gente no WhatsApp
             </a>{' '}
-            — respondemos em menos de 24h.
+            — respondemos em minutos.
           </p>
         </div>
       </section>
@@ -860,10 +877,14 @@ export function LandingPageContent() {
               asChild
               className="bg-white text-[#2563EB] hover:bg-[#F9FAFB] gap-2 px-8 font-bold shadow-lg"
             >
-              <Link href="/register">
+              <a
+                href={waLink('Olá, Jarbas! Quero começar meus 14 dias grátis no SyncroMoney.')}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Começar 14 dias grátis
                 <ArrowRight className="h-4 w-4" />
-              </Link>
+              </a>
             </Button>
             <Button
               size="lg"
@@ -880,6 +901,18 @@ export function LandingPageContent() {
           </p>
         </div>
       </section>
+
+      {/* ── WHATSAPP FLUTUANTE ────────────────────────────────────────── */}
+      <a
+        href={waLink('Olá! Quero saber mais sobre o SyncroMoney.')}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Falar no WhatsApp"
+        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg shadow-black/20 transition-transform duration-200 hover:scale-110"
+        style={{ background: '#25D366' }}
+      >
+        <MessageCircle className="h-7 w-7 text-white" fill="white" strokeWidth={0} />
+      </a>
     </>
   )
 }

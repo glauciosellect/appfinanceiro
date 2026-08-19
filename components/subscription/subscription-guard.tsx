@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { assinaturaAtiva, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
-import { Loader2, Lock, AlertTriangle, LogOut } from 'lucide-react'
+import { podeUsarPro, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
+import { Loader2, Lock, LogOut } from 'lucide-react'
 import { Logo } from '@/components/logo'
 
 interface Props {
@@ -13,9 +13,9 @@ interface Props {
 
 export function SubscriptionGuard({ children }: Props) {
   const router = useRouter()
-  const [status, setStatus] = useState<'loading' | 'ok' | 'blocked' | 'trial'>('loading')
-  const [diasTrial, setDiasTrial] = useState(0)
+  const [status, setStatus] = useState<'loading' | 'ok' | 'blocked'>('loading')
   const [assinatura, setAssinatura] = useState<Assinatura | null>(null)
+  const [diasTrial, setDiasTrial] = useState(0)
 
   useEffect(() => {
     async function verificar() {
@@ -31,13 +31,11 @@ export function SubscriptionGuard({ children }: Props) {
 
       const ass = data as Assinatura | null
       setAssinatura(ass)
-
-      if (assinaturaAtiva(ass)) {
-        setDiasTrial(diasRestantesTrial(ass))
-        setStatus(ass?.status === 'trialing' ? 'trial' : 'ok')
-      } else {
-        setStatus('blocked')
-      }
+      setDiasTrial(diasRestantesTrial(user.created_at))
+      // Trial de 14 dias grátis vale para acesso PRO (assinatura ativa OU
+      // ainda dentro do prazo desde o cadastro). O Premium (PDV/Caixa/
+      // Fiscal) segue gateado à parte por isPremium — nunca tem trial.
+      setStatus(podeUsarPro(ass, user.created_at) ? 'ok' : 'blocked')
     }
     verificar()
   }, [router])
@@ -59,26 +57,18 @@ export function SubscriptionGuard({ children }: Props) {
           <h2 className="text-2xl font-bold text-white mb-2">Acesso bloqueado</h2>
           <p className="text-slate-400 mb-6">
             {assinatura?.status === 'past_due'
-              ? 'Seu pagamento falhou. Atualize seu método de pagamento para continuar.'
-              : 'Seu período de teste expirou. Assine para continuar usando o SyncroMoney.'}
+              ? 'Seu pagamento ficou em atraso. Regularize para continuar.'
+              : assinatura?.status === 'pending'
+              ? 'Aguardando confirmação do seu pagamento.'
+              : diasTrial <= 0 && !assinatura
+              ? 'Seus 14 dias grátis terminaram. Assine para continuar usando o SyncroMoney.'
+              : 'Assine para continuar usando o SyncroMoney.'}
           </p>
           <button
             onClick={() => router.push('/assinar')}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors mb-3"
           >
             Ver planos e assinar
-          </button>
-          <button
-            onClick={async () => {
-              if (assinatura?.stripe_customer_id) {
-                const res = await fetch('/api/stripe/portal', { method: 'POST' })
-                const json = await res.json()
-                if (json.url) window.location.href = json.url
-              }
-            }}
-            className="w-full text-slate-400 hover:text-white text-sm transition-colors py-2"
-          >
-            Gerenciar assinatura existente
           </button>
           <button
             onClick={async () => {
@@ -96,23 +86,5 @@ export function SubscriptionGuard({ children }: Props) {
     )
   }
 
-  return (
-    <>
-      {status === 'trial' && diasTrial <= 3 && (
-        <div className="bg-amber-500 text-amber-950 text-sm font-medium text-center py-2 px-4 flex items-center justify-center gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {diasTrial === 0
-            ? 'Seu trial expira hoje! '
-            : `${diasTrial} dia${diasTrial > 1 ? 's' : ''} restante${diasTrial > 1 ? 's' : ''} no período gratuito. `}
-          <button
-            onClick={() => router.push('/assinar')}
-            className="underline font-bold hover:opacity-80"
-          >
-            Assine agora
-          </button>
-        </div>
-      )}
-      {children}
-    </>
-  )
+  return <>{children}</>
 }

@@ -250,69 +250,64 @@ export function VoiceButton() {
 
   return (
     <>
-      {/* Floating mic button — só renderizado após hydration quando isSupported=true */}
-      <button
-        onClick={voiceState === 'listening' ? stopListening : startListening}
-        disabled={voiceState === 'processing'}
-        style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
-        className={cn(
-          'fixed right-6 z-50 h-16 w-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-200',
-          voiceState === 'listening'
-            ? 'bg-red-500 active:bg-red-600 shadow-red-200 shadow-xl scale-110'
-            : voiceState === 'processing'
-            ? 'bg-blue-400 cursor-not-allowed'
-            : 'bg-blue-600 active:bg-blue-700 active:scale-95'
-        )}
-        title={voiceState === 'listening' ? 'Parar gravação' : 'Registrar por voz'}
-      >
-        {voiceState === 'processing' ? (
-          <Loader2 className="h-7 w-7 text-white animate-spin" />
-        ) : voiceState === 'listening' ? (
-          <MicOff className="h-7 w-7 text-white" />
-        ) : (
-          <Mic className="h-7 w-7 text-white" />
-        )}
-      </button>
-
-      {/* Listening bubble */}
-      {voiceState === 'listening' && (
-        <div
-          style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}
-          className="fixed right-6 z-50 bg-white rounded-2xl shadow-xl p-4 w-72 border border-gray-100"
-        >
-          <div className="flex items-center gap-2 text-red-500 text-sm font-medium mb-2">
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            Ouvindo...
-          </div>
-          <p className="text-xs text-gray-500 mb-2">
-            Diga{' '}
-            <span className="font-semibold text-gray-700">&quot;receita&quot;</span> ou{' '}
-            <span className="font-semibold text-gray-700">&quot;despesa&quot;</span> e
-            descreva a transação.
-          </p>
-          {liveText && (
-            <p className="text-sm text-gray-800 bg-gray-50 rounded-lg px-3 py-2 italic">
-              {liveText}
-            </p>
+      {/* Mic button — embutido no rodapé da sidebar (não flutua sobre o conteúdo) */}
+      <div className="relative">
+        <button
+          onClick={voiceState === 'listening' ? stopListening : startListening}
+          disabled={voiceState === 'processing'}
+          className={cn(
+            'h-11 w-11 rounded-full shadow-md flex items-center justify-center transition-all duration-200',
+            voiceState === 'listening'
+              ? 'bg-red-500 active:bg-red-600 shadow-red-200 shadow-lg scale-110'
+              : voiceState === 'processing'
+              ? 'bg-blue-400 cursor-not-allowed'
+              : 'bg-blue-600 active:bg-blue-700 active:scale-95'
           )}
-        </div>
-      )}
-
-      {/* Error bubble */}
-      {error && voiceState === 'idle' && (
-        <div
-          style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}
-          className="fixed right-6 z-50 bg-red-50 border border-red-200 rounded-xl p-3 w-72 text-sm text-red-700 flex items-start gap-2"
+          title={voiceState === 'listening' ? 'Parar gravação' : 'Registrar por voz'}
         >
-          <span className="flex-1">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="text-red-400 hover:text-red-600 shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+          {voiceState === 'processing' ? (
+            <Loader2 className="h-5 w-5 text-white animate-spin" />
+          ) : voiceState === 'listening' ? (
+            <MicOff className="h-5 w-5 text-white" />
+          ) : (
+            <Mic className="h-5 w-5 text-white" />
+          )}
+        </button>
+
+        {/* Listening bubble */}
+        {voiceState === 'listening' && (
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 bg-white rounded-2xl shadow-xl p-4 w-72 border border-gray-100">
+            <div className="flex items-center gap-2 text-red-500 text-sm font-medium mb-2">
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+              Ouvindo...
+            </div>
+            <p className="text-xs text-gray-500 mb-2">
+              Diga{' '}
+              <span className="font-semibold text-gray-700">&quot;receita&quot;</span> ou{' '}
+              <span className="font-semibold text-gray-700">&quot;despesa&quot;</span> e
+              descreva a transação.
+            </p>
+            {liveText && (
+              <p className="text-sm text-gray-800 bg-gray-50 rounded-lg px-3 py-2 italic">
+                {liveText}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Error bubble */}
+        {error && voiceState === 'idle' && (
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 bg-red-50 border border-red-200 rounded-xl p-3 w-72 text-sm text-red-700 flex items-start gap-2">
+            <span className="flex-1">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-600 shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Confirmation dialog */}
       <Dialog

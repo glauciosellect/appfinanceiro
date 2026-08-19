@@ -21,6 +21,12 @@ interface FiscalConfig {
   serie_nfe?: string
   numero_proximo_nfse?: number
   serie_nfse?: string
+  logo_url?: string
+  mostrar_logo?: boolean
+  mostrar_cnpj?: boolean
+  mostrar_endereco?: boolean
+  mostrar_telefone?: boolean
+  mostrar_email?: boolean
 }
 
 export default function FiscalTab({ userId }: { userId: string }) {
@@ -37,13 +43,14 @@ export default function FiscalTab({ userId }: { userId: string }) {
   const [salvandoNumNfse, setSalvandoNumNfse] = useState(false)
   const [senhaCert, setSenhaCert] = useState('')
   const [arquivoCert, setArquivoCert] = useState<File | null>(null)
+  const [salvandoOrcamento, setSalvandoOrcamento] = useState(false)
   const certInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     if (!userId) return
     Promise.all([
-      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj,numero_proximo_nfe,serie_nfe,numero_proximo_nfse,serie_nfse').eq('user_id', userId).single(),
+      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj,numero_proximo_nfe,serie_nfe,numero_proximo_nfse,serie_nfse,logo_url,mostrar_logo,mostrar_cnpj,mostrar_endereco,mostrar_telefone,mostrar_email').eq('user_id', userId).single(),
       createClient().from('perfil_empresa').select('cnpj_cpf, razao_social').eq('user_id', userId).single(),
     ]).then(([{ data: fiscal }, { data: perfil }]) => {
       if (fiscal) {
@@ -57,6 +64,27 @@ export default function FiscalTab({ userId }: { userId: string }) {
       setLoading(false)
     })
   }, [userId])
+
+  async function handleSalvarOrcamentoConfig() {
+    setSalvandoOrcamento(true)
+    try {
+      const { error } = await createClient().from('fiscal_config').update({
+        logo_url: config.logo_url || null,
+        mostrar_logo: config.mostrar_logo ?? true,
+        mostrar_cnpj: config.mostrar_cnpj ?? true,
+        mostrar_endereco: config.mostrar_endereco ?? true,
+        mostrar_telefone: config.mostrar_telefone ?? true,
+        mostrar_email: config.mostrar_email ?? true,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', userId)
+      if (error) throw error
+      toast('Configurações do orçamento salvas!', 'success')
+    } catch {
+      toast('Erro ao salvar configurações do orçamento', 'error')
+    } finally {
+      setSalvandoOrcamento(false)
+    }
+  }
 
   async function handleAtivar() {
     setAtivando(true)
@@ -479,6 +507,61 @@ export default function FiscalTab({ userId }: { userId: string }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Orçamento (PDF) — logo + toggles de visibilidade */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileText className="h-5 w-5 text-indigo-600" />
+            Orçamento (PDF)
+          </CardTitle>
+          <p className="text-sm text-gray-500">Controle o que aparece no cabeçalho do PDF de orçamento enviado ao cliente.</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>URL da Logo</Label>
+            <Input
+              placeholder="https://exemplo.com/logo.png"
+              value={config.logo_url ?? ''}
+              onChange={e => setConfig(c => ({ ...c, logo_url: e.target.value }))}
+            />
+            <p className="text-xs text-gray-400 mt-1">Cole o link de uma imagem já hospedada (PNG, JPG ou SVG).</p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">Mostrar no Orçamento</p>
+            {([
+              ['mostrar_logo', 'Logo'],
+              ['mostrar_cnpj', 'CNPJ'],
+              ['mostrar_endereco', 'Endereço'],
+              ['mostrar_telefone', 'Telefone'],
+              ['mostrar_email', 'E-mail'],
+            ] as const).map(([campo, label]) => (
+              <div
+                key={campo}
+                onClick={() => setConfig(c => ({ ...c, [campo]: !(c[campo] ?? true) }))}
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer select-none transition-all ${
+                  (config[campo] ?? true) ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className={`w-11 h-6 rounded-full transition-colors shrink-0 ${(config[campo] ?? true) ? 'bg-indigo-500' : 'bg-gray-300'}`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-transform ${(config[campo] ?? true) ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </div>
+                <p className="font-medium text-sm text-gray-800">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+            onClick={handleSalvarOrcamentoConfig}
+            disabled={salvandoOrcamento}
+          >
+            {salvandoOrcamento ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            Salvar configurações do orçamento
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

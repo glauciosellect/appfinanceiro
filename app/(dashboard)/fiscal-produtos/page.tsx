@@ -16,7 +16,7 @@ interface Produto {
   ncm: string
   cfop: string
   unidade: string
-  preco_unitario: number
+  preco_custo: number
   margem_lucro: number
   preco_venda: number
   estoque: number
@@ -70,7 +70,7 @@ export default function FiscalProdutosPage() {
     if (!user) { setSalvando(false); return }
 
     const margem = form.margem_lucro ?? 0
-    const custo = form.preco_unitario ?? 0
+    const custo = form.preco_custo ?? 0
     // Preço de venda: usa o calculado pela margem, mas se custo=0 usa o preco_venda do form diretamente
     const precoVenda = custo > 0
       ? Math.round(custo * (1 + margem / 100) * 100) / 100
@@ -85,7 +85,7 @@ export default function FiscalProdutosPage() {
         ncm: form.ncm || '',
         cfop: form.cfop || '5102',
         unidade: form.unidade || 'UN',
-        preco_unitario: custo,
+        preco_custo: custo,
         margem_lucro: margem,
         preco_venda: precoVenda,
         estoque: form.estoque ?? 0,
@@ -98,7 +98,7 @@ export default function FiscalProdutosPage() {
         ncm: form.ncm || '',
         cfop: form.cfop || '5102',
         unidade: form.unidade || 'UN',
-        preco_unitario: custo,
+        preco_custo: custo,
         margem_lucro: margem,
         preco_venda: precoVenda,
         estoque: form.estoque ?? 0,
@@ -156,7 +156,7 @@ export default function FiscalProdutosPage() {
                     <td className="px-6 py-4 font-mono text-gray-500 dark:text-gray-400">{p.ncm}</td>
                     <td className="px-6 py-4 font-mono text-gray-500 dark:text-gray-400">{p.cfop}</td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{p.unidade}</td>
-                    <td className="px-6 py-4 text-right text-gray-600 dark:text-gray-400">{formatCurrency(p.preco_unitario)}</td>
+                    <td className="px-6 py-4 text-right text-gray-600 dark:text-gray-400">{formatCurrency(p.preco_custo)}</td>
                     <td className="px-6 py-4 text-right text-gray-500 dark:text-gray-400">{(p.margem_lucro ?? 0).toFixed(0)}%</td>
                     <td className="px-6 py-4 text-right font-semibold text-green-700 dark:text-green-400">{formatCurrency(p.preco_venda ?? 0)}</td>
                     <td className="px-6 py-4 text-right">
@@ -214,7 +214,7 @@ export default function FiscalProdutosPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Custo Unitário (R$)</label>
-                <Input type="number" step="0.01" min="0" value={form.preco_unitario || ''} onChange={(e) => setForm({ ...form, preco_unitario: Number(e.target.value) })} />
+                <Input type="number" step="0.01" min="0" value={form.preco_custo || ''} onChange={(e) => setForm({ ...form, preco_custo: Number(e.target.value) })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -228,13 +228,13 @@ export default function FiscalProdutosPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preço de Venda (R$)</label>
                 <Input type="number" step="0.01" min="0"
                   value={(() => {
-                    const custo = form.preco_unitario ?? 0
+                    const custo = form.preco_custo ?? 0
                     const margem = form.margem_lucro ?? 0
                     return custo > 0 ? (Math.round(custo * (1 + margem / 100) * 100) / 100 || '') : (form.preco_venda || '')
                   })()}
                   onChange={(e) => {
                     const preco = Number(e.target.value)
-                    const custo = form.preco_unitario ?? 0
+                    const custo = form.preco_custo ?? 0
                     if (custo > 0) {
                       const margem = Math.round(((preco / custo) - 1) * 100)
                       setForm({ ...form, margem_lucro: Math.max(0, margem) })

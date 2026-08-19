@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, TrendingDown, CheckCircle, AlertCircle, Clock, DollarSign, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -86,7 +87,22 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+function proximaDataVencimento(diaVencimento: number): string {
+  const hoje = new Date()
+  const ano = hoje.getFullYear()
+  const mes = hoje.getMonth()
+  const ultimoDiaMesAtual = new Date(ano, mes + 1, 0).getDate()
+  let candidata = new Date(ano, mes, Math.min(diaVencimento, ultimoDiaMesAtual))
+  if (candidata < new Date(ano, mes, hoje.getDate())) {
+    const ultimoDiaProxMes = new Date(ano, mes + 2, 0).getDate()
+    candidata = new Date(ano, mes + 1, Math.min(diaVencimento, ultimoDiaProxMes))
+  }
+  return candidata.toISOString().split('T')[0]
+}
+
 export default function ContasPagarPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [aba, setAba] = useState<'contas' | 'parcelas'>('parcelas')
   const [contas, setContas] = useState<ContaPagar[]>([])
   const [parcelas, setParcelas] = useState<(ParcelaPagar & { fornecedor_nome?: string; conta_descricao?: string })[]>([])
@@ -155,6 +171,25 @@ export default function ContasPagarPage() {
   }, [userId, filtroStatus, _toast])
 
   useEffect(() => { fetchTudo() }, [fetchTudo])
+
+  function abrirNovaConta(defaults?: Partial<ContaPagarForm>) {
+    formNova.reset({ num_parcelas: 1, juros_percentual: 0, desconto_valor: 0, ...defaults })
+    setDialogNova(true)
+  }
+
+  useEffect(() => {
+    if (loading || cartoes.length === 0) return
+    if (searchParams.get('novo') !== '1') return
+    const cartaoId = searchParams.get('cartao_id') ?? undefined
+    const cartao = cartaoId ? cartoes.find((c) => c.id === cartaoId) : undefined
+    abrirNovaConta({
+      cartao_id: cartao?.id,
+      descricao: cartao ? `Fatura ${cartao.banco} ****${cartao.final_cartao}` : undefined,
+      data_primeira_parcela: cartao ? proximaDataVencimento(cartao.dia_vencimento) : undefined,
+    })
+    router.replace('/contas-pagar')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, cartoes, searchParams])
 
   async function handleCriarConta(values: ContaPagarForm) {
     try {
@@ -258,7 +293,7 @@ export default function ContasPagarPage() {
           <h1 className="text-2xl font-bold text-gray-900">Contas a Pagar</h1>
           <p className="text-sm text-gray-500">Gestão de pagamentos e despesas</p>
         </div>
-        <Button onClick={() => setDialogNova(true)} className="bg-red-600 hover:bg-red-700">
+        <Button onClick={() => abrirNovaConta()} className="bg-red-600 hover:bg-red-700">
           <Plus className="h-4 w-4 mr-2" />
           Nova Conta a Pagar
         </Button>

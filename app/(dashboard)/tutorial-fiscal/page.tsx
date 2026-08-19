@@ -18,6 +18,8 @@ import {
   ShoppingCart,
   Building2,
   Hash,
+  Wallet,
+  Clock,
 } from 'lucide-react'
 
 interface Step {
@@ -28,7 +30,7 @@ interface Step {
   color: string
   bg: string
   href: string
-  required: 'sim' | 'nfse' | 'nfe' | 'opcional'
+  required: 'sim' | 'nfse' | 'nfe' | 'pdv' | 'opcional'
   items: string[]
   tip?: string
 }
@@ -42,7 +44,7 @@ const steps: Step[] = [
   {
     number: 1,
     title: 'Preencher o Perfil da Empresa',
-    description: 'Antes de qualquer nota, o sistema precisa saber quem é o emitente — sua empresa. Esses dados são o cabeçalho de todas as NFS-e e NF-e emitidas.',
+    description: 'Antes de qualquer nota, o sistema precisa saber quem é o emitente — sua empresa. Esses dados são o cabeçalho de todas as NFS-e e NF-e emitidas, e também aparecem nos recibos do PDV.',
     icon: Building2,
     color: '#2563EB',
     bg: '#EFF6FF',
@@ -63,34 +65,34 @@ const steps: Step[] = [
   },
   {
     number: 2,
-    title: 'Ativar o Módulo Fiscal',
-    description: 'Com o perfil completo, ative a emissão fiscal. O SyncroMoney registra automaticamente seus dados na nuvem fiscal e habilita a comunicação com a Prefeitura (NFS-e) e/ou a SEFAZ (NF-e). Tudo sem você precisar acessar portais externos.',
+    title: 'Ativar o Plano Premium',
+    description: 'Uma única assinatura Premium libera PDV, Caixa, NF-e, NFS-e e NFC-e juntos. Diferente do plano PRO, o Premium não tem período de teste — é cobrado desde a ativação.',
     icon: Settings,
     color: '#7C3AED',
     bg: '#F5F3FF',
-    href: '/configuracoes',
+    href: '/assinar',
     required: 'sim',
     items: [
-      'Acesse Configurações → aba Fiscal',
-      'Marque os tipos de nota que pretende emitir: NFS-e (serviços) e/ou NF-e (produtos)',
-      'Clique em "Ativar Emissão Fiscal"',
-      'O sistema sincroniza automaticamente seu CNPJ, IE, regime tributário e endereço com a nuvem fiscal',
-      'Aguarde 2-3 segundos — um banner verde aparecerá indicando "Módulo fiscal ativo"',
-      'Se algum dado estiver inválido, a mensagem de erro aparecerá em vermelho — corrija no Perfil e ative novamente',
+      'Acesse "Assinar" (ou o aviso de upgrade que aparece nas seções PREMIUM do menu)',
+      'Escolha o plano PREMIUM (R$ 147/mês)',
+      'Confirme o pagamento — a assinatura é ativada imediatamente, sem trial',
+      'Após ativar, as seções "PDV & CAIXA" e "FISCAL" aparecem liberadas no menu lateral',
+      'Volte em Configurações → aba Fiscal para marcar os tipos de nota que pretende emitir: NFS-e (serviços) e/ou NF-e (produtos)',
+      'Clique em "Ativar Emissão Fiscal" — o sistema sincroniza automaticamente seu CNPJ, IE, regime tributário e endereço com a nuvem fiscal',
     ],
-    tip: 'A ativação registra sua empresa no integrador automaticamente — você NÃO precisa se cadastrar em nenhum site externo. Toda a comunicação com SEFAZ e Prefeitura passa pelo SyncroMoney.',
+    tip: 'É uma assinatura só: você não ativa PDV/Caixa separado do módulo fiscal. A mesma assinatura Premium libera tudo de uma vez.',
   },
   {
     number: 3,
-    title: 'Enviar o Certificado Digital (NF-e)',
-    description: 'Para emitir NF-e de produtos, o certificado digital A1 é obrigatório. Ele identifica sua empresa digitalmente para a SEFAZ. Para NFS-e de serviços, pule este passo.',
+    title: 'Enviar o Certificado Digital A1 (NF-e)',
+    description: 'Para emitir NF-e de produtos, o certificado digital A1 é obrigatório. Ele identifica sua empresa digitalmente para a SEFAZ. Para NFS-e de serviços ou para operar o PDV, esse certificado NÃO é necessário.',
     icon: FileKey,
     color: '#0891B2',
     bg: '#ECFEFF',
     href: '/configuracoes',
     required: 'nfe',
     items: [
-      'Ainda na aba Fiscal, certifique-se de que o toggle "NF-e — Nota Fiscal de Produtos" está ligado',
+      'Em Configurações → aba Fiscal, certifique-se de que o toggle "NF-e — Nota Fiscal de Produtos" está ligado',
       'Role a página até a seção "Certificado Digital A1"',
       'Clique na área tracejada e selecione seu arquivo .pfx ou .p12',
       'Informe a senha do certificado no campo "Senha do Certificado"',
@@ -117,50 +119,28 @@ const steps: Step[] = [
       'A configuração é sincronizada com a nuvem fiscal automaticamente',
       'Confira no painel da Focus NFe se "Próximo número (Produção)" mostra o valor que você definiu',
     ],
-    tip: 'NÃO precisa se preocupar se está começando do zero — o sistema já parte da nota nº 1 por padrão. Esse passo só é necessário se você TINHA outro sistema e quer manter a sequência fiscal continua para a contabilidade.',
+    tip: 'NÃO precisa se preocupar se está começando do zero — o sistema já parte da nota nº 1 por padrão. Esse passo só é necessário se você TINHA outro sistema e quer manter a sequência fiscal contínua para a contabilidade.',
   },
   {
     number: 5,
-    title: 'Cadastrar Serviços Fiscais (NFS-e)',
-    description: 'Crie o catálogo dos serviços que você presta. Cada serviço tem um código da LC 116/2003 e uma alíquota de ISS definida pela prefeitura. Esses dados são obrigatórios na nota.',
+    title: 'Cadastrar Produtos e Serviços',
+    description: 'O catálogo de Produtos e Serviços é único e compartilhado — o mesmo cadastro usado em Orçamentos e no PDV serve para emitir NF-e (produtos) e NFS-e (serviços). Se você já cadastrou produtos ou serviços no plano PRO, não precisa recadastrar nada aqui.',
     icon: Wrench,
     color: '#D97706',
     bg: '#FFFBEB',
-    href: '/fiscal-servicos',
-    required: 'nfse',
+    href: '/servicos',
+    required: 'opcional',
     items: [
-      'Acesse Fiscal → Serviços no menu lateral',
-      'Clique em "Novo Serviço"',
-      'Informe o nome do serviço (ex: "Desenvolvimento de Software")',
-      'Selecione o Código LC 116 correspondente (ex: 1.02 — Programação)',
-      'Informe a alíquota ISS — consulte a legislação do seu município',
-      'Salve — cadastre um serviço para cada tipo que você presta',
+      'Acesse "Produtos" no menu lateral (seção VENDAS) para os itens físicos vendidos por NF-e',
+      'Confirme os dados fiscais de cada produto: NCM, CFOP e unidade de medida, além de preço e código de barras/PLU',
+      'Acesse "Serviços" no menu lateral para os itens usados na NFS-e',
+      'Informe o Código LC 116/2003 correspondente ao serviço (ex: 1.02 — Programação) e a alíquota de ISS do seu município',
+      'Salve — o item já fica disponível tanto para emissão de notas quanto para Orçamentos e PDV',
     ],
-    tip: 'A alíquota ISS varia por município e tipo de serviço. Em Juiz de Fora, serviços de TI geralmente têm 2%. Consulte a tabela ISS da Prefeitura de JF para confirmar.',
+    tip: 'A alíquota ISS varia por município e tipo de serviço. Consulte a tabela ISS da sua Prefeitura para confirmar o valor correto de cada serviço.',
   },
   {
     number: 6,
-    title: 'Cadastrar Produtos (NF-e)',
-    description: 'Para emitir NF-e, cadastre os produtos que você vende com os dados fiscais obrigatórios: código NCM, CFOP e unidade de medida. Pule este passo se só emite NFS-e.',
-    icon: ShoppingCart,
-    color: '#16A34A',
-    bg: '#F0FDF4',
-    href: '/fiscal-produtos',
-    required: 'nfe',
-    items: [
-      'Acesse Fiscal → Produtos no menu lateral',
-      'Clique em "Novo Produto"',
-      'Informe o código e a descrição do produto',
-      'Informe o NCM (Nomenclatura Comum do Mercosul) — 8 dígitos',
-      'Informe o CFOP (Código Fiscal de Operações) — ex: 5102 para venda no estado',
-      'Selecione a unidade de medida (UN, KG, CX, etc.)',
-      'Informe o preço unitário e o estoque inicial',
-      'Salve — repita para cada produto',
-    ],
-    tip: 'O NCM de cada produto pode ser consultado na tabela TIPI (Tabela de Incidência do IPI) disponível no site da Receita Federal.',
-  },
-  {
-    number: 7,
     title: 'Cadastrar Clientes (Tomadores / Destinatários)',
     description: 'O destinatário (NF-e) ou tomador (NFS-e) é quem recebe a nota. Antes de emitir, o cliente precisa estar cadastrado com CNPJ/CPF e endereço corretos — esses dados vão impressos na nota.',
     icon: Users,
@@ -179,7 +159,7 @@ const steps: Step[] = [
     tip: 'Clientes com CNPJ têm os dados preenchidos automaticamente via BrasilAPI ao digitar o CNPJ. Para pessoa física, preencha o CPF e os dados manualmente.',
   },
   {
-    number: 8,
+    number: 7,
     title: 'Emitir a NFS-e (Nota de Serviços)',
     description: 'Com tudo configurado, você está pronto para emitir sua primeira Nota Fiscal de Serviços eletrônica, integrada diretamente à prefeitura — sem acessar portal separado.',
     icon: Receipt,
@@ -188,11 +168,11 @@ const steps: Step[] = [
     href: '/nfse/nova',
     required: 'nfse',
     items: [
-      'Acesse Fiscal → NFS-e no menu lateral',
+      'Acesse NFS-e no menu lateral (seção FISCAL — PREMIUM)',
       'Clique em "Emitir NFS-e"',
       'Informe o CNPJ ou CPF do tomador — selecione o cliente cadastrado',
       'Informe a data de competência (mês a que o serviço se refere)',
-      'Selecione o código LC 116 do serviço prestado',
+      'Selecione o serviço prestado (do catálogo cadastrado no Passo 5), com seu código LC 116',
       'Preencha a discriminação (descrição detalhada do serviço)',
       'Informe a quantidade e o valor unitário',
       'Defina a alíquota ISS e se o ISS é retido na fonte pelo tomador',
@@ -202,7 +182,7 @@ const steps: Step[] = [
     tip: 'Se o tomador for uma empresa que retém ISS, marque "ISS retido na fonte". O sistema calculará o valor líquido que você receberá descontado o ISS.',
   },
   {
-    number: 9,
+    number: 8,
     title: 'Emitir a NF-e (Nota de Produtos)',
     description: 'Para venda de produtos, emita a NF-e com os itens, quantidades, valores e dados fiscais. A nota é transmitida automaticamente à SEFAZ e autorizada em segundos. O DANFE em PDF fica disponível para baixar e enviar ao cliente.',
     icon: FileText,
@@ -211,11 +191,11 @@ const steps: Step[] = [
     href: '/nfe/nova',
     required: 'nfe',
     items: [
-      'Acesse Fiscal → NF-e no menu lateral',
+      'Acesse NF-e no menu lateral (seção FISCAL — PREMIUM)',
       'Clique em "Nova NF-e"',
       'Selecione a natureza da operação (ex: Venda de Mercadoria)',
       'Informe o destinatário (cliente cadastrado) e confira o endereço',
-      'Adicione os itens: selecione o produto, informe quantidade, valor e desconto se houver',
+      'Adicione os itens: selecione o produto do catálogo, informe quantidade, valor e desconto se houver',
       'Confira os totais de ICMS, PIS, COFINS — calculados automaticamente conforme o regime tributário',
       'Informe os dados de transporte (modalidade do frete, transportadora, placa)',
       'Revise o resumo e clique em "Transmitir à SEFAZ"',
@@ -224,12 +204,60 @@ const steps: Step[] = [
     ],
     tip: 'Notas rejeitadas pelo SEFAZ NÃO existem legalmente — você pode simplesmente corrigir os dados e emitir novamente com o mesmo número. Não há multa nem cancelamento envolvido.',
   },
+  {
+    number: 9,
+    title: 'Abrir o Caixa e Usar o PDV',
+    description: 'O PDV é a frente de caixa para vender no balcão. Antes de vender, é preciso abrir um Caixa. Ao final do turno, o fechamento gera um relatório e já lança as vendas automaticamente em Contas a Receber.',
+    icon: ShoppingCart,
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+    href: '/pdv',
+    required: 'pdv',
+    items: [
+      'Acesse PDV no menu lateral (seção PDV & CAIXA — PREMIUM)',
+      'Na primeira venda do turno, o sistema pede a abertura do Caixa: informe o operador, o fundo de troco inicial e, opcionalmente, vincule uma conta corrente para receber os valores em dinheiro/PIX/débito automaticamente',
+      'Busque produtos pelo nome, código de barras ou PLU — inclusive com leitor de código de barras via teclado; use as setas para navegar nos resultados e Enter para adicionar ao carrinho',
+      'Finalize a venda escolhendo a forma de pagamento: Dinheiro (com cálculo de troco), Cartão de Crédito/Débito (bandeira e parcelas), PIX (QR Code gerado na hora com a chave PIX da empresa) ou "Outras formas" (TED/DOC/Boleto/Cheque)',
+      'Use Sangria/Suprimento durante o turno para retiradas ou reforços de caixa, se necessário',
+      'No fim do turno, clique em "Fechar Caixa" — o sistema gera um relatório de fechamento imprimível ("Imprimir Relatório")',
+      'Vendas à vista (Dinheiro/PIX/Débito) entram automaticamente como já recebidas em Contas a Receber; vendas no crédito parcelado geram as parcelas futuras (~30 dias entre elas) automaticamente',
+    ],
+    tip: 'Você também pode acompanhar o turno aberto, vendas em andamento e histórico de fechamentos pela tela "Caixa" no menu — as ações de sangria/suprimento/fechar caixa estão disponíveis nos dois lugares.',
+  },
+  {
+    number: 10,
+    title: 'NFC-e (Cupom Fiscal) — Em breve',
+    description: 'A emissão de NFC-e (Cupom Fiscal eletrônico para venda direta ao consumidor) já tem um espaço reservado no menu, mas ainda está em desenvolvimento.',
+    icon: Clock,
+    color: '#9CA3AF',
+    bg: '#F9FAFB',
+    href: '/nfce',
+    required: 'opcional',
+    items: [
+      'A página "NFC-e" aparece no menu lateral com o selo "Em breve"',
+      'Ainda não há passo a passo de uso, pois a emissão não está disponível nesta versão',
+      'Assim que a funcionalidade for liberada, este tutorial será atualizado com o fluxo completo',
+    ],
+    tip: 'Por enquanto, use NFS-e ou NF-e conforme o tipo de venda, ou registre a venda pelo PDV normalmente — o cupom fiscal eletrônico chegará em uma atualização futura.',
+  },
 ]
 
 const faqs: FAQ[] = [
   {
     question: 'Qual a diferença entre NFS-e e NF-e?',
     answer: 'NFS-e (Nota Fiscal de Serviços Eletrônica) é emitida por empresas prestadoras de serviço e é administrada pela prefeitura municipal — o ISS é o imposto principal. NF-e (Nota Fiscal Eletrônica) é emitida para venda de produtos e é administrada pela Receita Federal e SEFAZ estadual — ICMS, PIS e COFINS são os impostos principais.',
+  },
+  {
+    question: 'PDV e Caixa fazem parte do Fiscal ou é outra coisa?',
+    answer: 'Ambos fazem parte do plano Premium junto com o módulo fiscal — a mesma assinatura libera os dois. Não são módulos separados: quem assina o Premium ganha PDV, Caixa, NF-e, NFS-e e NFC-e ao mesmo tempo.',
+  },
+  {
+    question: 'Preciso ativar o módulo fiscal separado do PDV?',
+    answer: 'Não. É uma assinatura única do plano Premium que libera tudo de uma vez — não existe uma ativação separada para PDV/Caixa e outra para o módulo fiscal.',
+  },
+  {
+    question: 'O estoque do PDV é o mesmo do módulo fiscal?',
+    answer: 'Sim, é o mesmo cadastro de produtos e o mesmo controle de estoque — uma venda no PDV e uma emissão de NF-e usam a mesma base de produtos e dão baixa no mesmo estoque.',
   },
   {
     question: 'Preciso de certificado digital para emitir NFS-e?',
@@ -253,11 +281,11 @@ const faqs: FAQ[] = [
   },
   {
     question: 'Posso cancelar uma nota já emitida?',
-    answer: 'Sim, dentro do prazo legal. Para NFS-e, vá em Fiscal → NFS-e, localize a nota e clique no ícone de cancelamento. Para NF-e, o prazo de cancelamento é de 24h após a autorização (ou antes da circulação da mercadoria). Após esse prazo, é necessário emitir uma Carta de Correção (CC-e) ou NF-e de devolução.',
+    answer: 'Sim, dentro do prazo legal. Para NFS-e, vá em NFS-e, localize a nota e clique no ícone de cancelamento. Para NF-e, o prazo de cancelamento é de 24h após a autorização (ou antes da circulação da mercadoria). Após esse prazo, é necessário emitir uma Carta de Correção (CC-e) ou NF-e de devolução.',
   },
   {
     question: 'Onde encontro o PDF da nota emitida?',
-    answer: 'Vá em Fiscal → NFS-e (ou NF-e), localize a nota com status "Autorizada" e clique no ícone de download (seta para baixo). Para NF-e, o arquivo gerado é o DANFE (Documento Auxiliar da NF-e).',
+    answer: 'Vá em NFS-e (ou NF-e), localize a nota com status "Autorizada" e clique no ícone de download (seta para baixo). Para NF-e, o arquivo gerado é o DANFE (Documento Auxiliar da NF-e).',
   },
   {
     question: 'Estou migrando de outro sistema. Como mantenho a sequência de notas?',
@@ -279,6 +307,10 @@ const faqs: FAQ[] = [
     question: 'O que é o DANFE?',
     answer: 'DANFE (Documento Auxiliar da NF-e) é o "espelho" em PDF da NF-e que acompanha a mercadoria durante o transporte. Ele tem o número da nota, a chave de acesso (44 dígitos) e o código de barras. Não é a nota fiscal em si — a NF-e propriamente dita é o arquivo XML autorizado pelo SEFAZ. O DANFE serve para conferência visual e fiscalização nos postos.',
   },
+  {
+    question: 'Como funciona o pagamento parcelado no PDV?',
+    answer: 'Ao escolher Cartão de Crédito no PDV, você seleciona a bandeira e o número de parcelas. O sistema gera automaticamente as parcelas em Contas a Receber, espaçadas em aproximadamente 30 dias, para que apareçam corretamente no Fluxo de Caixa e no Dashboard sem lançamento manual.',
+  },
 ]
 
 function StepCard({ step }: { step: Step }) {
@@ -289,6 +321,7 @@ function StepCard({ step }: { step: Step }) {
     sim:      { label: 'Obrigatório',   cls: 'bg-red-50 text-red-600' },
     nfse:     { label: 'NFS-e',         cls: 'bg-green-50 text-green-700' },
     nfe:      { label: 'NF-e',          cls: 'bg-blue-50 text-blue-700' },
+    pdv:      { label: 'PDV / Caixa',   cls: 'bg-purple-50 text-purple-700' },
     opcional: { label: 'Opcional',      cls: 'bg-gray-100 text-gray-500' },
   }
   const badge = badgeMap[step.required]
@@ -338,7 +371,7 @@ function StepCard({ step }: { step: Step }) {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: step.color }}
           >
-            Ir para {step.title.replace('Preencher o ', '').replace('Ativar o ', '').replace('Enviar o ', '').replace('Cadastrar ', '').replace('Emitir a ', '')}
+            Ir para {step.title.replace('Preencher o ', '').replace('Ativar o ', '').replace('Enviar o ', '').replace('Cadastrar ', '').replace('Emitir a ', '').replace('Configurar ', '').replace('Abrir o ', '')}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -369,18 +402,19 @@ export default function TutorialFiscalPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-50 mb-4">
           <GraduationCap className="h-7 w-7 text-amber-600" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Tutorial — Módulo Fiscal</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Tutorial — Plano Premium (PDV, Caixa e Fiscal)</h1>
         <p className="text-gray-500 mt-2 text-sm max-w-xl mx-auto">
-          Siga a ordem abaixo para configurar o módulo fiscal e emitir suas primeiras notas fiscais de serviço (NFS-e) e/ou produto (NF-e).
+          Siga a ordem abaixo para configurar o plano Premium, vender no PDV com Caixa e emitir suas primeiras notas fiscais de serviço (NFS-e) e/ou produto (NF-e).
         </p>
       </div>
 
       {/* Legenda */}
       <div className="flex flex-wrap gap-3 justify-center">
         {[
-          { cls: 'bg-red-50 text-red-600',     label: 'Obrigatório — todos' },
+          { cls: 'bg-red-50 text-red-600',      label: 'Obrigatório — todos' },
           { cls: 'bg-green-50 text-green-700',  label: 'Necessário para NFS-e' },
           { cls: 'bg-blue-50 text-blue-700',    label: 'Necessário para NF-e' },
+          { cls: 'bg-purple-50 text-purple-700', label: 'PDV / Caixa' },
           { cls: 'bg-gray-100 text-gray-500',   label: 'Opcional' },
         ].map(b => (
           <span key={b.label} className={`text-[11px] font-semibold px-3 py-1 rounded-full ${b.cls}`}>{b.label}</span>
@@ -396,7 +430,7 @@ export default function TutorialFiscalPage() {
               <div className="flex items-center gap-1.5 bg-white rounded-full px-3 py-1 shadow-sm border border-amber-100">
                 <CircleDot className="h-3 w-3" style={{ color: step.color }} />
                 <span className="text-xs font-medium text-gray-700">
-                  {step.title.replace('Preencher o ', '').replace('Ativar o ', '').replace('Enviar o ', '').replace('Cadastrar ', '').replace('Emitir a ', '')}
+                  {step.title.replace('Preencher o ', '').replace('Ativar o ', '').replace('Enviar o ', '').replace('Cadastrar ', '').replace('Emitir a ', '').replace('Configurar ', '').replace('Abrir o ', '')}
                 </span>
               </div>
               {i < steps.length - 1 && <ArrowRight className="h-3 w-3 text-amber-300 shrink-0" />}
@@ -419,11 +453,33 @@ export default function TutorialFiscalPage() {
         <h2 className="text-base font-semibold text-gray-900 mb-4">Fluxo de emissão — NFS-e (dia a dia)</h2>
         <div className="space-y-3">
           {[
-            { icon: CheckCircle2, color: '#2563EB', text: 'Prestou o serviço? Acesse Fiscal → NFS-e → Emitir NFS-e' },
+            { icon: CheckCircle2, color: '#2563EB', text: 'Prestou o serviço? Acesse NFS-e → Emitir NFS-e' },
             { icon: CheckCircle2, color: '#7C3AED', text: 'Selecione o tomador (cliente) e o serviço prestado' },
             { icon: CheckCircle2, color: '#16A34A', text: 'Informe o valor, competência e clique em Transmitir — a nota é autorizada na hora' },
             { icon: CheckCircle2, color: '#D97706', text: 'Baixe o PDF da nota e envie ao cliente pelo e-mail' },
-            { icon: CheckCircle2, color: '#0891B2', text: 'O SyncroMoney registra tudo — consulte o histórico em Fiscal → NFS-e' },
+            { icon: CheckCircle2, color: '#0891B2', text: 'O SyncroMoney registra tudo — consulte o histórico em NFS-e' },
+          ].map((item, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <item.icon className="h-4 w-4 mt-0.5 shrink-0" style={{ color: item.color }} />
+              <p className="text-sm text-gray-700">{item.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Fluxo do PDV */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+        <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Wallet className="h-4 w-4 text-purple-600" />
+          Fluxo do PDV — dia a dia
+        </h2>
+        <div className="space-y-3">
+          {[
+            { icon: CheckCircle2, color: '#7C3AED', text: 'Início do turno? Acesse PDV → abra o Caixa informando operador e fundo de troco' },
+            { icon: CheckCircle2, color: '#2563EB', text: 'Busque o produto (nome, código de barras ou PLU) e adicione ao carrinho com Enter' },
+            { icon: CheckCircle2, color: '#16A34A', text: 'Finalize com Dinheiro, Cartão ou PIX — o pagamento já lança em Contas a Receber automaticamente' },
+            { icon: CheckCircle2, color: '#D97706', text: 'Precisa retirar ou reforçar o caixa? Use Sangria/Suprimento a qualquer momento' },
+            { icon: CheckCircle2, color: '#0891B2', text: 'Fim do turno: clique em "Fechar Caixa" e imprima o relatório de fechamento' },
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-3">
               <item.icon className="h-4 w-4 mt-0.5 shrink-0" style={{ color: item.color }} />
@@ -435,13 +491,13 @@ export default function TutorialFiscalPage() {
 
       {/* FAQ */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Dúvidas frequentes — Fiscal</h2>
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Dúvidas frequentes — Premium</h2>
         <p className="text-sm text-gray-500 mb-4">Clique na pergunta para ver a resposta.</p>
         {faqs.map((faq, i) => <FaqItem key={i} faq={faq} />)}
       </div>
 
       <p className="text-center text-xs text-gray-400 pb-4">
-        SyncroMoney — Módulo Fiscal Premium
+        SyncroMoney — Plano Premium
       </p>
     </div>
   )

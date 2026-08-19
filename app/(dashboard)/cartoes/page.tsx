@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, CreditCard, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getCartoes, createCartao, updateCartao, deleteCartao, getFaturas, pagarFatura } from '@/lib/supabase/cartoes'
@@ -69,6 +70,7 @@ const STATUS_FATURA: Record<string, { label: string; color: string }> = {
 }
 
 export default function CartoesPage() {
+  const router = useRouter()
   const [cartoes, setCartoes] = useState<Cartao[]>([])
   const [faturas, setFaturas] = useState<FaturaCartao[]>([])
   const [contasCorrente, setContasCorrente] = useState<ContaCorrente[]>([])
@@ -178,10 +180,15 @@ export default function CartoesPage() {
                 onClick={() => fetchFaturas(c)}
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
+                  <button
+                    type="button"
+                    className="text-left hover:underline decoration-white/60 underline-offset-2"
+                    title="Criar conta a pagar para este cartão"
+                    onClick={(e) => { e.stopPropagation(); router.push(`/contas-pagar?novo=1&cartao_id=${c.id}`) }}
+                  >
                     <p className="text-sm opacity-80">{c.banco}</p>
                     <p className="font-bold text-lg">{c.nome_titular}</p>
-                  </div>
+                  </button>
                   <Badge className="bg-white/20 text-white border-0 text-xs uppercase">
                     {c.bandeira}
                   </Badge>

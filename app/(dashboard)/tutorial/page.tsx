@@ -18,6 +18,8 @@ import {
   UserCircle2,
   Package,
   Receipt,
+  FileText,
+  Zap,
 } from 'lucide-react'
 
 /* ── Tipos ── */
@@ -44,7 +46,7 @@ const steps: Step[] = [
   {
     number: 1,
     title: 'Preencher o Perfil da Empresa',
-    description: 'Antes de qualquer cadastro, configure os dados básicos da sua empresa. Esses dados aparecem em relatórios e — se você ativar o módulo fiscal depois — são essenciais para emissão de notas.',
+    description: 'Antes de qualquer cadastro, configure os dados básicos da sua empresa. Esses dados aparecem em relatórios e — se você ativar o plano Premium depois — são essenciais para emissão de notas fiscais.',
     icon: UserCircle2,
     color: '#0EA5E9',
     bg: '#F0F9FF',
@@ -58,7 +60,7 @@ const steps: Step[] = [
       'Selecione o regime tributário (Simples Nacional, Lucro Presumido ou Lucro Real)',
       'Clique em "Salvar Dados da Empresa"',
     ],
-    tip: 'Mesmo que você não vá emitir notas fiscais agora, preencha os dados completos — isso evita refazer o cadastro depois e permite ativar o módulo fiscal a qualquer momento.',
+    tip: 'Mesmo que você não vá emitir notas fiscais agora, preencha os dados completos — isso evita refazer o cadastro depois e permite migrar para o Premium a qualquer momento.',
   },
   {
     number: 2,
@@ -82,7 +84,7 @@ const steps: Step[] = [
   {
     number: 3,
     title: 'Cadastrar Clientes',
-    description: 'Se você presta serviços ou vende produtos e precisa cobrar, cadastre seus clientes. Eles são obrigatórios para criar Contas a Receber.',
+    description: 'Se você presta serviços ou vende produtos e precisa cobrar, cadastre seus clientes. Eles são obrigatórios para criar Contas a Receber e para montar Orçamentos.',
     icon: Users,
     color: '#7C3AED',
     bg: '#F5F3FF',
@@ -139,8 +141,66 @@ const steps: Step[] = [
   },
   {
     number: 6,
+    title: 'Cadastrar Catálogo — Produtos e Serviços',
+    description: 'Monte o catálogo do que você vende: produtos (em "Produtos") e serviços (em "Serviços"), dentro da seção VENDAS do menu. Esse catálogo é usado nos Orçamentos e, se você migrar para o Premium, é o MESMO catálogo usado na emissão de NF-e/NFS-e e no PDV — não é preciso recadastrar depois.',
+    icon: Package,
+    color: '#8B5CF6',
+    bg: '#F5F3FF',
+    href: '/produtos',
+    required: false,
+    items: [
+      'Acesse "Produtos" no menu lateral (seção VENDAS) para cadastrar itens físicos',
+      'Informe nome, preço e, se quiser, código de barras ou PLU para facilitar buscas depois',
+      'Acesse "Serviços" para cadastrar os serviços que você presta, com nome e preço',
+      'Repita para cada item do seu catálogo',
+      'Esses itens já ficam disponíveis para uso em Orçamentos imediatamente',
+    ],
+    tip: 'Vale cadastrar corretamente desde já — código de barras/PLU nos produtos evita retrabalho se você usar o PDV no futuro (Premium), e o mesmo catálogo alimenta a emissão de notas fiscais.',
+  },
+  {
+    number: 7,
+    title: 'Criar Orçamentos',
+    description: 'Monte propostas comerciais profissionais para enviar aos seus clientes antes de fechar a venda. O orçamento pode ser compartilhado por link e aceito pelo cliente sem que ele precise criar conta.',
+    icon: FileText,
+    color: '#2563EB',
+    bg: '#EFF6FF',
+    href: '/orcamentos',
+    required: false,
+    items: [
+      'Acesse "Orçamentos" no menu lateral (seção VENDAS)',
+      'Clique em "Novo Orçamento" e selecione o cliente',
+      'Adicione os itens: Produtos e Serviços ficam em seções separadas, cada uma com seu próprio subtotal — é possível aplicar desconto por item',
+      'Preencha Título, Condições de Pagamento, Garantia e Informações Adicionais',
+      'Clique em "Salvar Orçamento"',
+      'Clique em "Gerar Orçamento" para abrir a versão em PDF, com cabeçalho da empresa e QR Code PIX para pagamento',
+      'Use "Compartilhar" para enviar pelo WhatsApp/e-mail direto do celular (envia o link e, quando o aparelho suporta, o PDF já anexado) ou "Baixar PDF" / "Copiar link"',
+      'O cliente abre o link público, visualiza o orçamento e clica em "Aceitar Orçamento" — sem precisar criar conta',
+      'Orçamentos aceitos aparecem marcados com um selo verde "✓ Aceito em DD/MM" na lista',
+    ],
+    tip: '90% do uso deste módulo é pelo celular, na frente do cliente: monte o orçamento, gere o PDF e compartilhe na hora pelo WhatsApp.',
+  },
+  {
+    number: 8,
+    title: 'Controlar Estoque',
+    description: 'O estoque é atualizado automaticamente conforme você movimenta produtos cadastrados no catálogo. Use o ajuste manual para corrigir divergências físicas (quebras, contagem, perdas).',
+    icon: Package,
+    color: '#16A34A',
+    bg: '#F0FDF4',
+    href: '/estoque',
+    required: false,
+    items: [
+      'Acesse "Estoque" no menu lateral (seção VENDAS)',
+      'Veja os KPIs gerais, a posição de estoque por produto e as movimentações recentes',
+      'Para corrigir uma divergência (quebra, contagem física, perda), clique em "Ajustar Estoque"',
+      'Selecione o produto, informe se é entrada ou saída, a quantidade e o motivo do ajuste',
+      'Salve — o saldo do produto é atualizado imediatamente',
+    ],
+    tip: 'Se você usar o Premium (PDV e NF-e) depois, as vendas e emissões dão baixa automática no mesmo estoque — não é um controle separado.',
+  },
+  {
+    number: 9,
     title: 'Criar Contas a Receber',
-    description: 'Agora você está pronto para registrar suas cobranças. Cada conta a receber pode ter 1 ou várias parcelas — o sistema gera automaticamente.',
+    description: 'Registre suas cobranças. Cada conta a receber pode ter 1 ou várias parcelas — o sistema gera automaticamente.',
     icon: TrendingUp,
     color: '#16A34A',
     bg: '#F0FDF4',
@@ -149,7 +209,7 @@ const steps: Step[] = [
     items: [
       'Clique em "Contas a Receber" no menu lateral',
       'Clique no botão "Nova Conta a Receber"',
-      'Selecione o cliente (obrigatório — cadastre antes no Passo 2)',
+      'Selecione o cliente (obrigatório — cadastre antes no Passo 3)',
       'Informe a descrição do serviço ou produto vendido',
       'Informe o valor total e o número de parcelas',
       'Defina a data da primeira parcela',
@@ -160,7 +220,7 @@ const steps: Step[] = [
     tip: 'Para receber em parcela única, deixe "Nº de Parcelas" como 1.',
   },
   {
-    number: 7,
+    number: 10,
     title: 'Criar Contas a Pagar',
     description: 'Registre todas as suas despesas: aluguel, fornecedores, contas fixas, etc. Assim o sistema mostra exatamente quanto você vai precisar pagar e quando.',
     icon: TrendingDown,
@@ -181,28 +241,9 @@ const steps: Step[] = [
     tip: 'Contas fixas mensais como aluguel: coloque em "Nº de Parcelas" quantos meses quer lançar de uma vez.',
   },
   {
-    number: 8,
-    title: 'Controlar Estoque (Opcional)',
-    description: 'Se você vende produtos físicos, use o módulo de Estoque para controlar quantidades, entradas e saídas. O estoque é atualizado automaticamente ao emitir NF-e de venda e ao registrar NF-e de entrada do fornecedor.',
-    icon: Package,
-    color: '#8B5CF6',
-    bg: '#F5F3FF',
-    href: '/estoque',
-    required: false,
-    items: [
-      'Acesse "Estoque" no menu lateral',
-      'Clique em "Novo Produto" para cadastrar os itens',
-      'Informe código, descrição, NCM, unidade e preço',
-      'Defina o estoque inicial de cada produto',
-      'Para reposição: importe NF-e do fornecedor via XML em "NF-e Entradas → Nova"',
-      'O sistema dará baixa automática no estoque ao emitir NF-e de saída',
-    ],
-    tip: 'Use NF-e Entradas para registrar compras com fornecedor. Basta importar o XML da nota e o sistema lança no estoque, na conta a pagar e na movimentação financeira automaticamente.',
-  },
-  {
-    number: 9,
-    title: 'Ativar o Módulo Fiscal (Opcional)',
-    description: 'Se você emite ou pretende emitir notas fiscais (NFS-e de serviços ou NF-e de produtos), ative o módulo fiscal. Há um tutorial dedicado com o passo a passo completo.',
+    number: 11,
+    title: 'Conhecer o Plano Premium (PDV, Caixa e Módulo Fiscal)',
+    description: 'O plano Premium libera, numa assinatura só: PDV (frente de caixa para vender no balcão), Caixa (abertura/fechamento de turno) e o Módulo Fiscal completo (NFS-e e NF-e). Há um tutorial dedicado com o passo a passo completo.',
     icon: Receipt,
     color: '#D97706',
     bg: '#FFFBEB',
@@ -210,12 +251,12 @@ const steps: Step[] = [
     required: false,
     items: [
       'Confirme que o Perfil da Empresa está 100% preenchido (CNPJ, IE, IM, regime tributário)',
-      'Acesse o Tutorial Fiscal pelo menu lateral',
-      'Siga os 9 passos: ativação, certificado A1, numeração inicial, cadastro de serviços/produtos, emissão',
-      'Você pode emitir NFS-e (serviços) imediatamente — não precisa de certificado digital',
-      'Para NF-e (produtos) é necessário um certificado digital A1 válido',
+      'Acesse "Tutorial Fiscal" pelo menu lateral (seção FISCAL — PREMIUM)',
+      'Siga o passo a passo: ativação do Premium, certificado A1, numeração inicial, catálogo, clientes, emissão de notas e uso do PDV/Caixa',
+      'Você pode emitir NFS-e (serviços) sem certificado digital',
+      'Para NF-e (produtos) e para operar o PDV é necessário assinar o plano Premium — não há período de teste para ele',
     ],
-    tip: 'Migrando de outro emissor? No tutorial fiscal há um passo dedicado para continuar a sequência de numeração de NF-e sem quebrar a contabilidade.',
+    tip: 'O plano PRO já tem 14 dias de teste grátis. O Premium (PDV, Caixa e Fiscal) é cobrado desde a ativação, sem trial, através da página "Assinar".',
   },
 ]
 
@@ -249,12 +290,24 @@ const faqs: FAQ[] = [
     answer: 'Vá em Relatórios no menu lateral. Selecione o tipo de relatório (Recebimentos, Pagamentos, Inadimplência ou Fluxo de Caixa), defina o período e clique em "Exportar CSV" ou "Imprimir".',
   },
   {
-    question: 'Posso usar o sistema sem emitir notas fiscais?',
-    answer: 'Sim. O módulo fiscal é totalmente opcional. Você pode usar o SyncroMoney só para controle financeiro (contas a pagar, receber, fluxo de caixa) sem ativar a parte de notas. Quando quiser emitir, basta seguir o Tutorial Fiscal.',
+    question: 'Como funciona o Orçamento?',
+    answer: 'Você monta o orçamento com produtos e/ou serviços do seu catálogo, define condições de pagamento e garantia, salva e gera um PDF profissional. Depois é só compartilhar o link (ou o PDF, pelo botão nativo de compartilhar do celular) — o cliente visualiza e aceita direto pelo navegador.',
   },
   {
-    question: 'Como importar uma NF-e de fornecedor?',
-    answer: 'Acesse "NF-e Entradas" no menu lateral e clique em "Nova". Você pode importar o XML da NF-e que o fornecedor enviou — o sistema extrai os produtos, preços e impostos automaticamente, atualiza o estoque e gera as contas a pagar correspondentes. Também é possível digitar manualmente se você não tiver o XML.',
+    question: 'O cliente precisa criar conta para aceitar um orçamento?',
+    answer: 'Não. O link do orçamento abre uma página pública, sem login. O cliente só visualiza os itens e clica em "Aceitar Orçamento". Assim que aceito, o orçamento aparece marcado com um selo verde na sua lista.',
+  },
+  {
+    question: 'Posso vender sem ter o módulo Premium?',
+    answer: 'Sim. Orçamento e Catálogo (Produtos/Serviços) já cobrem cotação e proposta comercial, e fazem parte do plano PRO. Para vender de fato no balcão, com frente de caixa e abertura/fechamento de turno, o PDV é exclusivo do plano Premium.',
+  },
+  {
+    question: 'Como funciona o período de teste de 14 dias?',
+    answer: 'Todo cadastro novo já começa usando o plano PRO gratuitamente por 14 dias a partir da data de cadastro, sem precisar de cartão de crédito. O plano Premium (PDV, Caixa e Fiscal) não tem período de teste — é cobrado desde a ativação.',
+  },
+  {
+    question: 'Posso usar o sistema sem emitir notas fiscais?',
+    answer: 'Sim. O módulo fiscal faz parte do Premium e é totalmente opcional. Você pode usar o SyncroMoney só para controle financeiro, orçamentos e catálogo (contas a pagar, receber, fluxo de caixa, orçamentos) sem nunca assinar o Premium.',
   },
   {
     question: 'Como cadastrar uma transferência entre contas?',
@@ -389,8 +442,12 @@ export default function TutorialPage() {
         </div>
         <h1 className="text-2xl font-bold text-gray-900">Como usar o SyncroMoney</h1>
         <p className="text-gray-500 mt-2 text-sm max-w-xl mx-auto">
-          Siga os passos abaixo na ordem correta para configurar o sistema e começar a controlar suas finanças hoje mesmo.
+          Siga os passos abaixo na ordem correta para configurar o plano PRO e começar a controlar suas finanças, catálogo e orçamentos hoje mesmo.
         </p>
+        <div className="inline-flex items-center gap-1.5 mt-3 text-[11px] font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-600">
+          <Zap className="h-3 w-3" />
+          Plano PRO — 14 dias grátis
+        </div>
       </div>
 
       {/* Resumo visual da ordem */}
@@ -401,7 +458,7 @@ export default function TutorialPage() {
             <div key={step.number} className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 bg-white rounded-full px-3 py-1 shadow-sm border border-blue-100">
                 <CircleDot className="h-3 w-3" style={{ color: step.color }} />
-                <span className="text-xs font-medium text-gray-700">{step.title.replace('Cadastrar ', '').replace('Criar ', '')}</span>
+                <span className="text-xs font-medium text-gray-700">{step.title.replace('Cadastrar ', '').replace('Criar ', '').replace('Preencher o ', '').replace('Controlar ', '').replace('Conhecer o ', '')}</span>
                 {!step.required && <span className="text-[9px] text-gray-400">(opcional)</span>}
               </div>
               {i < steps.length - 1 && <ArrowRight className="h-3 w-3 text-blue-300 shrink-0" />}
@@ -427,6 +484,7 @@ export default function TutorialPage() {
         <div className="space-y-3">
           {[
             { icon: CheckCircle2, color: '#16A34A', text: 'Acesse o Dashboard para ver o resumo financeiro do dia' },
+            { icon: FileText, color: '#2563EB', text: 'Monte e envie Orçamentos para clientes em negociação, direto do celular' },
             { icon: TrendingUp, color: '#2563EB', text: 'Registre os recebimentos que chegaram (Contas a Receber → clique na parcela → Receber)' },
             { icon: TrendingDown, color: '#DC2626', text: 'Registre os pagamentos realizados (Contas a Pagar → clique na parcela → Pagar)' },
             { icon: CheckCircle2, color: '#7C3AED', text: 'Verifique os vencimentos dos próximos 7 dias no Dashboard para se preparar' },

@@ -24,16 +24,19 @@ import {
   Zap,
   Truck,
   GraduationCap,
+  Wallet,
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 import { usePlan } from '@/lib/hooks/use-plan'
+import { VoiceButton } from '@/components/voice/voice-button'
 
 interface NavItem {
   href: string
   label: string
   icon: React.ElementType
   color?: string
+  badge?: string
 }
 
 interface NavSection {
@@ -59,6 +62,15 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    title: 'VENDAS',
+    items: [
+      { href: '/orcamentos', label: 'Orçamentos', icon: FileText },
+      { href: '/produtos',   label: 'Produtos',   icon: Package },
+      { href: '/servicos',   label: 'Serviços',   icon: Wrench },
+      { href: '/estoque',    label: 'Estoque',    icon: Package },
+    ],
+  },
+  {
     title: 'CADASTROS',
     items: [
       { href: '/contas-correntes', label: 'Contas Correntes', icon: Landmark  },
@@ -75,15 +87,21 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    title: 'PDV & CAIXA — PREMIUM',
+    items: [
+      { href: '/pdv',   label: 'PDV',   icon: ShoppingCart },
+      { href: '/caixa', label: 'Caixa', icon: Wallet },
+    ],
+    premium: true,
+  },
+  {
     title: 'FISCAL — PREMIUM',
     items: [
-      { href: '/nfe',              label: 'NF-e (Produtos)',   icon: FileText  },
-      { href: '/nfse',             label: 'NFS-e (Serviços)',  icon: Receipt   },
-      { href: '/estoque',          label: 'Estoque',           icon: Package   },
-      { href: '/fiscal-produtos',  label: 'Produtos',          icon: ShoppingCart },
-      { href: '/fiscal-servicos',  label: 'Serviços',          icon: Wrench    },
-      { href: '/nfe-entradas',     label: 'NF-e de Entrada',   icon: TrendingUp, color: 'green' },
-      { href: '/tutorial-fiscal',  label: 'Tutorial Fiscal',   icon: GraduationCap },
+      { href: '/nfe',              label: 'NF-e (Produtos)',      icon: FileText  },
+      { href: '/nfse',             label: 'NFS-e (Serviços)',     icon: Receipt   },
+      { href: '/nfce',             label: 'NFC-e (Cupom Fiscal)', icon: Receipt, badge: 'Em breve' },
+      { href: '/nfe-entradas',     label: 'NF-e de Entrada',      icon: TrendingUp, color: 'green' },
+      { href: '/tutorial-fiscal',  label: 'Tutorial Fiscal',      icon: GraduationCap },
     ],
     premium: true,
   },
@@ -177,7 +195,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                       )}
                     >
                       <item.icon className={cn('h-4 w-4 shrink-0', iconColor)} />
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate flex-1">{item.label}</span>
+                      {item.badge && (
+                        <span className="shrink-0 text-[9px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
                     </Link>
                   )
                 })}
@@ -186,7 +209,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex flex-col items-center gap-2">
+          <VoiceButton />
           <p className="text-xs text-gray-400 dark:text-gray-600 text-center">SyncroMoney © 2025</p>
         </div>
       </aside>

@@ -444,3 +444,270 @@ export interface FluxoCaixaItem {
   saldo: number
   realizado: boolean
 }
+
+// ============================================================
+// PRODUTOS (catálogo — compartilhado entre Orçamento e PDV)
+// ============================================================
+export interface Produto {
+  id: string
+  user_id: string
+  nome: string
+  detalhes?: string
+  barcode?: string
+  plu?: string
+  unidade_medida: string
+  preco_custo: number
+  preco_unitario: number
+  margem_lucro: number
+  ativo: boolean
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+}
+
+export interface ProdutoFormData {
+  nome: string
+  detalhes?: string
+  barcode?: string
+  plu?: string
+  unidade_medida: string
+  preco_custo: number
+  preco_unitario: number
+}
+
+// ============================================================
+// SERVIÇOS (catálogo)
+// ============================================================
+export interface Servico {
+  id: string
+  user_id: string
+  nome: string
+  detalhes?: string
+  unidade_medida: string
+  preco_custo: number
+  preco_unitario: number
+  margem_lucro: number
+  ativo: boolean
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+}
+
+export interface ServicoFormData {
+  nome: string
+  detalhes?: string
+  unidade_medida: string
+  preco_custo: number
+  preco_unitario: number
+}
+
+// ============================================================
+// FISCAL CONFIG
+// ============================================================
+export interface FiscalConfig {
+  id: string
+  user_id: string
+  cnpj?: string
+  razao_social?: string
+  inscricao_estadual?: string
+  inscricao_municipal?: string
+  regime_tributario?: string
+  cep?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  municipio?: string
+  uf?: string
+  telefone?: string
+  email?: string
+  habilita_nfse?: boolean
+  habilita_nfe?: boolean
+  ambiente?: string
+  focus_status?: string
+  focus_erro?: string
+  certificado_status?: string
+  certificado_vencimento?: string
+  ativo?: boolean
+  created_at?: string
+  updated_at?: string
+  // Orçamento PDF: logo + toggles de visibilidade
+  logo_url?: string
+  mostrar_logo: boolean
+  mostrar_cnpj: boolean
+  mostrar_endereco: boolean
+  mostrar_telefone: boolean
+  mostrar_email: boolean
+}
+
+// ============================================================
+// PEDIDOS (Orçamento/Pedido)
+// ============================================================
+export type StatusPedido = 'pendente' | 'aguardando_pagamento' | 'concluido' | 'cancelado'
+export type TipoDesconto = 'percentual' | 'valor'
+export type TipoItemPedido = 'produto' | 'servico'
+
+export interface Pedido {
+  id: string
+  user_id: string
+  numero_sequencial: string
+  cliente_id?: string
+  data_pedido: string
+  referencia?: string
+  observacoes?: string
+  titulo?: string
+  condicoes_pagamento?: string
+  garantia?: string
+  informacoes_adicionais?: string
+  status: StatusPedido
+  desconto_tipo: TipoDesconto
+  desconto_valor: number
+  subtotal: number
+  total: number
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+  clientes?: { id: string; nome: string; telefone?: string } | null
+  token_publico: string
+  aceito_em?: string
+  aceito_ip?: string
+}
+
+export interface PedidoItem {
+  id: string
+  pedido_id: string
+  user_id: string
+  tipo: TipoItemPedido
+  item_id: string
+  nome_item: string
+  quantidade: number
+  preco_unitario: number
+  desconto_tipo: TipoDesconto
+  desconto_valor: number
+  subtotal: number
+  created_at: string
+}
+
+export interface PedidoFormData {
+  cliente_id?: string
+  data_pedido: string
+  referencia?: string
+  observacoes?: string
+  titulo?: string
+  condicoes_pagamento?: string
+  garantia?: string
+  informacoes_adicionais?: string
+  desconto_tipo: TipoDesconto
+  desconto_valor: number
+}
+
+export interface PedidoItemFormData {
+  tipo: TipoItemPedido
+  item_id: string
+  nome_item: string
+  quantidade: number
+  preco_unitario: number
+  desconto_tipo: TipoDesconto
+  desconto_valor: number
+}
+
+// ============================================================
+// PDV — VENDAS
+// ============================================================
+export type StatusVenda = 'em_andamento' | 'em_espera' | 'concluida' | 'cancelada'
+
+export interface Venda {
+  id: string
+  user_id: string
+  numero_sequencial: string
+  caixa_sessao_id?: string
+  cliente_id?: string
+  status: StatusVenda
+  identificador_espera?: string
+  subtotal: number
+  desconto: number
+  total: number
+  cancelada_motivo?: string
+  cancelada_por?: string
+  cancelada_em?: string
+  created_at: string
+  updated_at: string
+  clientes?: { id: string; nome: string } | null
+}
+
+export interface VendaItem {
+  id: string
+  venda_id: string
+  user_id: string
+  produto_id: string
+  nome_produto: string
+  quantidade: number
+  preco_unitario: number
+  desconto_item: number
+  subtotal: number
+  cancelado: boolean
+  created_at: string
+}
+
+export interface VendaPagamento {
+  id: string
+  venda_id: string
+  user_id: string
+  forma_pagamento_id?: string
+  forma_pagamento_nome: string
+  valor: number
+  troco: number
+  bandeira?: string
+  parcelas?: number
+  created_at: string
+}
+
+export interface VendaItemFormData {
+  produto_id: string
+  nome_produto: string
+  quantidade: number
+  preco_unitario: number
+  desconto_item: number
+}
+
+export interface VendaPagamentoFormData {
+  forma_pagamento_id?: string
+  forma_pagamento_nome: string
+  valor: number
+  troco?: number
+  bandeira?: string
+  parcelas?: number
+}
+
+// ============================================================
+// CAIXA (sessão de caixa do PDV)
+// ============================================================
+export type StatusCaixaSessao = 'aberto' | 'fechado'
+export type TipoMovimentacaoCaixa = 'sangria' | 'suprimento'
+
+export interface CaixaSessao {
+  id: string
+  user_id: string
+  operador: string
+  fundo_troco_inicial: number
+  aberto_em: string
+  fechado_em?: string
+  saldo_esperado?: number
+  saldo_contado?: number
+  diferenca?: number
+  status: StatusCaixaSessao
+  created_at: string
+  conta_corrente_id?: string
+}
+
+export interface CaixaMovimentacao {
+  id: string
+  user_id: string
+  caixa_sessao_id: string
+  tipo: TipoMovimentacaoCaixa
+  valor: number
+  motivo: string
+  criado_por?: string
+  criado_em: string
+  estorno_de_id?: string
+}

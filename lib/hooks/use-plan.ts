@@ -2,27 +2,46 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { isPremiumFiscal, type Assinatura } from '@/lib/supabase/assinatura'
+import { isPro, isPremium, type Assinatura, type PlanoAssinatura } from '@/lib/supabase/assinatura'
 
 interface PlanState {
   loading: boolean
+  isPro: boolean
   isPremium: boolean
+  plano: PlanoAssinatura | null
   assinatura: Assinatura | null
 }
 
+const INITIAL_STATE: PlanState = {
+  loading: true,
+  isPro: false,
+  isPremium: false,
+  plano: null,
+  assinatura: null,
+}
+
 export function usePlan(): PlanState {
-  const [state, setState] = useState<PlanState>({ loading: true, isPremium: false, assinatura: null })
+  const [state, setState] = useState<PlanState>(INITIAL_STATE)
 
   useEffect(() => {
     createClient().auth.getUser().then(async ({ data }) => {
-      if (!data.user) { setState({ loading: false, isPremium: false, assinatura: null }); return }
+      if (!data.user) {
+        setState({ ...INITIAL_STATE, loading: false })
+        return
+      }
       const { data: ass } = await createClient()
         .from('assinaturas')
         .select('*')
         .eq('user_id', data.user.id)
         .single()
       const assinatura = ass as Assinatura | null
-      setState({ loading: false, isPremium: isPremiumFiscal(assinatura), assinatura })
+      setState({
+        loading: false,
+        isPro: isPro(assinatura),
+        isPremium: isPremium(assinatura),
+        plano: assinatura?.plano ?? null,
+        assinatura,
+      })
     })
   }, [])
 
