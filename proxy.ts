@@ -39,6 +39,7 @@ export async function proxy(request: NextRequest) {
     '/auth/bem-vindo',
     '/auth/erro-confirmacao',
     '/api/stripe/webhook',
+    '/api/asaas/webhook',
     '/api/fiscal/diagnostico',
   ]
 
