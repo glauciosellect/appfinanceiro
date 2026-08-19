@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { Button } from '@/components/ui/button'
@@ -14,7 +13,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function RegisterPage() {
-  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -24,11 +22,11 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    const plano = searchParams.get('plano')
+    const plano = new URLSearchParams(window.location.search).get('plano')
     if (plano === 'pro' || plano === 'premium') {
       sessionStorage.setItem('plano_selecionado', plano)
     }
-  }, [searchParams])
+  }, [])
 
   async function handleRegister(e: React.SyntheticEvent) {
     e.preventDefault()
