@@ -107,8 +107,8 @@ export default function OrcamentoDetalhePage() {
   async function handleClienteChange(clienteId: string) {
     if (!pedido) return
     try {
-      await updatePedido(userId, pedido.id, { cliente_id: clienteId || undefined })
-      fetchTudo()
+      const atualizado = await updatePedido(userId, pedido.id, { cliente_id: clienteId || undefined })
+      setPedido(atualizado)
     } catch {
       _toast('Erro ao atualizar cliente', 'error')
     }
@@ -118,7 +118,7 @@ export default function OrcamentoDetalhePage() {
     if (!pedido) return
     try {
       await updateStatusPedido(userId, pedido.id, status)
-      fetchTudo()
+      setPedido({ ...pedido, status })
     } catch {
       _toast('Erro ao atualizar status', 'error')
     }
@@ -127,7 +127,7 @@ export default function OrcamentoDetalhePage() {
   async function handleSalvarCabecalho() {
     if (!pedido) return
     try {
-      await updatePedido(userId, pedido.id, {
+      const atualizado = await updatePedido(userId, pedido.id, {
         referencia: referencia || undefined,
         observacoes: observacoes || undefined,
         titulo: titulo || undefined,
@@ -135,8 +135,7 @@ export default function OrcamentoDetalhePage() {
         garantia: garantia || undefined,
         informacoes_adicionais: informacoesAdicionais || undefined,
       })
-      _toast('Orçamento atualizado!', 'success')
-      fetchTudo()
+      setPedido(atualizado)
     } catch {
       _toast('Erro ao salvar orçamento', 'error')
     }
@@ -156,9 +155,9 @@ export default function OrcamentoDetalhePage() {
         desconto_tipo: descontoTipo,
         desconto_valor: descontoValor,
       })
-      await recalcularTotaisPedido(userId, pedido.id)
+      const atualizado = await recalcularTotaisPedido(userId, pedido.id)
+      setPedido(atualizado)
       _toast('Orçamento salvo!', 'success')
-      fetchTudo()
     } catch {
       _toast('Erro ao salvar orçamento', 'error')
     } finally {
@@ -169,7 +168,7 @@ export default function OrcamentoDetalhePage() {
   async function handleAdicionarItem(item: ItemCatalogo) {
     if (!pedido) return
     try {
-      await addItemPedido(userId, pedido.id, {
+      const novoItem = await addItemPedido(userId, pedido.id, {
         tipo: item.tipo,
         item_id: item.id,
         nome_item: item.nome,
@@ -178,9 +177,10 @@ export default function OrcamentoDetalhePage() {
         desconto_tipo: 'percentual',
         desconto_valor: 0,
       })
+      setItens((prev) => [...prev, novoItem])
+      setPedido((prev) => prev ? { ...prev, subtotal: prev.subtotal + novoItem.subtotal, total: prev.total + novoItem.subtotal } : prev)
       if (item.tipo === 'produto') setBuscaProduto('')
       else setBuscaServico('')
-      fetchTudo()
     } catch {
       _toast('Erro ao adicionar item', 'error')
     }
@@ -188,8 +188,12 @@ export default function OrcamentoDetalhePage() {
 
   async function handleAtualizarItem(item: PedidoItem, campo: 'quantidade' | 'desconto_valor', valor: number) {
     try {
-      await updateItemPedido(userId, item.id, { [campo]: valor })
-      fetchTudo()
+      const atualizado = await updateItemPedido(userId, item.id, { [campo]: valor })
+      setItens((prev) => prev.map((i) => (i.id === atualizado.id ? atualizado : i)))
+      if (pedido) {
+        const pedidoAtualizado = await recalcularTotaisPedido(userId, pedido.id)
+        setPedido(pedidoAtualizado)
+      }
     } catch {
       _toast('Erro ao atualizar item', 'error')
     }
@@ -199,7 +203,9 @@ export default function OrcamentoDetalhePage() {
     if (!pedido) return
     try {
       await removeItemPedido(userId, pedido.id, itemId)
-      fetchTudo()
+      setItens((prev) => prev.filter((i) => i.id !== itemId))
+      const pedidoAtualizado = await recalcularTotaisPedido(userId, pedido.id)
+      setPedido(pedidoAtualizado)
     } catch {
       _toast('Erro ao remover item', 'error')
     }
@@ -209,9 +215,9 @@ export default function OrcamentoDetalhePage() {
     if (!pedido) return
     try {
       await updatePedido(userId, pedido.id, { desconto_tipo: descontoTipo, desconto_valor: descontoValor })
-      await recalcularTotaisPedido(userId, pedido.id)
+      const atualizado = await recalcularTotaisPedido(userId, pedido.id)
+      setPedido(atualizado)
       _toast('Desconto aplicado!', 'success')
-      fetchTudo()
     } catch {
       _toast('Erro ao aplicar desconto', 'error')
     }

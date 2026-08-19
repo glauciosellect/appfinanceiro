@@ -23,15 +23,28 @@ export async function gerarPdfDeElemento(elementId: string, nomeArquivo: string)
     throw new Error(`Elemento #${elementId} não encontrado`)
   }
 
-  const canvas = await html2canvas(elemento, {
-    scale: 2,
-    backgroundColor: '#ffffff',
-    // Defensivo: logo_url em fiscal_config pode ser uma URL externa (o usuário
-    // cola o link de uma imagem já hospedada). useCORS não tem custo quando a
-    // imagem é local/data URL, mas evita um logo em branco silencioso quando a
-    // imagem vem de fora e o servidor de origem envia cabeçalhos CORS corretos.
-    useCORS: true,
-  })
+  let canvas: HTMLCanvasElement
+  try {
+    canvas = await html2canvas(elemento, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      // Defensivo: logo_url em fiscal_config pode ser uma URL externa (o usuário
+      // cola o link de uma imagem já hospedada). useCORS não tem custo quando a
+      // imagem é local/data URL, mas evita um logo em branco silencioso quando a
+      // imagem vem de fora e o servidor de origem envia cabeçalhos CORS corretos.
+      useCORS: true,
+    })
+  } catch {
+    // A logo pode vir de um host sem CORS liberado (ex.: link colado de outro
+    // serviço), o que derruba a captura inteira com useCORS ativo. Tenta de
+    // novo ignorando a imagem da logo, para não travar o PDF inteiro por ela.
+    canvas = await html2canvas(elemento, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: false,
+      ignoreElements: (el) => el.tagName === 'IMG' && (el as HTMLImageElement).id === 'orcamento-logo',
+    })
+  }
 
   const imgData = canvas.toDataURL('image/png')
 

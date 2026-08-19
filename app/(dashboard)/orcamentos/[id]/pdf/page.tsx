@@ -6,11 +6,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Printer, Copy, Loader2, Package, Wrench, Share2, Download } from 'lucide-react'
-import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/client'
 import { getPedidoComItens } from '@/lib/supabase/pedidos'
 import { getFiscalConfig } from '@/lib/supabase/fiscal'
-import { gerarPixCopiaECola } from '@/lib/pix/br-code'
 import { gerarPdfDeElemento } from '@/lib/pdf/gerar-pdf-elemento'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -26,9 +24,6 @@ export default function OrcamentoPdfPage() {
   const [itens, setItens] = useState<PedidoItem[]>([])
   const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null)
   const [loading, setLoading] = useState(true)
-  const [chavePix, setChavePix] = useState('')
-  const [pixQrDataUrl, setPixQrDataUrl] = useState('')
-  const [pixPayload, setPixPayload] = useState('')
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [baixandoPdf, setBaixandoPdf] = useState(false)
 
@@ -40,41 +35,13 @@ export default function OrcamentoPdfPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const [resultado, fiscal, contaComChave] = await Promise.all([
+      const [resultado, fiscal] = await Promise.all([
         getPedidoComItens(user.id, pedidoId),
         getFiscalConfig(user.id),
-        (async () => {
-          const { data } = await supabase
-            .from('contas_correntes')
-            .select('chave_pix')
-            .eq('user_id', user.id)
-            .not('chave_pix', 'is', null)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .maybeSingle()
-          return data as { chave_pix: string } | null
-        })(),
       ])
       if (resultado) {
         setPedido(resultado.pedido)
         setItens(resultado.itens)
-
-        if (fiscal?.razao_social && contaComChave?.chave_pix) {
-          try {
-            const payload = gerarPixCopiaECola({
-              chavePix: contaComChave.chave_pix,
-              nomeRecebedor: fiscal.razao_social,
-              cidade: fiscal.municipio || 'SAO PAULO',
-              valor: resultado.pedido.total,
-            })
-            setPixPayload(payload)
-            setChavePix(contaComChave.chave_pix)
-            const dataUrl = await QRCode.toDataURL(payload)
-            setPixQrDataUrl(dataUrl)
-          } catch {
-            // QR Code Pix é opcional na página — falha silenciosa, seção de Pagamento simplesmente não exibe o QR.
-          }
-        }
       }
       setFiscalConfig(fiscal)
     } catch {
@@ -256,7 +223,7 @@ export default function OrcamentoPdfPage() {
             {mostrarLogo && fiscalConfig?.logo_url && (
               <div className="w-14 h-14 shrink-0 border border-gray-300 rounded overflow-hidden flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={fiscalConfig.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+                <img id="orcamento-logo" src={fiscalConfig.logo_url} alt="Logo" crossOrigin="anonymous" className="w-full h-full object-contain p-1" />
               </div>
             )}
             <div className="space-y-0.5">
@@ -398,66 +365,45 @@ export default function OrcamentoPdfPage() {
           </div>
         </div>
 
-        {/* Pagamento */}
-        {(pedido.condicoes_pagamento || chavePix) && (
+        {/* Título, Condições, Garantia e Informações */}
+        {(pedido.condicoes_pagamento || pedido.garantia || pedido.informacoes_adicionais) && (
           <div className="border-b border-gray-700">
             <div className="bg-gray-100 px-4 py-1 border-b border-gray-400">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Pagamento</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Título, Condições, Garantia e Informações</p>
             </div>
-            <div className="p-3 grid grid-cols-[1fr_auto] gap-4 items-start">
-              <div className="space-y-2 text-[11px]">
-                {chavePix && (
-                  <div>
-                    <p className="text-[9px] uppercase font-bold text-gray-500 mb-0.5">Meios de pagamento</p>
-                    <p><strong>PIX</strong>: {chavePix}</p>
-                  </div>
-                )}
-                {pedido.condicoes_pagamento && (
-                  <div>
-                    <p className="text-[9px] uppercase font-bold text-gray-500 mb-0.5">Condições de Pagamento</p>
-                    <p className="whitespace-pre-wrap">{pedido.condicoes_pagamento}</p>
-                  </div>
-                )}
-              </div>
-              {pixQrDataUrl && (
-                <div className="shrink-0 flex flex-col items-center gap-1">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={pixQrDataUrl} alt="QR Code PIX" className="w-24 h-24 border border-gray-300 rounded" />
-                  <p className="text-[8px] text-gray-400">Escaneie para pagar</p>
+            <div className="p-3 space-y-2 text-[11px]">
+              {pedido.condicoes_pagamento && (
+                <div>
+                  <p className="text-[9px] uppercase font-bold text-gray-500 mb-0.5">Condições de Pagamento</p>
+                  <p className="whitespace-pre-wrap">{pedido.condicoes_pagamento}</p>
+                </div>
+              )}
+              {pedido.garantia && (
+                <div>
+                  <p className="text-[9px] uppercase font-bold text-gray-500 mb-0.5">Garantia</p>
+                  <p className="whitespace-pre-wrap">{pedido.garantia}</p>
+                </div>
+              )}
+              {pedido.informacoes_adicionais && (
+                <div>
+                  <p className="text-[9px] uppercase font-bold text-gray-500 mb-0.5">Informações Adicionais</p>
+                  <p className="whitespace-pre-wrap">{pedido.informacoes_adicionais}</p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Garantia */}
-        {pedido.garantia && (
-          <div className="border-b border-gray-700">
-            <div className="bg-gray-100 px-4 py-1 border-b border-gray-400">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Garantia</p>
-            </div>
-            <div className="p-3 text-[11px] whitespace-pre-wrap">{pedido.garantia}</div>
-          </div>
-        )}
-
-        {/* Informações Adicionais */}
-        {pedido.informacoes_adicionais && (
-          <div className="border-b border-gray-700">
-            <div className="bg-gray-100 px-4 py-1 border-b border-gray-400">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Informações Adicionais</p>
-            </div>
-            <div className="p-3 text-[11px] whitespace-pre-wrap">{pedido.informacoes_adicionais}</div>
-          </div>
-        )}
-
         {/* Rodapé — link público */}
         <div className="p-4 space-y-1 text-center">
           <p className="text-[10px] text-gray-500">Envie este link ao cliente para aceite online.</p>
-          <p className="text-[11px] font-mono text-blue-700 break-all">{linkPublico}</p>
-          <a href={linkPublico} target="_blank" rel="noreferrer" className="text-[11px] text-blue-600 underline print:hidden">
+          <a href={linkPublico} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-blue-700 underline break-all">
             {linkPublico}
           </a>
-          <p className="text-[9px] text-gray-400 italic pt-2">Orçamento gerado no Syncromoney — syncromoney.com.br</p>
+          <p className="text-[9px] text-gray-400 italic pt-2">
+            Orçamento gerado por {nomeEmpresa}
+            {fiscalConfig?.cnpj ? ` — CNPJ ${fiscalConfig.cnpj}` : ''}
+          </p>
         </div>
 
       </div>

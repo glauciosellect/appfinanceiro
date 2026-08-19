@@ -259,6 +259,30 @@ export default function OrcamentoPublicoPage() {
             <div className="flex justify-between text-base pt-2 border-t border-gray-200"><span className="font-semibold text-gray-900">Total</span><span className="font-bold text-blue-600">{formatCurrency(pedido.total)}</span></div>
           </div>
 
+          {/* Título, Condições, Garantia e Informações */}
+          {(pedido.condicoes_pagamento || pedido.garantia || pedido.informacoes_adicionais) && (
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm">
+              {pedido.condicoes_pagamento && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Condições de Pagamento</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{pedido.condicoes_pagamento}</p>
+                </div>
+              )}
+              {pedido.garantia && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Garantia</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{pedido.garantia}</p>
+                </div>
+              )}
+              {pedido.informacoes_adicionais && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-1">Informações Adicionais</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">{pedido.informacoes_adicionais}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Aceite */}
           {pedido.aceito_em ? (
             <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
