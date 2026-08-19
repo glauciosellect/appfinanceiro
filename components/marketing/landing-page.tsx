@@ -633,6 +633,18 @@ export function LandingPageContent() {
               </div>
             ))}
           </div>
+
+          <div className="mt-10 flex justify-center">
+            <a
+              href={waLink('Olá! Quero conversar com a equipe do SyncroMoney antes de assinar.')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-[#D1FAE5] bg-[#F0FDF4] px-5 py-2.5 text-sm font-semibold text-[#16A34A] transition-transform hover:scale-105 hover:bg-[#DCFCE7]"
+            >
+              <Headset className="h-4 w-4" />
+              Converse com a equipe
+            </a>
+          </div>
         </div>
       </section>
 
@@ -1142,7 +1154,7 @@ export function LandingPageContent() {
             ))}
           </div>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-10 flex justify-center">
             <a
               href={waLink('Olá, Jarbas! Tenho uma dúvida sobre os planos do SyncroMoney.')}
               target="_blank"
@@ -1151,15 +1163,6 @@ export function LandingPageContent() {
             >
               <HelpCircle className="h-4 w-4" />
               Tire suas dúvidas
-            </a>
-            <a
-              href={waLink('Olá! Quero conversar com a equipe do SyncroMoney antes de assinar.')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-[#D1FAE5] bg-[#F0FDF4] px-5 py-2.5 text-sm font-semibold text-[#16A34A] transition-transform hover:scale-105 hover:bg-[#DCFCE7]"
-            >
-              <Headset className="h-4 w-4" />
-              Converse com a equipe
             </a>
           </div>
         </div>

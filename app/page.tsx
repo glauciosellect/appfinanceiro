@@ -5,12 +5,6 @@ import { Button } from '@/components/ui/button'
 import { MarketingLogo } from '@/components/shared/MarketingLogo'
 import { LandingPageContent } from '@/components/marketing/landing-page'
 
-const WHATSAPP_NUMBER = '5532982022232'
-
-function waLink(message: string) {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
-}
-
 function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-sm">
@@ -34,13 +28,9 @@ function Navbar() {
             <Link href="/login">Entrar</Link>
           </Button>
           <Button size="sm" asChild className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-sm px-4">
-            <a
-              href={waLink('Olá, Jarbas! Quero começar meus 14 dias grátis no SyncroMoney.')}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <Link href="/register?plano=pro">
               Teste grátis — 14 dias
-            </a>
+            </Link>
           </Button>
         </div>
       </div>
