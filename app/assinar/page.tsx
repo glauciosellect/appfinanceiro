@@ -63,6 +63,14 @@ export default function AssinarPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
+    const plano = sessionStorage.getItem('plano_selecionado')
+    if (plano === 'pro' || plano === 'premium') {
+      setPlanoSelecionado(plano)
+      sessionStorage.removeItem('plano_selecionado')
+    }
+  }, [])
+
+  useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }

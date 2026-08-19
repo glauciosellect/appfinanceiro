@@ -24,6 +24,14 @@ import {
   CheckCircle2,
   Building2,
   MessageCircle,
+  HelpCircle,
+  Headset,
+  FileSignature,
+  Send,
+  PenLine,
+  ScanBarcode,
+  Banknote,
+  Printer,
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────────
@@ -36,11 +44,18 @@ function waLink(message: string) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   REGISTRO — link para cadastro já com o plano escolhido
+──────────────────────────────────────────────────────────────── */
+function registerLink(plano: 'pro' | 'premium') {
+  return `/register?plano=${plano}`
+}
+
+/* ─────────────────────────────────────────────────────────────
    DASHBOARD MOCKUP — HTML estático, zero JS
 ──────────────────────────────────────────────────────────────── */
 function DashboardMockup() {
   return (
-    <div className="pointer-events-none select-none overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] shadow-2xl shadow-[#2563EB]/10">
+    <div className="pointer-events-none select-none overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] shadow-2xl shadow-[#2563EB]/10 transition-transform duration-500 hover:scale-[1.02]">
       {/* window chrome */}
       <div className="flex items-center gap-1.5 border-b border-[#E5E7EB] bg-white px-4 py-3">
         <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
@@ -64,7 +79,7 @@ function DashboardMockup() {
               <p className="text-[9px] font-medium text-[#9CA3AF]">{card.label}</p>
               <p className="mt-1 text-[11px] font-bold" style={{ color: card.color }}>{card.value}</p>
               <div className="mt-1.5 h-1 w-full rounded-full" style={{ background: card.bg }}>
-                <div className="h-1 rounded-full w-3/4" style={{ background: card.color, opacity: 0.5 }} />
+                <div className="h-1 animate-grow-bar rounded-full" style={{ background: card.color, opacity: 0.5, ['--bar-w' as string]: '75%' }} />
               </div>
             </div>
           ))}
@@ -79,8 +94,8 @@ function DashboardMockup() {
               { e: 65, s: 55 }, { e: 90, s: 40 }, { e: 75, s: 48 },
             ].map((bar, i) => (
               <div key={i} className="flex flex-1 items-end gap-0.5">
-                <div className="flex-1 rounded-sm bg-[#86EFAC]" style={{ height: `${bar.e}%` }} />
-                <div className="flex-1 rounded-sm bg-[#FCA5A5]" style={{ height: `${bar.s}%` }} />
+                <div className="flex-1 rounded-sm bg-[#86EFAC] animate-grow-up" style={{ height: `${bar.e}%`, animationDelay: `${i * 80}ms` }} />
+                <div className="flex-1 rounded-sm bg-[#FCA5A5] animate-grow-up" style={{ height: `${bar.s}%`, animationDelay: `${i * 80 + 40}ms` }} />
               </div>
             ))}
           </div>
@@ -116,6 +131,140 @@ function DashboardMockup() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ORÇAMENTO MOCKUP — tela do orçamento sendo montado
+──────────────────────────────────────────────────────────────── */
+function OrcamentoMockup() {
+  return (
+    <div className="pointer-events-none select-none overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-[#2563EB]/10 transition-transform duration-500 hover:scale-[1.02]">
+      <div className="flex items-center gap-1.5 border-b border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
+        <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+        <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+        <span className="h-3 w-3 rounded-full bg-[#28C840]" />
+        <div className="ml-3 flex h-5 max-w-52 flex-1 items-center rounded-md bg-white px-3 border border-[#E5E7EB]">
+          <span className="text-[10px] text-[#9CA3AF]">syncromoney.com.br/orcamentos/novo</span>
+        </div>
+      </div>
+
+      <div className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold text-[#111827]">Orçamento #0142</p>
+            <p className="text-[8px] text-[#9CA3AF]">Cliente: Marcos Ferreira</p>
+          </div>
+          <span className="rounded-full bg-[#FFFBEB] px-2 py-1 text-[8px] font-bold text-[#D97706]">Rascunho</span>
+        </div>
+
+        <div className="rounded-xl border border-[#E5E7EB] p-3 space-y-2">
+          {[
+            { item: 'Instalação elétrica completa', qtd: '1x', val: 'R$ 850,00' },
+            { item: 'Disjuntor bipolar 40A', qtd: '3x', val: 'R$ 240,00' },
+            { item: 'Cabo flexível 2.5mm (rolo)', qtd: '2x', val: 'R$ 180,00' },
+          ].map((row) => (
+            <div key={row.item} className="flex items-center justify-between border-b border-dashed border-[#F3F4F6] pb-1.5 last:border-0 last:pb-0">
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-[8px] font-medium text-[#374151]">{row.item}</p>
+                <p className="text-[7px] text-[#9CA3AF]">{row.qtd}</p>
+              </div>
+              <span className="text-[9px] font-bold text-[#111827]">{row.val}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl bg-[#EFF6FF] px-3 py-2">
+          <span className="text-[9px] font-semibold text-[#2563EB]">Total do orçamento</span>
+          <span className="text-[13px] font-extrabold text-[#2563EB]">R$ 1.270,00</span>
+        </div>
+
+        <div className="flex gap-2">
+          <div className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#E5E7EB] py-2">
+            <FileSignature className="h-3 w-3 text-[#6B7280]" />
+            <span className="text-[8px] font-semibold text-[#6B7280]">Gerar PDF</span>
+          </div>
+          <div className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#2563EB] py-2">
+            <Send className="h-3 w-3 text-white" />
+            <span className="text-[8px] font-semibold text-white">Enviar p/ cliente</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-lg bg-[#F0FDF4] px-2.5 py-1.5">
+          <CheckCircle2 className="h-3 w-3 shrink-0 text-[#16A34A]" />
+          <span className="text-[8px] font-medium text-[#166534]">Cliente pode aprovar direto pelo link — sem app, sem login</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PDV MOCKUP — tela de venda com produto sendo adicionado
+──────────────────────────────────────────────────────────────── */
+function PdvMockup() {
+  return (
+    <div className="pointer-events-none select-none overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl shadow-black/40 transition-transform duration-500 hover:scale-[1.02]">
+      <div className="flex items-center gap-1.5 border-b border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
+        <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+        <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+        <span className="h-3 w-3 rounded-full bg-[#28C840]" />
+        <div className="ml-3 flex h-5 max-w-40 flex-1 items-center rounded-md bg-white px-3 border border-[#E5E7EB]">
+          <span className="text-[10px] text-[#9CA3AF]">syncromoney.com.br/pdv</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[1fr_120px]">
+        {/* carrinho */}
+        <div className="p-3 space-y-2 border-r border-[#F3F4F6]">
+          <div className="flex items-center gap-2 rounded-lg border border-[#DBEAFE] bg-[#EFF6FF] px-2.5 py-2 animate-pulse-soft">
+            <ScanBarcode className="h-3.5 w-3.5 text-[#2563EB] shrink-0" />
+            <span className="text-[8px] font-medium text-[#2563EB]">Escaneie o código de barras...</span>
+          </div>
+
+          {[
+            { name: 'Refrigerante Lata 350ml', qtd: 2, val: 'R$ 9,00' },
+            { name: 'Pão Francês (kg)', qtd: 1, val: 'R$ 12,90' },
+            { name: 'Detergente Neutro 500ml', qtd: 3, val: 'R$ 8,70' },
+          ].map((row, i) => (
+            <div
+              key={row.name}
+              className="flex items-center justify-between rounded-lg bg-[#F9FAFB] px-2.5 py-1.5 animate-fade-in-item"
+              style={{ animationDelay: `${i * 150}ms` }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[8px] font-medium text-[#111827]">{row.name}</p>
+                <p className="text-[7px] text-[#9CA3AF]">{row.qtd}x unid.</p>
+              </div>
+              <span className="text-[9px] font-bold text-[#111827]">{row.val}</span>
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between border-t-2 border-[#111827] pt-2 mt-2">
+            <span className="text-[9px] font-bold text-[#111827]">TOTAL</span>
+            <span className="text-[15px] font-extrabold text-[#16A34A]">R$ 30,60</span>
+          </div>
+        </div>
+
+        {/* pagamento */}
+        <div className="flex flex-col gap-1.5 bg-[#F9FAFB] p-2.5">
+          <p className="mb-0.5 text-[7px] font-bold uppercase tracking-wide text-[#9CA3AF]">Pagamento</p>
+          {[
+            { icon: Banknote, label: 'Dinheiro' },
+            { icon: CreditCard, label: 'Cartão' },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-2 py-1.5">
+              <Icon className="h-3 w-3 text-[#6B7280]" />
+              <span className="text-[7.5px] font-medium text-[#374151]">{label}</span>
+            </div>
+          ))}
+          <div className="mt-1 flex items-center justify-center gap-1 rounded-lg bg-[#16A34A] py-2">
+            <Printer className="h-3 w-3 text-white" />
+            <span className="text-[7.5px] font-bold text-white">Finalizar Venda</span>
           </div>
         </div>
       </div>
@@ -190,8 +339,32 @@ const FEATURES = [
   },
 ]
 
+const ORCAMENTO_FEATURES = [
+  {
+    icon: PenLine,
+    title: 'Monte em segundos',
+    desc: 'Adicione produtos e serviços do seu catálogo com poucos toques. Ideal para usar direto no celular, na frente do cliente.',
+  },
+  {
+    icon: FileSignature,
+    title: 'PDF profissional',
+    desc: 'Gere um orçamento com a cara da sua empresa — logo, dados de contato e condições de pagamento, pronto para enviar.',
+  },
+  {
+    icon: Send,
+    title: 'Envio por link ou WhatsApp',
+    desc: 'Compartilhe o orçamento por link direto ou WhatsApp Web/App. O cliente abre em qualquer celular, sem instalar nada.',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Aceite online do cliente',
+    desc: 'O cliente aprova o orçamento clicando num botão, direto pela tela que você enviou. Você é avisado assim que ele aceitar.',
+  },
+]
+
 const PLANS = [
   {
+    key: 'pro' as const,
     name: 'PRO',
     price: 'R$ 97,00',
     period: '/mês',
@@ -213,11 +386,11 @@ const PLANS = [
     ],
     trial: true,
     cta: 'Começar 14 dias grátis',
-    waMessage: 'Olá, Jarbas! Quero começar o plano PRO do SyncroMoney.',
     highlight: true,
     premium: false,
   },
   {
+    key: 'premium' as const,
     name: 'PREMIUM',
     price: 'R$ 147,00',
     period: '/mês',
@@ -241,7 +414,6 @@ const PLANS = [
     ],
     trial: false,
     cta: 'Ativar módulo Premium',
-    waMessage: 'Olá, Jarbas! Quero ativar o plano PREMIUM do SyncroMoney (fiscal + PDV).',
     highlight: false,
     premium: true,
   },
@@ -280,6 +452,29 @@ const TESTIMONIALS = [
 export function LandingPageContent() {
   return (
     <>
+      {/* animações reutilizadas na página inteira */}
+      <style>{`
+        @keyframes grow-up { from { height: 0; } }
+        .animate-grow-up { animation: grow-up 0.9s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes grow-bar { from { width: 0; } to { width: var(--bar-w); } }
+        .animate-grow-bar { animation: grow-bar 1.2s cubic-bezier(0.16,1,0.3,1) 0.3s both; }
+        @keyframes fade-in-item { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-item { animation: fade-in-item 0.5s ease-out both; }
+        @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+        @keyframes float-y { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .animate-float { animation: float-y 5s ease-in-out infinite; }
+        @keyframes float-y-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+        .animate-float-slow { animation: float-y-slow 7s ease-in-out infinite; }
+        @keyframes shine { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        .animate-shine {
+          background: linear-gradient(90deg, #111827 0%, #2563EB 25%, #111827 50%, #2563EB 75%, #111827 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+          animation: shine 6s linear infinite;
+        }
+      `}</style>
+
       {/* ── HERO ──────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-white py-10 sm:py-14">
         <div
@@ -293,7 +488,7 @@ export function LandingPageContent() {
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[#2563EB] opacity-[0.06] blur-3xl"
+          className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[#2563EB] opacity-[0.06] blur-3xl animate-pulse-soft"
         />
 
         <div className="relative mx-auto max-w-6xl px-5">
@@ -310,7 +505,7 @@ export function LandingPageContent() {
               <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight text-[#111827] sm:text-5xl lg:text-[3.25rem]">
                 O controle financeiro que{' '}
                 <span className="relative inline-block">
-                  <span className="relative z-10 text-[#2563EB]">sua empresa</span>
+                  <span className="relative z-10 animate-shine">sua empresa</span>
                   <span
                     aria-hidden
                     className="absolute -bottom-0.5 left-0 right-0 h-2.5 rounded opacity-20"
@@ -321,7 +516,7 @@ export function LandingPageContent() {
               </h1>
 
               <p className="mt-5 max-w-lg text-base leading-relaxed text-[#6B7280] sm:text-lg">
-                Contas a pagar e receber, cartões, clientes, fornecedores e fluxo de caixa
+                Contas a pagar e receber, cartões, orçamentos, clientes, fornecedores e fluxo de caixa
                 em um só lugar — simples, rápido e sem planilhas.
               </p>
 
@@ -329,16 +524,12 @@ export function LandingPageContent() {
                 <Button
                   size="lg"
                   asChild
-                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2 px-7 shadow-md shadow-[#2563EB]/25 w-full sm:w-auto"
+                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2 px-7 shadow-md shadow-[#2563EB]/25 w-full sm:w-auto transition-transform hover:scale-[1.03]"
                 >
-                  <a
-                    href={waLink('Olá, Jarbas! Quero começar meus 14 dias grátis no SyncroMoney.')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <Link href={registerLink('pro')}>
                     Começar 14 dias grátis
                     <ArrowRight className="h-4 w-4" />
-                  </a>
+                  </Link>
                 </Button>
                 <Button
                   size="lg"
@@ -353,6 +544,16 @@ export function LandingPageContent() {
               <p className="mt-4 text-xs text-[#9CA3AF]">
                 14 dias grátis · Sem cartão de crédito · Cancele quando quiser
               </p>
+
+              <a
+                href={waLink('Olá! Tenho uma dúvida sobre o SyncroMoney antes de começar.')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#16A34A] hover:underline"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                Tire suas dúvidas no WhatsApp
+              </a>
             </div>
 
             {/* mockup */}
@@ -361,7 +562,7 @@ export function LandingPageContent() {
                 aria-hidden
                 className="absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-[#EFF6FF] via-[#F9FAFB] to-[#F0FDF4]"
               />
-              <div className="translate-y-6">
+              <div className="translate-y-6 animate-float">
                 <DashboardMockup />
               </div>
             </div>
@@ -379,7 +580,7 @@ export function LandingPageContent() {
             {METRICS.map(({ value, label, icon: Icon, color, bg }) => (
               <div
                 key={label}
-                className="flex flex-col items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-5 text-center shadow-sm sm:p-6"
+                className="flex flex-col items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-5 text-center shadow-sm sm:p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
                 <div
                   className="flex h-11 w-11 items-center justify-center rounded-xl"
@@ -422,7 +623,7 @@ export function LandingPageContent() {
                 className="group rounded-2xl border border-[#E5E7EB] bg-white p-6 transition-all duration-200 hover:border-[#DBEAFE] hover:shadow-md hover:-translate-y-0.5"
               >
                 <div
-                  className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
+                  className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3"
                   style={{ background: bg }}
                 >
                   <Icon className="h-5 w-5" style={{ color }} />
@@ -435,11 +636,129 @@ export function LandingPageContent() {
         </div>
       </section>
 
+      {/* ── ORÇAMENTOS ────────────────────────────────────────────────── */}
+      <section id="orcamentos" className="relative overflow-hidden bg-[#EFF6FF] py-20">
+        <div aria-hidden className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#2563EB] opacity-[0.07] blur-3xl animate-pulse-soft" />
+        <div className="relative mx-auto max-w-6xl px-5">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            {/* mockup */}
+            <div className="order-2 lg:order-1">
+              <div className="animate-float-slow">
+                <OrcamentoMockup />
+              </div>
+            </div>
+
+            {/* copy */}
+            <div className="order-1 lg:order-2">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#DBEAFE] bg-white px-3.5 py-1.5">
+                <FileSignature className="h-3.5 w-3.5 text-[#2563EB]" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[#2563EB]">Orçamentos</span>
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#111827] sm:text-4xl">
+                Feche mais vendas com{' '}
+                <span className="text-[#2563EB]">orçamentos profissionais</span>
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-[#6B7280]">
+                Monte um orçamento em segundos direto do celular, na frente do cliente. Envie por
+                link ou WhatsApp e receba o aceite online — sem papel, sem retrabalho.
+              </p>
+
+              <div className="mt-8 space-y-4">
+                {ORCAMENTO_FEATURES.map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="flex gap-3.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                      <Icon className="h-4 w-4 text-[#2563EB]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#111827]">{title}</p>
+                      <p className="mt-0.5 text-sm leading-relaxed text-[#6B7280]">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                asChild
+                size="lg"
+                className="mt-8 bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2 shadow-md shadow-[#2563EB]/25 transition-transform hover:scale-[1.03]"
+              >
+                <Link href={registerLink('pro')}>
+                  Começar 14 dias grátis
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PDV ───────────────────────────────────────────────────────── */}
+      <section id="pdv" className="relative overflow-hidden bg-[#111827] py-20">
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-[#16A34A] opacity-10 blur-3xl animate-pulse-soft" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(to right, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '40px 40px' }}
+        />
+
+        <div className="relative mx-auto max-w-6xl px-5">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            {/* copy */}
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#FBBF24]/30 bg-[#FBBF24]/10 px-3.5 py-1.5">
+                <ScanBarcode className="h-3.5 w-3.5 text-[#FBBF24]" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[#FBBF24]">PDV — Módulo Premium</span>
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+                Um PDV{' '}
+                <span className="text-[#60A5FA]">rápido e simples</span>{' '}
+                de usar
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-400">
+                Escaneie o produto, escolha a forma de pagamento e finalize a venda em segundos.
+                Sem curva de aprendizado — se sabe usar um celular, sabe usar o PDV do SyncroMoney.
+              </p>
+
+              <div className="mt-8 space-y-4">
+                {[
+                  { icon: ScanBarcode, title: 'Leitura por código de barras', desc: 'Bipe o produto com leitor ou câmera do celular e ele entra direto no carrinho.' },
+                  { icon: Banknote, title: 'Vários meios de pagamento', desc: 'Dinheiro, cartão, PIX e mais — tudo na mesma tela, sem trocar de sistema.' },
+                  { icon: Package, title: 'Estoque atualizado na hora', desc: 'Cada venda baixa o estoque automaticamente, direto do catálogo de produtos.' },
+                  { icon: Printer, title: 'Fechamento de caixa automático', desc: 'Ao fechar o caixa, os valores já entram sozinhos no financeiro e no fluxo de caixa.' },
+                ].map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="flex gap-3.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                      <Icon className="h-4 w-4 text-[#60A5FA]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{title}</p>
+                      <p className="mt-0.5 text-sm leading-relaxed text-slate-400">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button asChild size="lg" className="mt-8 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold gap-2 shadow-lg shadow-[#FBBF24]/25 transition-transform hover:scale-[1.03]">
+                <Link href={registerLink('premium')}>
+                  <Zap className="h-4 w-4" />
+                  Ativar módulo Premium
+                </Link>
+              </Button>
+            </div>
+
+            {/* mockup */}
+            <div className="animate-float">
+              <PdvMockup />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── PREMIUM FISCAL ────────────────────────────────────────────── */}
       <section id="fiscal" className="relative overflow-hidden bg-[#0F172A] py-24">
         {/* decoração de fundo */}
-        <div aria-hidden className="pointer-events-none absolute -top-40 right-0 h-[500px] w-[500px] rounded-full bg-[#2563EB] opacity-10 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-40 left-0 h-[400px] w-[400px] rounded-full bg-[#7C3AED] opacity-10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -top-40 right-0 h-[500px] w-[500px] rounded-full bg-[#2563EB] opacity-10 blur-3xl animate-pulse-soft" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-40 left-0 h-[400px] w-[400px] rounded-full bg-[#7C3AED] opacity-10 blur-3xl animate-pulse-soft" />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.03]"
@@ -457,12 +776,12 @@ export function LandingPageContent() {
 
           <div className="mb-4 text-center">
             <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl">
-              PDV, NF-e e NFS-e{' '}
+              NF-e e NFS-e{' '}
               <span className="text-[#60A5FA]">sem sair do sistema</span>
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-400 max-w-2xl mx-auto">
-              Chega de depender de sistemas separados. O SyncroMoney Premium integra ponto de venda,
-              caixa e emissão fiscal diretamente ao seu controle financeiro — tudo sincronizado, tudo em um lugar.
+              Chega de depender de sistemas separados. O SyncroMoney Premium integra emissão fiscal
+              diretamente ao seu controle financeiro e ao PDV — tudo sincronizado, tudo em um lugar.
             </p>
           </div>
 
@@ -501,7 +820,7 @@ export function LandingPageContent() {
                   desc: 'Cadastro completo de transportadoras com RNTRC, placa e modalidade de frete (CIF/FOB). Informações do transporte direto na NF-e.',
                 },
               ].map(({ icon: Icon, color, bg, title, desc }) => (
-                <div key={title} className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm hover:border-white/20 transition-colors">
+                <div key={title} className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all duration-200 hover:border-white/20 hover:-translate-y-0.5">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: bg }}>
                     <Icon className="h-5 w-5" style={{ color }} />
                   </div>
@@ -516,7 +835,7 @@ export function LandingPageContent() {
             {/* direita: mini mockup DANFE + checklist */}
             <div className="space-y-5">
               {/* mini documento mockup */}
-              <div className="rounded-2xl border border-white/10 bg-white p-4 shadow-2xl shadow-black/40">
+              <div className="rounded-2xl border border-white/10 bg-white p-4 shadow-2xl shadow-black/40 transition-transform duration-500 hover:scale-[1.02]">
                 {/* header mockup */}
                 <div className="grid grid-cols-[1fr_120px] border-b-2 border-gray-700 pb-3 mb-3">
                   <div className="flex items-center gap-2">
@@ -604,15 +923,11 @@ export function LandingPageContent() {
                     <p className="text-white font-bold text-xl">R$ 147,00<span className="text-slate-400 text-sm font-normal">/mês</span></p>
                     <p className="text-slate-400 text-xs mt-0.5">Inclui todos os recursos do plano PRO</p>
                   </div>
-                  <Button asChild size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold gap-1.5 shadow-lg shadow-[#FBBF24]/25">
-                    <a
-                      href={waLink('Olá, Jarbas! Quero ativar o plano PREMIUM do SyncroMoney (fiscal + PDV).')}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                  <Button asChild size="sm" className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold gap-1.5 shadow-lg shadow-[#FBBF24]/25 transition-transform hover:scale-[1.05]">
+                    <Link href={registerLink('premium')}>
                       <Zap className="h-3.5 w-3.5" />
                       Ativar Premium
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -631,7 +946,7 @@ export function LandingPageContent() {
                 { icon: Truck, label: 'Transportadoras' },
                 { icon: BarChart3, label: 'Escritórios Contábeis' },
               ].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
+                <div key={label} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 transition-colors hover:bg-white/10">
                   <Icon className="h-3.5 w-3.5 text-slate-400" />
                   <span className="text-xs font-medium text-slate-300">{label}</span>
                 </div>
@@ -656,7 +971,7 @@ export function LandingPageContent() {
           </div>
 
           <div className="flex flex-col gap-4 sm:grid sm:grid-cols-3">
-            <div className="flex flex-col justify-between rounded-2xl border border-[#E5E7EB] bg-white p-7 shadow-sm">
+            <div className="flex flex-col justify-between rounded-2xl border border-[#E5E7EB] bg-white p-7 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
               <div>
                 <div className="mb-5 flex gap-0.5">
                   {[...Array(5)].map((_, i) => (
@@ -687,7 +1002,7 @@ export function LandingPageContent() {
               {TESTIMONIALS.slice(1).map((t) => (
                 <div
                   key={t.name}
-                  className="flex flex-col justify-between rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm"
+                  className="flex flex-col justify-between rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
                 >
                   <div>
                     <div className="mb-4 flex gap-0.5">
@@ -747,7 +1062,7 @@ export function LandingPageContent() {
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
-                className={`relative flex flex-col rounded-2xl p-7 ${
+                className={`relative flex flex-col rounded-2xl p-7 transition-transform duration-300 hover:-translate-y-1 ${
                   plan.premium
                     ? 'border-2 border-[#FBBF24] bg-[#0F172A] shadow-xl shadow-[#FBBF24]/10'
                     : plan.highlight
@@ -808,16 +1123,16 @@ export function LandingPageContent() {
                   size="lg"
                   className={
                     plan.premium
-                      ? 'w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold shadow-md shadow-[#FBBF24]/25'
+                      ? 'w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold shadow-md shadow-[#FBBF24]/25 transition-transform hover:scale-[1.03]'
                       : plan.highlight
-                      ? 'w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-md shadow-[#2563EB]/25'
+                      ? 'w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-md shadow-[#2563EB]/25 transition-transform hover:scale-[1.03]'
                       : 'w-full'
                   }
                   variant={plan.premium || plan.highlight ? 'default' : 'outline'}
                 >
-                  <a href={waLink(plan.waMessage)} target="_blank" rel="noopener noreferrer">
+                  <Link href={registerLink(plan.key)}>
                     {plan.cta}
-                  </a>
+                  </Link>
                 </Button>
 
                 <p className={`mt-3 text-center text-xs ${plan.premium ? 'text-slate-500' : 'text-[#9CA3AF]'}`}>
@@ -827,25 +1142,33 @@ export function LandingPageContent() {
             ))}
           </div>
 
-          <p className="mt-10 text-center text-sm text-[#9CA3AF]">
-            Dúvidas?{' '}
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <a
               href={waLink('Olá, Jarbas! Tenho uma dúvida sobre os planos do SyncroMoney.')}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-[#2563EB] hover:underline"
+              className="inline-flex items-center gap-2 rounded-full border border-[#D1FAE5] bg-[#F0FDF4] px-5 py-2.5 text-sm font-semibold text-[#16A34A] transition-transform hover:scale-105 hover:bg-[#DCFCE7]"
             >
-              Fale com a gente no WhatsApp
-            </a>{' '}
-            — respondemos em minutos.
-          </p>
+              <HelpCircle className="h-4 w-4" />
+              Tire suas dúvidas
+            </a>
+            <a
+              href={waLink('Olá! Quero conversar com a equipe do SyncroMoney antes de assinar.')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-[#D1FAE5] bg-[#F0FDF4] px-5 py-2.5 text-sm font-semibold text-[#16A34A] transition-transform hover:scale-105 hover:bg-[#DCFCE7]"
+            >
+              <Headset className="h-4 w-4" />
+              Converse com a equipe
+            </a>
+          </div>
         </div>
       </section>
 
       {/* ── CTA FINAL ─────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#2563EB] py-20">
-        <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white opacity-5" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-white opacity-5" />
+        <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white opacity-5 animate-float-slow" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-white opacity-5 animate-float" />
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.04]"
@@ -875,16 +1198,12 @@ export function LandingPageContent() {
             <Button
               size="lg"
               asChild
-              className="bg-white text-[#2563EB] hover:bg-[#F9FAFB] gap-2 px-8 font-bold shadow-lg"
+              className="bg-white text-[#2563EB] hover:bg-[#F9FAFB] gap-2 px-8 font-bold shadow-lg transition-transform hover:scale-[1.04]"
             >
-              <a
-                href={waLink('Olá, Jarbas! Quero começar meus 14 dias grátis no SyncroMoney.')}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <Link href={registerLink('pro')}>
                 Começar 14 dias grátis
                 <ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </Button>
             <Button
               size="lg"
@@ -895,6 +1214,16 @@ export function LandingPageContent() {
               <Link href="/login">Já tenho conta</Link>
             </Button>
           </div>
+
+          <a
+            href={waLink('Olá! Quero conversar com a equipe do SyncroMoney antes de assinar.')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white hover:underline"
+          >
+            <Headset className="h-3.5 w-3.5" />
+            Prefere conversar primeiro? Fale com a equipe
+          </a>
 
           <p className="mt-4 text-xs text-white/50">
             Grátis por 14 dias · Sem cartão · Cancele a qualquer momento
@@ -908,7 +1237,7 @@ export function LandingPageContent() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Falar no WhatsApp"
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg shadow-black/20 transition-transform duration-200 hover:scale-110"
+        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg shadow-black/20 transition-transform duration-200 hover:scale-110 animate-float"
         style={{ background: '#25D366' }}
       >
         <MessageCircle className="h-7 w-7 text-white" fill="white" strokeWidth={0} />
