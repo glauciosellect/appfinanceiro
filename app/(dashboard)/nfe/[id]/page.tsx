@@ -1,14 +1,15 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Download, XCircle, Printer, Loader2 } from 'lucide-react'
+import { ArrowLeft, Download, Printer, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { getNFe, type NFeRecord } from '@/lib/supabase/nfe'
 import { createClient } from '@/lib/supabase/client'
 import { getPerfilEmpresa, perfilVazio, type PerfilEmpresa } from '@/lib/supabase/perfil-empresa'
+import { useToast } from '@/components/ui/toast'
 
 function Cell({ label, value, mono, className = '' }: { label: string; value?: string | null; mono?: boolean; className?: string }) {
   return (
@@ -45,20 +46,46 @@ export default function NFeVisualizarPage() {
   const [nota, setNota] = useState<NFeRecord | null>(null)
   const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
   const [loading, setLoading] = useState(true)
+  const [sincronizando, setSincronizando] = useState(false)
+  const { toast } = useToast()
 
-  useEffect(() => {
+  const fetchNota = useCallback(async () => {
     if (!idStr) return
-    createClient().auth.getUser().then(async ({ data }) => {
-      if (!data.user) return
-      const [n, p] = await Promise.all([
-        getNFe(data.user.id, idStr),
-        getPerfilEmpresa(data.user.id),
-      ])
-      setNota(n)
-      setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
-      setLoading(false)
-    })
+    const { data } = await createClient().auth.getUser()
+    if (!data.user) return
+    const [n, p] = await Promise.all([
+      getNFe(data.user.id, idStr),
+      getPerfilEmpresa(data.user.id),
+    ])
+    setNota(n)
+    setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
+    setLoading(false)
   }, [idStr])
+
+  useEffect(() => { fetchNota() }, [fetchNota])
+
+  async function handleSincronizar() {
+    if (!nota?.focus_ref) return
+    setSincronizando(true)
+    try {
+      const res = await fetch('/api/fiscal/sincronizar-nfe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: nota.focus_ref, id: nota.id }),
+      })
+      const json = await res.json() as { ok?: boolean; error?: string; status?: string; retorno?: Record<string, unknown> }
+      if (json.ok) {
+        toast(`Status: ${json.status ?? 'ok'}${json.retorno?.numero ? ` — Nº ${json.retorno.numero}` : ''}`, 'success')
+        fetchNota()
+      } else {
+        toast(json.error ?? 'Erro ao sincronizar', 'error')
+      }
+    } catch {
+      toast('Erro ao sincronizar status', 'error')
+    } finally {
+      setSincronizando(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -114,6 +141,12 @@ export default function NFeVisualizarPage() {
           <Link href="/nfe"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Link>
         </Button>
         <div className="flex gap-2">
+          {nota.status === 'processando' && nota.focus_ref && (
+            <Button variant="outline" size="sm" onClick={handleSincronizar} disabled={sincronizando}>
+              {sincronizando ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+              Sincronizar status
+            </Button>
+          )}
           {nota.danfe_url && (
             <a href={nota.danfe_url} target="_blank" rel="noreferrer">
               <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar DANFE</Button>
@@ -136,13 +169,30 @@ export default function NFeVisualizarPage() {
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4 mr-1" />Imprimir
           </Button>
-          {nota.status !== 'cancelada' && (
-            <Button variant="destructive" size="sm">
-              <XCircle className="h-4 w-4 mr-1" />Cancelar NF-e
-            </Button>
-          )}
         </div>
       </div>
+
+      {/* Banner processando */}
+      {nota.status === 'processando' && (
+        <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-300 rounded-xl print:hidden">
+          <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
+          <div>
+            <p className="font-semibold text-blue-800 text-sm">Aguardando autorização da SEFAZ</p>
+            <p className="text-blue-700 text-xs mt-0.5">Clique em &quot;Sincronizar status&quot; para consultar a situação atual na Focus NFe.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Banner erro */}
+      {nota.status === 'erro' && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-300 rounded-xl print:hidden">
+          <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
+          <div>
+            <p className="font-semibold text-red-800 text-sm">Rejeitada pela SEFAZ</p>
+            <p className="text-red-700 text-xs mt-0.5">{nota.erro_mensagem || 'Corrija os dados e reenvie pela tela de edição.'}</p>
+          </div>
+        </div>
+      )}
 
       {/* DANFE */}
       <div className="bg-white border-2 border-gray-800 text-[11px]" id="danfe">
@@ -204,12 +254,15 @@ export default function NFeVisualizarPage() {
               <p className="text-[8px] text-gray-400 mt-1">Consulta em <span className="text-blue-600">www.nfe.fazenda.gov.br</span></p>
             </div>
             <div className={`mt-2 px-2 py-1 rounded text-center text-[10px] font-bold ${
-              nota.status === 'emitida'   ? 'bg-green-100 text-green-800' :
-              nota.status === 'rascunho'  ? 'bg-yellow-100 text-yellow-800' :
+              nota.status === 'emitida'     ? 'bg-green-100 text-green-800' :
+              nota.status === 'rascunho'    ? 'bg-yellow-100 text-yellow-800' :
+              nota.status === 'processando' ? 'bg-blue-100 text-blue-800' :
               'bg-red-100 text-red-800'
             }`}>
-              {nota.status === 'emitida'  ? '✓ AUTORIZADA PELA SEFAZ' :
-               nota.status === 'rascunho' ? '⚠ NÃO TRANSMITIDA' : '✕ CANCELADA'}
+              {nota.status === 'emitida'     ? '✓ AUTORIZADA PELA SEFAZ' :
+               nota.status === 'rascunho'    ? '⚠ NÃO TRANSMITIDA' :
+               nota.status === 'processando' ? '⏳ AGUARDANDO AUTORIZAÇÃO' :
+               nota.status === 'erro'        ? '✕ REJEITADA' : '✕ CANCELADA'}
             </div>
           </div>
         </div>

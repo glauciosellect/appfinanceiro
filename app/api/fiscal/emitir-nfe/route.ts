@@ -224,6 +224,21 @@ export async function POST(req: NextRequest) {
   const autorizado = resultado.status === 'autorizado'
   const valorTotal = itens.reduce((s, it) => s + it.valor_bruto, 0)
 
+  // Normaliza o status bruto da Focus NFe pro mesmo vocabulário usado em
+  // toda a UI (rascunho/emitida/processando/erro/cancelada) — mesmo mapa
+  // usado em app/api/nfse/webhook e app/api/nfse/sincronizar. Sem isso, um
+  // status bruto tipo "processando_autorizacao" ficava salvo do jeito que
+  // veio da API e a tela de detalhe (que só reconhece 'emitida'/'rascunho')
+  // exibia qualquer outra coisa como "✕ CANCELADA" por engano.
+  const statusMap: Record<string, string> = {
+    autorizado: 'emitida',
+    processando_autorizacao: 'processando',
+    erro_autorizacao: 'erro',
+    denegado: 'erro',
+    cancelado: 'cancelada',
+  }
+  const statusFinal = autorizado ? 'emitida' : (statusMap[resultado.status ?? ''] ?? 'processando')
+
   // Em produção, usa o número retornado pelo SEFAZ via Focus NFe.
   // Em homologação, Focus NFe atribui sua própria sequência de teste (1, 2, 3...),
   // então usamos o número configurado pelo usuário para manter a sequência correta.
@@ -252,7 +267,8 @@ export async function POST(req: NextRequest) {
     uf_destinatario: body.destinatario.uf || null,
     cep_destinatario: body.destinatario.cep || null,
     valor_total: valorTotal,
-    status: autorizado ? 'emitida' : (resultado.status ?? 'processando'),
+    status: statusFinal,
+    erro_mensagem: resultado.mensagem_sefaz ?? null,
     tipo: 'saida',
     danfe_url: resultado.caminho_danfe
       ? (resultado.caminho_danfe.startsWith('http') ? resultado.caminho_danfe : `https://api.focusnfe.com.br${resultado.caminho_danfe}`)
