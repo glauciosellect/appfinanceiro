@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { consultarNFe } from '@/lib/fiscal/focusnfe'
+import { consultarNFe, erroFocusNFe } from '@/lib/fiscal/focusnfe'
 
 // Consulta o status atual de uma NF-e na Focus NFe/SEFAZ — usado quando a
 // emissão original ficou "processando" (a espera de até 20s em
@@ -28,8 +28,11 @@ export async function POST(req: NextRequest) {
     denegado: 'erro',
     cancelado: 'cancelada',
   }
-  const status = statusMap[retorno.status ?? ''] ?? 'processando'
-  const erro = retorno.erros?.map((e) => `${e.codigo}: ${e.mensagem}`).join('; ') ?? retorno.mensagem_sefaz ?? null
+  const msgErro = erroFocusNFe(retorno) ?? retorno.mensagem_sefaz ?? null
+  // Um erro de conta (token inválido, limite excedido etc.) não vem com
+  // `retorno.status` preenchido — sem checar msgErro primeiro, isso caía no
+  // fallback 'processando' e a nota nunca saía desse estado.
+  const status = msgErro ? 'erro' : (statusMap[retorno.status ?? ''] ?? 'processando')
 
   const { error: dbError } = await supabase
     .from('nfe_emitidas')
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest) {
       xml_url: retorno.caminho_xml_nota_fiscal
         ? (retorno.caminho_xml_nota_fiscal.startsWith('http') ? retorno.caminho_xml_nota_fiscal : `https://api.focusnfe.com.br${retorno.caminho_xml_nota_fiscal}`)
         : undefined,
-      erro_mensagem: erro,
+      erro_mensagem: msgErro,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

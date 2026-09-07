@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { consultarNFSe } from '@/lib/fiscal/focusnfe'
+import { consultarNFSe, erroFocusNFe } from '@/lib/fiscal/focusnfe'
 import { getSupabaseAdmin } from '@/lib/parceiro/auth'
 
 // A Focus NFe chama este endpoint via GET quando o status de uma NFS-e muda.
@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
     erro_autorizacao:        'erro',
     cancelado:               'cancelada',
   }
-  const novoStatus = statusMap[retorno.status ?? ''] ?? 'processando'
-  const erro = retorno.erros?.map(e => `${e.codigo}: ${e.mensagem}`).join('; ')
+  const erro = erroFocusNFe(retorno)
+  const novoStatus = erro ? 'erro' : (statusMap[retorno.status ?? ''] ?? 'processando')
 
   // Chamada externa da Focus NFe — nunca tem sessão de usuário (sem cookies),
   // então o client de sessão seria bloqueado pelo RLS e o update não

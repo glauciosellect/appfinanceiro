@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { emitirNFe, consultarNFe, isTokenConfigured, getAmbiente, type ItemNFe } from '@/lib/fiscal/focusnfe'
+import { emitirNFe, consultarNFe, isTokenConfigured, getAmbiente, erroFocusNFe, type ItemNFe } from '@/lib/fiscal/focusnfe'
 
 const REGIME_MAP: Record<string, string> = {
   simples:          '1',
@@ -205,10 +205,9 @@ export async function POST(req: NextRequest) {
     itens,
   })
 
-  const temErro = retorno.erros && retorno.erros.length > 0
-  if (temErro) {
-    const msg = retorno.erros!.map(e => `[${e.codigo}] ${e.mensagem}`).join('; ')
-    return NextResponse.json({ error: msg }, { status: 422 })
+  const msgErro = erroFocusNFe(retorno)
+  if (msgErro) {
+    return NextResponse.json({ error: msgErro }, { status: 422 })
   }
 
   // Aguarda autorização (polling até 20s)

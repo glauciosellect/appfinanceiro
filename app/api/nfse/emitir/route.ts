@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { emitirNFSe, getAmbiente } from '@/lib/fiscal/focusnfe'
+import { emitirNFSe, getAmbiente, erroFocusNFe } from '@/lib/fiscal/focusnfe'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -101,10 +101,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
-  // Se a Focus NFe retornou erro (nota não criada), retorna erro imediatamente
-  if (retorno.erros && retorno.erros.length > 0) {
-    const erroMsg = retorno.erros.map(e => `${e.codigo}: ${e.mensagem}`).join('; ')
-    console.error('[emitir-nfse] erros Focus NFe:', erroMsg)
+  // Se a Focus NFe retornou erro (nota não criada), retorna erro imediatamente.
+  // erroFocusNFe() cobre tanto o formato erros[] (validação/SEFAZ) quanto o
+  // formato codigo/mensagem no nível raiz (erro de conta — token inválido,
+  // limite excedido etc.) — sem isso esse segundo formato passava batido.
+  const erroMsg = erroFocusNFe(retorno)
+  if (erroMsg) {
+    console.error('[emitir-nfse] erro Focus NFe:', erroMsg)
     return NextResponse.json({ ok: false, error: erroMsg, retorno }, { status: 422 })
   }
 

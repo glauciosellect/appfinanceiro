@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { consultarNFSe } from '@/lib/fiscal/focusnfe'
+import { consultarNFSe, erroFocusNFe } from '@/lib/fiscal/focusnfe'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
     erro_autorizacao: 'erro',
     cancelado: 'cancelada',
   }
-  const status = statusMap[retorno.status ?? ''] ?? 'processando'
-  const erro = retorno.erros?.map(e => e.mensagem).join('; ')
+  const msgErro = erroFocusNFe(retorno)
+  const status = msgErro ? 'erro' : (statusMap[retorno.status ?? ''] ?? 'processando')
 
   await supabase
     .from('nfse')
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       codigo_verificacao: retorno.codigo_verificacao ?? undefined,
       link_pdf: retorno.link_nfse_pdf ?? undefined,
       link_xml: retorno.link_nfse_xml ?? undefined,
-      erro_mensagem: erro ?? null,
+      erro_mensagem: msgErro,
       retorno_focusnfe: retorno,
       updated_at: new Date().toISOString(),
     })

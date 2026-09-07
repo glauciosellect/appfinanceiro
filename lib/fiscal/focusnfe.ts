@@ -91,6 +91,31 @@ export interface FocusNFSeRetorno {
   link_nfse_xml?: string
   erros?: Array<{ codigo: string; mensagem: string; correcao?: string }>
   mensagem_sefaz?: string
+  // Erros de conta/autenticação (token inválido, limite excedido etc.) vêm
+  // nesse formato direto — codigo/mensagem no nível raiz — em vez do array
+  // `erros`. Sem checar isso também, esse tipo de erro passava batido pelo
+  // `retorno.erros?.length` e a nota ficava presa em "processando" pra
+  // sempre em vez de mostrar o erro real. Ver erroFocusNFe() abaixo.
+  codigo?: string
+  mensagem?: string
+}
+
+/** Extrai uma mensagem de erro de um retorno da Focus NFe em qualquer um dos
+ * dois formatos que a API usa: array `erros` (erro de validação/SEFAZ) ou
+ * `codigo`/`mensagem` no nível raiz (erro de conta — token inválido, limite
+ * de requisições etc.). Retorna null se não houver erro. */
+export function erroFocusNFe(retorno: {
+  erros?: Array<{ codigo: string; mensagem: string }>
+  codigo?: string
+  mensagem?: string
+}): string | null {
+  if (retorno.erros && retorno.erros.length > 0) {
+    return retorno.erros.map((e) => `[${e.codigo}] ${e.mensagem}`).join('; ')
+  }
+  if (retorno.codigo && retorno.mensagem) {
+    return `[${retorno.codigo}] ${retorno.mensagem}`
+  }
+  return null
 }
 
 export async function emitirNFSe(params: EmitirNFSeParams): Promise<FocusNFSeRetorno> {
@@ -266,6 +291,9 @@ export interface FocusNFeRetorno {
   caminho_danfe?: string
   erros?: Array<{ codigo: string; mensagem: string; correcao?: string }>
   mensagem_sefaz?: string
+  // Ver comentário equivalente em FocusNFSeRetorno / erroFocusNFe() abaixo.
+  codigo?: string
+  mensagem?: string
 }
 
 export async function emitirNFe(params: EmitirNFeParams): Promise<FocusNFeRetorno> {
