@@ -18,7 +18,30 @@ import { z } from 'zod'
 import { Settings, Plus, Pencil, Trash2, Tag, CreditCard as CardIcon, Crown, CheckCircle, Clock, AlertTriangle, Upload, Building2, Save, X, Zap, Receipt } from 'lucide-react'
 import FiscalTab from '@/components/configuracoes/fiscal-tab'
 import type { Categoria, TipoCategoria } from '@/types'
-import { assinaturaAtiva, type Assinatura } from '@/lib/supabase/assinatura'
+import { assinaturaAtiva, ehEmailVitalicio, type Assinatura } from '@/lib/supabase/assinatura'
+
+// Assinatura sintética pro acesso vitalício (dono/desenvolvedor) — nunca
+// consulta nem escreve a tabela `assinaturas`, só preenche o shape pra o
+// resto da tela renderizar como Premium ativo sem precisar tocar em cada
+// lugar que lê `assinatura?.plano`/`assinatura?.status`. Ver
+// lib/supabase/assinatura.ts (`ehEmailVitalicio`) pra config do e-mail.
+function assinaturaVitalicia(userId: string): Assinatura {
+  const agora = new Date().toISOString()
+  return {
+    id: 'vitalicio',
+    user_id: userId,
+    plano: 'premium',
+    asaas_customer_id: null,
+    asaas_subscription_id: null,
+    billing_type: null,
+    status: 'active',
+    valor: 0,
+    proximo_vencimento: null,
+    ultimo_pagamento_em: null,
+    created_at: agora,
+    updated_at: agora,
+  }
+}
 import {
   getPerfilEmpresa, upsertPerfilEmpresa, uploadLogo, perfilVazio,
   type PerfilEmpresa,
@@ -73,8 +96,12 @@ export default function ConfiguracoesPage() {
       if (data.user) {
         setUserId(data.user.id)
         setUserEmail(data.user.email ?? '')
-        const { data: ass } = await createClient().from('assinaturas').select('*').eq('user_id', data.user.id).single()
-        setAssinatura(ass as Assinatura | null)
+        if (ehEmailVitalicio(data.user.email)) {
+          setAssinatura(assinaturaVitalicia(data.user.id))
+        } else {
+          const { data: ass } = await createClient().from('assinaturas').select('*').eq('user_id', data.user.id).single()
+          setAssinatura(ass as Assinatura | null)
+        }
         const p = await getPerfilEmpresa(data.user.id)
         setPerfil(p ?? { ...perfilVazio, user_id: data.user.id })
       }

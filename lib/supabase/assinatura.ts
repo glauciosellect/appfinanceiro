@@ -4,6 +4,22 @@ export type StatusAssinatura = 'pending' | 'active' | 'past_due' | 'canceled'
 export type PlanoAssinatura = 'pro' | 'premium'
 export type BillingType = 'PIX' | 'CREDIT_CARD'
 
+// Acesso vitalício por e-mail (dono/desenvolvedor) — bypassa a tabela
+// `assinaturas` por completo, nunca escreve/lê estado de cobrança pra
+// isso. Configurar em NEXT_PUBLIC_LIFETIME_EMAILS (.env.local), lista
+// separada por vírgula. Fonte ÚNICA desta checagem — todo lugar que
+// decide acesso PRO/PREMIUM (SubscriptionGuard, usePlan, tela de
+// Configurações, tela de Assinar) deve chamar `ehEmailVitalicio` em vez
+// de reimplementar o parse do env var.
+const EMAILS_VITALICIOS = (process.env.NEXT_PUBLIC_LIFETIME_EMAILS ?? '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean)
+
+export function ehEmailVitalicio(email: string | null | undefined): boolean {
+  return Boolean(email) && EMAILS_VITALICIOS.includes(email!.toLowerCase())
+}
+
 export interface Assinatura {
   id: string
   user_id: string

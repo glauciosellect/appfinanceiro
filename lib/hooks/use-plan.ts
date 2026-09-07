@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { isPro, isPremium, type Assinatura, type PlanoAssinatura } from '@/lib/supabase/assinatura'
+import { isPro, isPremium, ehEmailVitalicio, type Assinatura, type PlanoAssinatura } from '@/lib/supabase/assinatura'
 
 interface PlanState {
   loading: boolean
@@ -20,6 +20,14 @@ const INITIAL_STATE: PlanState = {
   assinatura: null,
 }
 
+const ESTADO_VITALICIO: PlanState = {
+  loading: false,
+  isPro: true,
+  isPremium: true,
+  plano: 'premium',
+  assinatura: null,
+}
+
 export function usePlan(): PlanState {
   const [state, setState] = useState<PlanState>(INITIAL_STATE)
 
@@ -29,6 +37,12 @@ export function usePlan(): PlanState {
         setState({ ...INITIAL_STATE, loading: false })
         return
       }
+
+      if (ehEmailVitalicio(data.user.email)) {
+        setState(ESTADO_VITALICIO)
+        return
+      }
+
       const { data: ass } = await createClient()
         .from('assinaturas')
         .select('*')

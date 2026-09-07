@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { podeUsarPro, diasRestantesTrial, type Assinatura } from '@/lib/supabase/assinatura'
+import { podeUsarPro, diasRestantesTrial, ehEmailVitalicio, type Assinatura } from '@/lib/supabase/assinatura'
 import { Loader2, Lock, LogOut } from 'lucide-react'
 import { Logo } from '@/components/logo'
 
@@ -22,6 +22,11 @@ export function SubscriptionGuard({ children }: Props) {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
+
+      if (ehEmailVitalicio(user.email)) {
+        setStatus('ok')
+        return
+      }
 
       const { data } = await supabase
         .from('assinaturas')
