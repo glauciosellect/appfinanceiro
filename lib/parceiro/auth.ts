@@ -19,6 +19,7 @@ export interface ParceiroEmpresa {
   municipio: string | null
   uf: string | null
   codigo_municipio: string | null
+  contora_company_id: string | null
   ambiente: string | null
   numero_proximo_nfse: number | null
   serie_nfse: string | null

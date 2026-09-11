@@ -30,6 +30,39 @@ if (!SUPABASE_URL || !SERVICE_ROLE) {
   process.exit(1)
 }
 
+const CONTORA_BASE_URL = 'https://fiscal.contora.com.br/api/v1'
+const CONTORA_TOKEN_PRODUCAO = process.env.CONTORA_API_TOKEN ?? process.env.CONTORA_API_TOKEN_PRODUCAO ?? ''
+const CONTORA_TOKEN_HOMOLOGACAO = process.env.CONTORA_API_TOKEN_HOMOLOGACAO ?? ''
+
+// Diferente da Focus NFe (onde o CNPJ do parceiro precisava ser cadastrado
+// manualmente no painel antes deste script rodar), aqui cadastramos direto
+// na Contora e já guardamos o company_id retornado.
+async function cadastrarNaContora(dados) {
+  const token = dados.ambiente === 'homologacao' ? (CONTORA_TOKEN_HOMOLOGACAO || CONTORA_TOKEN_PRODUCAO) : (CONTORA_TOKEN_PRODUCAO || CONTORA_TOKEN_HOMOLOGACAO)
+  if (!token) throw new Error('CONTORA_API_TOKEN(_HOMOLOGACAO) não configurado no .env.local')
+
+  const cnpjLimpo = dados.cnpj.replace(/\D/g, '')
+  const res = await fetch(`${CONTORA_BASE_URL}/companies/by-document/${cnpjLimpo}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      legal_name: dados.razao_social,
+      document: cnpjLimpo,
+      state_code: dados.uf,
+      city_code: dados.codigo_municipio || undefined,
+      city_name: dados.municipio || undefined,
+      tax_regime: 'simples',
+      default_environment: dados.ambiente,
+      settings: { municipal_registration: dados.inscricao_municipal || undefined },
+    }),
+  })
+  const json = await res.json()
+  if (!res.ok || !json?.data?.id) {
+    throw new Error(`Falha ao cadastrar empresa na Contora: ${JSON.stringify(json)}`)
+  }
+  return json.data.id
+}
+
 // ————— Edite aqui os dados do parceiro/empresa antes de rodar —————
 const NOME_PARCEIRO = process.env.PARCEIRO_NOME ?? 'GestorBIM'
 const DADOS_EMPRESA = {
@@ -68,6 +101,14 @@ async function main() {
     console.log(`ℹ️  Parceiro já existe: ${NOME_PARCEIRO} (${parceiro.id})`)
   }
 
+  if (!DADOS_EMPRESA.cnpj || !DADOS_EMPRESA.razao_social) {
+    throw new Error('PARCEIRO_CNPJ e PARCEIRO_RAZAO_SOCIAL são obrigatórios')
+  }
+
+  console.log('⏳ Cadastrando empresa na Fiscal Contora...')
+  const contoraCompanyId = await cadastrarNaContora(DADOS_EMPRESA)
+  console.log(`✅ Empresa cadastrada na Contora: ${contoraCompanyId}`)
+
   const chave = `money_${DADOS_EMPRESA.ambiente === 'producao' ? 'live' : 'test'}_${randomBytes(24).toString('hex')}`
   const apiKeyHash = createHash('sha256').update(chave).digest('hex')
 
@@ -76,6 +117,7 @@ async function main() {
     .insert({
       parceiro_id: parceiro.id,
       api_key_hash: apiKeyHash,
+      contora_company_id: contoraCompanyId,
       ...DADOS_EMPRESA,
     })
     .select('id')

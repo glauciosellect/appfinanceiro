@@ -116,8 +116,7 @@ const steps: Step[] = [
       'Em "Próximo número da NF-e", informe o número da próxima nota a ser emitida (ex: se já emitiu até a 109, coloque 110)',
       'Em "Série", mantenha 1 — exceto se você usa série diferente em outro sistema',
       'Clique em "Salvar Numeração"',
-      'A configuração é sincronizada com a nuvem fiscal automaticamente',
-      'Confira no painel da Focus NFe se "Próximo número (Produção)" mostra o valor que você definiu',
+      'O número informado é usado diretamente na próxima nota emitida — não precisa confirmar em painel externo',
     ],
     tip: 'NÃO precisa se preocupar se está começando do zero — o sistema já parte da nota nº 1 por padrão. Esse passo só é necessário se você TINHA outro sistema e quer manter a sequência fiscal contínua para a contabilidade.',
   },
@@ -261,7 +260,7 @@ const faqs: FAQ[] = [
   },
   {
     question: 'Preciso de certificado digital para emitir NFS-e?',
-    answer: 'Não. Para NFS-e, o SyncroMoney se comunica diretamente com a prefeitura via integrador Focus NFe, sem necessidade de certificado digital. O certificado só é exigido para emissão de NF-e (produtos).',
+    answer: 'Não. Para NFS-e, o SyncroMoney se comunica com o Sistema Nacional via integrador Fiscal Contora, sem necessidade de certificado digital enviado por você. O certificado só é exigido para emissão de NF-e (produtos).',
   },
   {
     question: 'O que é ISS retido na fonte?',

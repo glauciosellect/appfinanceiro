@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { emitirNFSe, getAmbiente, erroFocusNFe } from '@/lib/fiscal/focusnfe'
+import { emitirNFSe } from '@/lib/fiscal/contora'
+import { buscarCodigoMunicipio } from '@/lib/fiscal/ibge'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -38,9 +39,13 @@ export async function POST(req: NextRequest) {
   // Dados fiscais do prestador (por cliente — multi-tenant)
   const { data: fiscalConfig } = await supabase
     .from('fiscal_config')
-    .select('inscricao_municipal, cnpj, numero_proximo_nfse, serie_nfse, regime_tributario, codigo_municipio')
+    .select('numero_proximo_nfse, serie_nfse, contora_company_id, ambiente')
     .eq('user_id', user.id)
     .single()
+
+  if (!fiscalConfig?.contora_company_id) {
+    return NextResponse.json({ error: 'Ative o módulo fiscal e cadastre a empresa antes de emitir' }, { status: 400 })
+  }
 
   // Próximo número RPS
   const { data: ultimaRow } = await supabase
@@ -51,73 +56,71 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .single()
 
-  const baseRps = fiscalConfig?.numero_proximo_nfse ?? parseInt(process.env.NFSE_PROXIMO_RPS ?? '1', 10)
+  const baseRps = fiscalConfig?.numero_proximo_nfse ?? 1
   const ultimoRps = (ultimaRow?.numero_rps ?? 0) as number
   const numero_rps = Math.max(baseRps, ultimoRps + 1)
-  const ref = `nfse_${user.id.replace(/-/g, '').slice(0, 8)}_${numero_rps}`
   const data_emissao = new Date().toISOString()
+  const ambiente = (fiscalConfig.ambiente as 'homologacao' | 'producao' | undefined) ?? 'homologacao'
+
+  const tomadorCodigoMunicipio = tomador_logradouro
+    ? await buscarCodigoMunicipio(tomador_municipio, tomador_uf)
+    : null
 
   const payload = {
-    ref,
+    companyId: fiscalConfig.contora_company_id as string,
+    ambiente,
+    number: numero_rps,
     tomador_razao_social,
     tomador_cnpj,
     tomador_cpf,
     tomador_email,
-    tomador_telefone,
     tomador_logradouro,
     tomador_numero,
-    tomador_complemento,
     tomador_bairro,
-    tomador_municipio,
+    tomador_codigo_municipio: tomadorCodigoMunicipio ?? undefined,
     tomador_uf,
     tomador_cep,
     valor_servicos: Number(valor_servicos),
-    iss_retido: Boolean(iss_retido),
-    aliquota_iss: aliquota_iss ? Number(aliquota_iss) : undefined,
-    codigo_servico,
-    codigo_lc116,
-    discriminacao,
-    data_emissao,
-    data_competencia,
-    numero_rps,
-    serie_rps: fiscalConfig?.serie_nfse ?? 'RPS',
-    inscricao_municipal_prestador: fiscalConfig?.inscricao_municipal ?? process.env.EMITENTE_INSCRICAO_MUNICIPAL ?? undefined,
-    regime_tributario_prestador: fiscalConfig?.regime_tributario ?? '1',
-    codigo_municipio_prestador: fiscalConfig?.codigo_municipio ?? process.env.EMITENTE_CODIGO_MUNICIPIO ?? undefined,
-    codigo_cnae: codigo_cnae ?? undefined,
-    ibs_cbs_situacao_tributaria: ibs_cbs_situacao_tributaria ?? undefined,
-    ibs_cbs_classificacao_tributaria: ibs_cbs_classificacao_tributaria ?? undefined,
-    codigo_indicador_operacao: codigo_indicador_operacao ?? undefined,
-    codigo_nbs: codigo_nbs ?? undefined,
+    iss_withheld: Boolean(iss_retido),
+    iss_rate: aliquota_iss ? Number(aliquota_iss) : undefined,
+    // codigo_lc116 (ex: "14.06") não é o national_tax_code de 6 dígitos direto —
+    // a Contora deriva boa parte disso sozinha quando cnae/nbs são informados;
+    // passamos os dois códigos brutos e deixamos a API validar/derivar.
+    municipal_tax_code: codigo_servico ?? undefined,
+    national_tax_code: codigo_lc116 ? codigo_lc116.replace(/\D/g, '').padEnd(6, '0') : undefined,
+    nbs_code: codigo_nbs ?? undefined,
+    cnae: codigo_cnae ?? undefined,
+    descricao: discriminacao,
   }
 
   let retorno
   try {
     retorno = await emitirNFSe(payload)
     console.log('[emitir-nfse] payload:', JSON.stringify(payload))
-    console.log('[emitir-nfse] retorno Focus NFe:', JSON.stringify(retorno))
+    console.log('[emitir-nfse] retorno Fiscal Contora:', JSON.stringify(retorno))
   } catch (err) {
     console.error('[emitir-nfse] erro:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
-  // Se a Focus NFe retornou erro (nota não criada), retorna erro imediatamente.
-  // erroFocusNFe() cobre tanto o formato erros[] (validação/SEFAZ) quanto o
-  // formato codigo/mensagem no nível raiz (erro de conta — token inválido,
-  // limite excedido etc.) — sem isso esse segundo formato passava batido.
-  const erroMsg = erroFocusNFe(retorno)
-  if (erroMsg) {
-    console.error('[emitir-nfse] erro Focus NFe:', erroMsg)
+  if (retorno.erros && retorno.erros.length > 0) {
+    const erroMsg = retorno.erros.map(e => `[${e.codigo}] ${e.mensagem}`).join('; ')
+    console.error('[emitir-nfse] erro Fiscal Contora:', erroMsg)
     return NextResponse.json({ ok: false, error: erroMsg, retorno }, { status: 422 })
   }
 
+  // A Contora processa em fila (draft -> dispatch -> autorizado/erro de forma
+  // assíncrona) — igual à Focus NFe, o status inicial normalmente é
+  // "processando" e app/api/nfse/sincronizar faz o polling até autorizar.
   const statusMap: Record<string, string> = {
-    autorizado: 'autorizada',
-    processando_autorizacao: 'processando',
-    erro_autorizacao: 'erro',
-    cancelado: 'cancelada',
+    authorized: 'autorizada',
+    authorize_pending: 'processando',
+    queued: 'processando',
+    processing: 'processando',
+    error: 'erro',
+    cancelled: 'cancelada',
   }
-  const status = statusMap[retorno.status ?? ''] ?? 'processando'
+  const status = statusMap[retorno.processing_status ?? retorno.status ?? ''] ?? 'processando'
   const erro = retorno.erros?.map(e => `${e.codigo}: ${e.mensagem}`).join('; ')
 
   const enderecoTomador = [tomador_logradouro, tomador_numero, tomador_complemento, tomador_bairro]
@@ -130,8 +133,7 @@ export async function POST(req: NextRequest) {
     .from('nfse')
     .insert({
       user_id: user.id,
-      focus_uuid: retorno.uuid,
-      focus_ref: ref,
+      contora_document_id: retorno.documentId,
       numero: retorno.numero,
       numero_rps,
       serie_rps: 'RPS',
@@ -155,9 +157,7 @@ export async function POST(req: NextRequest) {
       data_emissao,
       data_competencia,
       codigo_verificacao: retorno.codigo_verificacao,
-      link_pdf: retorno.link_nfse_pdf,
-      link_xml: retorno.link_nfse_xml,
-      ambiente: getAmbiente(),
+      ambiente,
       erro_mensagem: erro ?? null,
       payload_enviado: payload,
       retorno_focusnfe: retorno,

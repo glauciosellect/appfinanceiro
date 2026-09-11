@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { consultarNFe, erroFocusNFe } from '@/lib/fiscal/focusnfe'
+import { consultarNFe } from '@/lib/fiscal/contora'
 
-// Consulta o status atual de uma NF-e na Focus NFe/SEFAZ — usado quando a
+// Consulta o status atual de uma NF-e na Contora/SEFAZ — usado quando a
 // emissão original ficou "processando" (a espera de até 20s em
 // app/api/fiscal/emitir-nfe/route.ts não é suficiente pra toda autorização),
 // mesmo padrão de app/api/nfse/sincronizar/route.ts.
@@ -11,28 +11,36 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const { ref, id } = (await req.json()) as { ref: string; id: string }
-  if (!ref || !id) return NextResponse.json({ error: 'ref e id são obrigatórios' }, { status: 400 })
+  const { id } = (await req.json()) as { id: string }
+  if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+
+  const [{ data: nota }, { data: fiscalConfig }] = await Promise.all([
+    supabase.from('nfe_emitidas').select('contora_document_id').eq('id', id).eq('user_id', user.id).single(),
+    supabase.from('fiscal_config').select('contora_company_id, ambiente').eq('user_id', user.id).single(),
+  ])
+
+  if (!nota?.contora_document_id || !fiscalConfig?.contora_company_id) {
+    return NextResponse.json({ error: 'Nota ou empresa não encontrada na Contora' }, { status: 400 })
+  }
+  const ambiente = (fiscalConfig.ambiente as 'homologacao' | 'producao' | undefined) ?? 'homologacao'
 
   let retorno
   try {
-    retorno = await consultarNFe(ref)
+    retorno = await consultarNFe(fiscalConfig.contora_company_id, nota.contora_document_id, ambiente)
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
   const statusMap: Record<string, string> = {
-    autorizado: 'emitida',
-    processando_autorizacao: 'processando',
-    erro_autorizacao: 'erro',
-    denegado: 'erro',
-    cancelado: 'cancelada',
+    authorized: 'emitida',
+    authorize_pending: 'processando',
+    queued: 'processando',
+    processing: 'processando',
+    error: 'erro',
+    cancelled: 'cancelada',
   }
-  const msgErro = erroFocusNFe(retorno) ?? retorno.mensagem_sefaz ?? null
-  // Um erro de conta (token inválido, limite excedido etc.) não vem com
-  // `retorno.status` preenchido — sem checar msgErro primeiro, isso caía no
-  // fallback 'processando' e a nota nunca saía desse estado.
-  const status = msgErro ? 'erro' : (statusMap[retorno.status ?? ''] ?? 'processando')
+  const msgErro = retorno.erros?.map(e => `[${e.codigo}] ${e.mensagem}`).join('; ') ?? retorno.mensagem_sefaz ?? null
+  const status = msgErro ? 'erro' : (statusMap[retorno.processing_status ?? retorno.status ?? ''] ?? 'processando')
 
   const { error: dbError } = await supabase
     .from('nfe_emitidas')
@@ -41,12 +49,6 @@ export async function POST(req: NextRequest) {
       chave_acesso: retorno.chave_nfe ?? undefined,
       numero: retorno.numero ? Number(retorno.numero) : undefined,
       serie: retorno.serie ?? undefined,
-      danfe_url: retorno.caminho_danfe
-        ? (retorno.caminho_danfe.startsWith('http') ? retorno.caminho_danfe : `https://api.focusnfe.com.br${retorno.caminho_danfe}`)
-        : undefined,
-      xml_url: retorno.caminho_xml_nota_fiscal
-        ? (retorno.caminho_xml_nota_fiscal.startsWith('http') ? retorno.caminho_xml_nota_fiscal : `https://api.focusnfe.com.br${retorno.caminho_xml_nota_fiscal}`)
-        : undefined,
       erro_mensagem: msgErro,
       updated_at: new Date().toISOString(),
     })
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
 
   if (dbError) console.error('[sincronizar-nfe] erro ao atualizar banco:', dbError)
-  console.log('[sincronizar-nfe] ref:', ref, '| retorno:', JSON.stringify(retorno))
+  console.log('[sincronizar-nfe] id:', id, '| retorno:', JSON.stringify(retorno))
 
   return NextResponse.json({ ok: true, status, retorno })
 }

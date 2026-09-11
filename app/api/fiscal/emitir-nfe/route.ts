@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { emitirNFe, consultarNFe, isTokenConfigured, getAmbiente, erroFocusNFe, type ItemNFe } from '@/lib/fiscal/focusnfe'
+import { emitirNFe, consultarNFe, isTokenConfigured, type ItemNFe } from '@/lib/fiscal/contora'
+import { buscarCodigoMunicipio } from '@/lib/fiscal/ibge'
 
 const REGIME_MAP: Record<string, string> = {
   simples:          '1',
@@ -9,7 +10,9 @@ const REGIME_MAP: Record<string, string> = {
   lucro_real:       '3',
 }
 
-function taxCodes(regime: string, valorBase: number): Partial<ItemNFe> {
+// A Contora calcula a base do ICMS/PIS/COFINS sozinha (quantidade × preço −
+// desconto) — diferente da Focus NFe, não existe mais base_calculo manual.
+function taxCodes(regime: string): Partial<ItemNFe> {
   const isSimples = regime === '1'
   if (isSimples) {
     return {
@@ -23,14 +26,10 @@ function taxCodes(regime: string, valorBase: number): Partial<ItemNFe> {
   return {
     icms_origem:                  '0',
     icms_situacao_tributaria:     '00',
-    icms_modalidade_base_calculo: '3',
-    icms_base_calculo:            valorBase,
     icms_aliquota:                12,
     pis_situacao_tributaria:      '01',
-    pis_base_calculo:             valorBase,
     pis_aliquota_porcentual:      1.65,
     cofins_situacao_tributaria:   '01',
-    cofins_base_calculo:          valorBase,
     cofins_aliquota_porcentual:   7.6,
   }
 }
@@ -88,10 +87,12 @@ export async function POST(req: NextRequest) {
 
   const regime = REGIME_MAP[perfil.regime_tributario as string] ?? '1'
 
-  // Monta itens com tributação
+  // Monta itens com tributação. valorBruto aqui é só pra exibição/total local
+  // — quem calcula a base fiscal de verdade agora é a Contora (quantidade ×
+  // preço − desconto), então mandamos o desconto como valor, não embutido no preço.
   const itens: ItemNFe[] = body.itens.map((it) => {
     const desconto = it.desconto ?? 0
-    const valorBruto = Math.round(it.quantidade * it.valor_unitario * (1 - desconto / 100) * 100) / 100
+    const valorDesconto = Math.round(it.quantidade * it.valor_unitario * (desconto / 100) * 100) / 100
     return {
       codigo_produto:           it.codigo_produto || 'PROD',
       descricao:                it.descricao,
@@ -100,10 +101,11 @@ export async function POST(req: NextRequest) {
       unidade_comercial:        it.unidade || 'UN',
       quantidade_comercial:     it.quantidade,
       valor_unitario_comercial: it.valor_unitario,
-      valor_bruto:              valorBruto,
-      ...taxCodes(regime, valorBruto),
+      valor_desconto:           valorDesconto || undefined,
+      ...taxCodes(regime),
     } as ItemNFe
   })
+  const valorBrutoItem = (it: ItemNFe) => it.quantidade_comercial * it.valor_unitario_comercial - (it.valor_desconto ?? 0)
 
   const ref = `nfe-${user.id.slice(0, 8)}-${Date.now()}`
   // SEFAZ exige data_emissao em horário local brasileiro (UTC-3) com offset;
@@ -112,16 +114,16 @@ export async function POST(req: NextRequest) {
   const agoraBR = new Date(agoraUtc.getTime() - 3 * 60 * 60 * 1000)
   const dataEmissao = agoraBR.toISOString().slice(0, 19) + '-03:00'
 
-  // Busca numeração configurada
+  // Busca numeração e empresa/ambiente configurados na Contora
   const { data: fiscalCfg } = await supabase
     .from('fiscal_config')
-    .select('numero_proximo_nfe, serie_nfe')
+    .select('numero_proximo_nfe, serie_nfe, contora_company_id, ambiente')
     .eq('user_id', user.id)
     .single()
 
   // Se token não configurado → salva localmente como "emitida simulada"
   if (!isTokenConfigured()) {
-    const valorTotal = itens.reduce((s, it) => s + it.valor_bruto, 0)
+    const valorTotal = itens.reduce((s, it) => s + valorBrutoItem(it), 0)
 
     const { data: maxRow } = await supabase
       .from('nfe_emitidas')
@@ -171,86 +173,95 @@ export async function POST(req: NextRequest) {
       simulada: true,
       numero,
       serie,
-      aviso: 'Token Focus NFe não configurado — nota registrada localmente.',
+      aviso: 'Token Fiscal Contora não configurado — nota registrada localmente.',
     })
   }
 
-  // Emite via Focus NFe
+  if (!fiscalCfg?.contora_company_id) {
+    return NextResponse.json({ error: 'Ative o módulo fiscal e cadastre a empresa antes de emitir' }, { status: 400 })
+  }
+  const ambiente = (fiscalCfg.ambiente as 'homologacao' | 'producao' | undefined) ?? 'homologacao'
+  const numeroConfiguradoInicial = fiscalCfg?.numero_proximo_nfe ?? 1
+  const serieConfiguradaInicial = fiscalCfg?.serie_nfe ?? '1'
+
+  // A Contora exige código IBGE (7 dígitos) no endereço, não o nome da
+  // cidade — o formulário só coleta o nome, então resolvemos aqui.
+  const codigoMunicipioDestinatario = await buscarCodigoMunicipio(body.destinatario.municipio, body.destinatario.uf)
+  if (body.destinatario.logradouro && !codigoMunicipioDestinatario) {
+    return NextResponse.json(
+      { error: `Não foi possível identificar o código IBGE do município "${body.destinatario.municipio}/${body.destinatario.uf}". Confira o nome da cidade.` },
+      { status: 400 }
+    )
+  }
+
   const retorno = await emitirNFe({
-    ref,
+    companyId: fiscalCfg.contora_company_id,
+    ambiente,
+    documentType: 'nfe',
+    series: Number(serieConfiguradaInicial) || undefined,
+    number: numeroConfiguradoInicial,
     natureza_operacao:    body.natureza_operacao,
-    data_emissao:         dataEmissao,
-    tipo_documento:       '1',
-    finalidade_emissao:   '1',
-    consumidor_final:     body.consumidor_final ? '1' : '0',
-    presenca_comprador:   body.presenca_comprador ?? '9',
-    cnpj_emitente:        perfil.cnpj_cpf,
-    inscricao_estadual_emitente: perfil.inscricao_estadual ?? '',
-    regime_tributario_emitente: regime,
+    operation_type:       'saida',
+    consumidor_final:     body.consumidor_final,
+    presence_indicator:   body.presenca_comprador ? Number(body.presenca_comprador) : 9,
     nome_destinatario:    body.destinatario.nome,
     cnpj_destinatario:    body.destinatario.cnpj,
     cpf_destinatario:     body.destinatario.cpf,
-    email_destinatario:   body.destinatario.email,
     logradouro_destinatario: body.destinatario.logradouro,
     numero_destinatario:  body.destinatario.numero,
     bairro_destinatario:  body.destinatario.bairro,
-    municipio_destinatario: body.destinatario.municipio,
+    codigo_municipio_destinatario: codigoMunicipioDestinatario ?? undefined,
     uf_destinatario:      body.destinatario.uf,
     cep_destinatario:     body.destinatario.cep,
-    modalidade_frete:     body.frete.modalidade,
-    nome_transportador:   body.frete.transportadora_nome,
-    cnpj_transportador:   body.frete.transportadora_cnpj,
-    placa_transporte:     body.frete.placa,
-    uf_transporte:        body.frete.uf_placa,
     itens,
   })
 
-  const msgErro = erroFocusNFe(retorno)
-  if (msgErro) {
-    return NextResponse.json({ error: msgErro }, { status: 422 })
+  if (retorno.erros && retorno.erros.length > 0) {
+    return NextResponse.json({ error: retorno.erros.map(e => `[${e.codigo}] ${e.mensagem}`).join('; ') }, { status: 422 })
+  }
+  const documentId = retorno.documentId
+  if (!documentId) {
+    return NextResponse.json({ error: 'Contora não retornou o id do documento' }, { status: 502 })
   }
 
-  // Aguarda autorização (polling até 20s)
+  // Aguarda autorização (polling até 20s) — a Contora processa em fila
   let resultado = retorno
-  if (resultado.status === 'processando_autorizacao') {
+  if (resultado.processing_status === 'queued' || resultado.processing_status === 'processing') {
     for (let i = 0; i < 8; i++) {
       await new Promise(r => setTimeout(r, 2500))
-      resultado = await consultarNFe(ref)
-      if (resultado.status !== 'processando_autorizacao') break
+      resultado = await consultarNFe(fiscalCfg.contora_company_id, documentId, ambiente)
+      if (resultado.processing_status !== 'queued' && resultado.processing_status !== 'processing') break
     }
   }
 
-  const autorizado = resultado.status === 'autorizado'
-  const valorTotal = itens.reduce((s, it) => s + it.valor_bruto, 0)
+  const autorizado = resultado.status === 'authorized'
+  const valorTotal = itens.reduce((s, it) => s + valorBrutoItem(it), 0)
 
-  // Normaliza o status bruto da Focus NFe pro mesmo vocabulário usado em
-  // toda a UI (rascunho/emitida/processando/erro/cancelada) — mesmo mapa
-  // usado em app/api/nfse/webhook e app/api/nfse/sincronizar. Sem isso, um
-  // status bruto tipo "processando_autorizacao" ficava salvo do jeito que
-  // veio da API e a tela de detalhe (que só reconhece 'emitida'/'rascunho')
-  // exibia qualquer outra coisa como "✕ CANCELADA" por engano.
+  // Normaliza o status bruto da Contora pro mesmo vocabulário usado em toda a
+  // UI (rascunho/emitida/processando/erro/cancelada) — mesmo mapa usado em
+  // app/api/nfse/webhook e app/api/nfse/sincronizar.
   const statusMap: Record<string, string> = {
-    autorizado: 'emitida',
-    processando_autorizacao: 'processando',
-    erro_autorizacao: 'erro',
-    denegado: 'erro',
-    cancelado: 'cancelada',
+    authorized: 'emitida',
+    authorize_pending: 'processando',
+    queued: 'processando',
+    processing: 'processando',
+    error: 'erro',
+    cancelled: 'cancelada',
   }
-  const statusFinal = autorizado ? 'emitida' : (statusMap[resultado.status ?? ''] ?? 'processando')
+  const statusFinal = autorizado ? 'emitida' : (statusMap[resultado.processing_status ?? resultado.status ?? ''] ?? 'processando')
 
-  // Em produção, usa o número retornado pelo SEFAZ via Focus NFe.
-  // Em homologação, Focus NFe atribui sua própria sequência de teste (1, 2, 3...),
-  // então usamos o número configurado pelo usuário para manter a sequência correta.
-  const numeroConfigurado = fiscalCfg?.numero_proximo_nfe ?? 1
-  const serieConfigurada = fiscalCfg?.serie_nfe ?? '1'
-  const emProducao = getAmbiente() === 'producao'
+  // Em produção, usa o número retornado pela SEFAZ via Contora. Em
+  // homologação, a numeração de teste pode divergir da sequência local, então
+  // mantemos o número configurado pelo usuário pra não perder a continuidade.
+  const emProducao = ambiente === 'producao'
   const numeroFinal = emProducao && resultado.numero
     ? Number(resultado.numero)
-    : numeroConfigurado
-  const serieFinal = resultado.serie ?? serieConfigurada
+    : numeroConfiguradoInicial
+  const serieFinal = resultado.serie ?? serieConfiguradaInicial
 
   await supabase.from('nfe_emitidas').insert({
     user_id: user.id,
+    contora_document_id: documentId,
     numero: numeroFinal,
     serie: serieFinal,
     chave_acesso: resultado.chave_nfe ?? null,
@@ -267,19 +278,11 @@ export async function POST(req: NextRequest) {
     cep_destinatario: body.destinatario.cep || null,
     valor_total: valorTotal,
     status: statusFinal,
-    erro_mensagem: resultado.mensagem_sefaz ?? null,
+    erro_mensagem: resultado.erros?.map(e => e.mensagem).join('; ') ?? null,
     tipo: 'saida',
-    danfe_url: resultado.caminho_danfe
-      ? (resultado.caminho_danfe.startsWith('http') ? resultado.caminho_danfe : `https://api.focusnfe.com.br${resultado.caminho_danfe}`)
-      : null,
-    xml_url: resultado.caminho_xml_nota_fiscal
-      ? (resultado.caminho_xml_nota_fiscal.startsWith('http') ? resultado.caminho_xml_nota_fiscal : `https://api.focusnfe.com.br${resultado.caminho_xml_nota_fiscal}`)
-      : null,
     itens,
     transportadora: body.frete.transportadora_nome || null,
-    focus_ref: ref,
-    focus_uuid: resultado.uuid ?? null,
-    ambiente: process.env.FOCUSNFE_AMBIENTE ?? 'homologacao',
+    ambiente,
   })
 
   // Incrementa o próximo número para a nota seguinte
@@ -290,11 +293,10 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: autorizado,
-    status: resultado.status,
+    status: statusFinal,
     numero: String(numeroFinal),
     serie: serieFinal,
     chave_nfe: resultado.chave_nfe,
-    danfe_url: resultado.caminho_danfe,
     mensagem_sefaz: resultado.mensagem_sefaz,
   })
 }

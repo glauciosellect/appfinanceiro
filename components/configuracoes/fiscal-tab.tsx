@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
-import { CheckCircle2, AlertCircle, Loader2, FileKey, Zap, Receipt, ExternalLink, Upload, FileText, Hash } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, FileKey, Zap, Receipt, Upload, FileText, Hash } from 'lucide-react'
 
 interface FiscalConfig {
   habilita_nfse?: boolean
   habilita_nfe?: boolean
-  focus_status?: string
-  focus_erro?: string
+  contora_status?: string
+  contora_erro?: string
   certificado_status?: string
   ativo?: boolean
   cnpj?: string
@@ -50,7 +50,7 @@ export default function FiscalTab({ userId }: { userId: string }) {
   useEffect(() => {
     if (!userId) return
     Promise.all([
-      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,focus_status,focus_erro,certificado_status,ativo,cnpj,numero_proximo_nfe,serie_nfe,numero_proximo_nfse,serie_nfse,logo_url,mostrar_logo,mostrar_cnpj,mostrar_endereco,mostrar_telefone,mostrar_email').eq('user_id', userId).single(),
+      createClient().from('fiscal_config').select('habilita_nfse,habilita_nfe,contora_status,contora_erro,certificado_status,ativo,cnpj,numero_proximo_nfe,serie_nfe,numero_proximo_nfse,serie_nfse,logo_url,mostrar_logo,mostrar_cnpj,mostrar_endereco,mostrar_telefone,mostrar_email').eq('user_id', userId).single(),
       createClient().from('perfil_empresa').select('cnpj_cpf, razao_social').eq('user_id', userId).single(),
     ]).then(([{ data: fiscal }, { data: perfil }]) => {
       if (fiscal) {
@@ -97,13 +97,13 @@ export default function FiscalTab({ userId }: { userId: string }) {
           habilita_nfe: config.habilita_nfe,
         }),
       })
-      const json = await res.json() as { ok?: boolean; error?: string; focus_erro?: string }
+      const json = await res.json() as { ok?: boolean; error?: string; contora_erro?: string }
       if (json.ok) {
         toast('Módulo fiscal ativado com sucesso!', 'success')
-        setConfig(c => ({ ...c, focus_status: 'cadastrado', ativo: true }))
+        setConfig(c => ({ ...c, contora_status: 'cadastrado', ativo: true }))
       } else {
-        toast(json.focus_erro ?? json.error ?? 'Erro ao ativar', 'error')
-        setConfig(c => ({ ...c, focus_status: 'erro' }))
+        toast(json.contora_erro ?? json.error ?? 'Erro ao ativar', 'error')
+        setConfig(c => ({ ...c, contora_status: 'erro' }))
       }
     } catch {
       toast('Erro de conexão', 'error')
@@ -151,7 +151,7 @@ export default function FiscalTab({ userId }: { userId: string }) {
       })
       const json = await res.json() as { ok?: boolean; error?: string; aviso?: string }
       if (json.ok) {
-        toast(json.aviso ?? 'Numeração sincronizada com a Focus NFe!', 'success')
+        toast(json.aviso ?? 'Numeração da NF-e salva com sucesso!', 'success')
         setConfig(c => ({ ...c, numero_proximo_nfe: num, serie_nfe: serieNfe }))
       } else {
         toast(json.error ?? 'Erro ao salvar numeração', 'error')
@@ -187,19 +187,6 @@ export default function FiscalTab({ userId }: { userId: string }) {
     }
   }
 
-  async function handleConfirmarManual() {
-    try {
-      await createClient().from('fiscal_config').update({
-        certificado_status: 'enviado',
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', userId)
-      toast('Certificado confirmado!', 'success')
-      setConfig(c => ({ ...c, certificado_status: 'enviado' }))
-    } catch {
-      toast('Erro ao salvar confirmação', 'error')
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 text-gray-400">
@@ -208,7 +195,7 @@ export default function FiscalTab({ userId }: { userId: string }) {
     )
   }
 
-  const isAtivo = config.focus_status === 'cadastrado' || config.ativo
+  const isAtivo = config.contora_status === 'cadastrado' || config.ativo
   const certEnviado = config.certificado_status === 'enviado'
 
   return (
@@ -227,12 +214,12 @@ export default function FiscalTab({ userId }: { userId: string }) {
             </p>
           </div>
         </div>
-      ) : config.focus_status === 'erro' ? (
+      ) : config.contora_status === 'erro' ? (
         <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
           <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
           <div>
             <p className="font-semibold text-red-800 text-sm">Erro no cadastro fiscal</p>
-            <p className="text-red-700 text-xs">{config.focus_erro}</p>
+            <p className="text-red-700 text-xs">{config.contora_erro}</p>
           </div>
         </div>
       ) : (
@@ -414,7 +401,7 @@ export default function FiscalTab({ userId }: { userId: string }) {
               disabled={salvandoNum || !numeroProximo}
             >
               {salvandoNum ? <Loader2 className="h-4 w-4 animate-spin" /> : <Hash className="h-4 w-4" />}
-              Salvar e sincronizar com Focus NFe
+              Salvar numeração da NF-e
             </Button>
           </CardContent>
         </Card>
@@ -488,22 +475,6 @@ export default function FiscalTab({ userId }: { userId: string }) {
               {enviandoCert ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {certEnviado ? 'Substituir Certificado' : 'Enviar Certificado'}
             </Button>
-
-            <div className="border-t pt-3 space-y-2">
-              <p className="text-xs text-gray-400 text-center">
-                Prefere fazer pelo painel da Focus NFe?{' '}
-                <a href="https://app.focusnfe.com.br" target="_blank" rel="noopener noreferrer"
-                  className="text-purple-600 hover:underline inline-flex items-center gap-0.5">
-                  Acesse aqui <ExternalLink className="h-3 w-3" />
-                </a>
-                {' '}e depois clique em:
-              </p>
-              <Button variant="outline" className="w-full gap-2 text-sm" onClick={handleConfirmarManual}
-                disabled={certEnviado}>
-                <CheckCircle2 className="h-4 w-4" />
-                {certEnviado ? 'Certificado já confirmado' : 'Já enviei pelo painel — confirmar'}
-              </Button>
-            </div>
           </CardContent>
         </Card>
       )}

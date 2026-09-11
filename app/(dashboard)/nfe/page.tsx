@@ -195,21 +195,27 @@ function NFeLine({ nota, onExcluir }: { nota: NFeRecord; onExcluir: (id: string)
           >
             <Printer className="h-4 w-4" />
           </Link>
-          {nota.danfe_url && (
+          {(nota.danfe_url || nota.contora_document_id) && (
             <button
               title="Baixar DANFE"
-              onClick={() => window.open(nota.danfe_url!, '_blank')}
+              onClick={() => window.open(
+                nota.danfe_url || `/api/fiscal/artefato?tipo=nfe&id=${nota.id}&formato=pdf`,
+                '_blank'
+              )}
               className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
             >
               <Download className="h-4 w-4" />
             </button>
           )}
-          {nota.xml_url && (
+          {(nota.xml_url || nota.contora_document_id) && (
             <button
               title="Baixar XML"
               onClick={async () => {
                 const filename = `nfe_${nota.numero || nota.id}.xml`
-                const res = await fetch(`/api/fiscal/download-xml?url=${encodeURIComponent(nota.xml_url!)}&filename=${filename}`)
+                const url = nota.xml_url
+                  ? `/api/fiscal/download-xml?url=${encodeURIComponent(nota.xml_url)}&filename=${filename}`
+                  : `/api/fiscal/artefato?tipo=nfe&id=${nota.id}&formato=xml`
+                const res = await fetch(url)
                 const blob = await res.blob()
                 const link = document.createElement('a')
                 link.href = URL.createObjectURL(blob)

@@ -31,6 +31,7 @@ interface NfseRow {
   data_emissao: string
   erro_mensagem?: string
   focus_ref?: string
+  contora_document_id?: string
 }
 
 const STATUS_CFG: Record<string, { label: string; className: string }> = {
@@ -96,7 +97,7 @@ export default function NFSePage() {
       const res = await fetch(`/api/nfse/cancelar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ref: nota.focus_ref, id: nota.id }),
+        body: JSON.stringify({ id: nota.id }),
       })
       const json = await res.json() as { ok?: boolean; error?: string }
       if (json.ok) {
@@ -248,8 +249,8 @@ function NFSeLine({ nota, onCancelar, onExcluir }: { nota: NfseRow; onCancelar: 
             <Printer className="h-4 w-4" />
           </Link>
           {/* Download PDF */}
-          {nota.link_pdf && (
-            <a href={nota.link_pdf} target="_blank" rel="noreferrer" title="Baixar PDF" className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg inline-flex">
+          {(nota.link_pdf || nota.contora_document_id) && (
+            <a href={nota.link_pdf || `/api/fiscal/artefato?tipo=nfse&id=${nota.id}&formato=pdf`} target="_blank" rel="noreferrer" title="Baixar PDF" className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg inline-flex">
               <Download className="h-4 w-4" />
             </a>
           )}

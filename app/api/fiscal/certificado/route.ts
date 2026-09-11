@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { enviarCertificado } from '@/lib/fiscal/focusnfe'
+import { enviarCertificado } from '@/lib/fiscal/contora'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -16,28 +16,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Certificado e senha são obrigatórios' }, { status: 400 })
   }
 
-  // Busca CNPJ: tenta fiscal_config, fallback para perfil_empresa
+  // Certificado é por empresa na Contora — precisa do cadastro (ativar) feito antes
   const { data: configRow } = await supabase
     .from('fiscal_config')
-    .select('cnpj')
+    .select('contora_company_id, ambiente')
     .eq('user_id', user.id)
     .single()
 
-  let cnpjFinal = configRow?.cnpj?.replace(/\D/g, '') ?? ''
-
-  if (!cnpjFinal) {
-    const { data: perfil } = await supabase
-      .from('perfil_empresa')
-      .select('cnpj_cpf')
-      .eq('user_id', user.id)
-      .single()
-    if (!perfil?.cnpj_cpf) {
-      return NextResponse.json({ error: 'Ative o módulo fiscal antes de enviar o certificado' }, { status: 400 })
-    }
-    cnpjFinal = perfil.cnpj_cpf.replace(/\D/g, '')
-    await supabase.from('fiscal_config')
-      .update({ cnpj: cnpjFinal })
-      .eq('user_id', user.id)
+  if (!configRow?.contora_company_id) {
+    return NextResponse.json({ error: 'Ative o módulo fiscal antes de enviar o certificado' }, { status: 400 })
   }
 
   // Converte .pfx para base64
@@ -46,28 +33,24 @@ export async function POST(req: NextRequest) {
 
   let retorno
   try {
-    retorno = await enviarCertificado(cnpjFinal, pfxBase64, senha)
+    const ambiente = (configRow.ambiente as 'homologacao' | 'producao' | undefined) ?? 'homologacao'
+    retorno = await enviarCertificado(configRow.contora_company_id, pfxBase64, senha, ambiente)
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 
-  const temErro = retorno.erros && retorno.erros.length > 0
-  const erroMsg = temErro
-    ? retorno.erros!.map((e: { codigo?: string; mensagem?: string }) => `[${e.codigo ?? '?'}] ${e.mensagem ?? ''}`).join('; ')
-    : (retorno.message && retorno.status !== 'ok' ? retorno.message : null)
-
-  if (!temErro && !erroMsg) {
+  if (retorno.ok) {
     await supabase.from('fiscal_config').update({
       certificado_status: 'enviado',
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id)
   }
 
-  console.log('[certificado] retorno Focus NFe:', JSON.stringify(retorno))
+  console.log('[certificado] retorno Fiscal Contora:', JSON.stringify(retorno))
 
   return NextResponse.json({
-    ok: !temErro && !erroMsg,
-    error: erroMsg ?? undefined,
+    ok: retorno.ok === true,
+    error: retorno.erro,
     retorno,
   })
 }

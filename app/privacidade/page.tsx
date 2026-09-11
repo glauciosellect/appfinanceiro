@@ -49,7 +49,7 @@ export default function PrivacidadePage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>Criar e manter sua conta;</li>
           <li>Processar pagamentos de assinatura;</li>
-          <li>Emitir NFS-e e NF-e junto às autoridades fiscais competentes via Focus NFe;</li>
+          <li>Emitir NFS-e e NF-e junto às autoridades fiscais competentes via Fiscal Contora;</li>
           <li>Enviar comunicações transacionais (confirmação de e-mail, recibo de cobrança, alertas da conta);</li>
           <li>Enviar novidades e melhorias do produto — você pode cancelar a qualquer momento;</li>
           <li>Detectar e prevenir fraudes e uso indevido da plataforma;</li>
@@ -74,7 +74,7 @@ export default function PrivacidadePage() {
           rows={[
             ['Asaas', 'Processamento de pagamentos e assinaturas', 'asaas.com'],
             ['Supabase', 'Banco de dados e autenticação (infraestrutura em nuvem)', 'supabase.com/privacy'],
-            ['Focus NFe', 'Transmissão de NFS-e e NF-e às prefeituras e SEFAZ', 'focusnfe.com.br'],
+            ['Fiscal Contora', 'Transmissão de NFS-e e NF-e às prefeituras e SEFAZ', 'fiscal.contora.com.br'],
             ['Vercel', 'Hospedagem da aplicação web', 'vercel.com/legal/privacy-policy'],
           ]}
           headers={['Fornecedor', 'Finalidade', 'Política']}

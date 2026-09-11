@@ -25,6 +25,7 @@ export interface NFeRecord {
   itens: unknown
   transportadora: string | null
   focus_ref: string | null
+  contora_document_id: string | null
   ambiente: string
   erro_mensagem: string | null
   created_at: string

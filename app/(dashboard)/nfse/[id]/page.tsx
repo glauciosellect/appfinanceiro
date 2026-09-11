@@ -38,6 +38,7 @@ interface NfseRow {
   data_competencia?: string
   erro_mensagem?: string
   focus_ref?: string
+  contora_document_id?: string
 }
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
@@ -77,13 +78,13 @@ export default function NFSeVisualizarPage() {
   useEffect(() => { fetchNota() }, [fetchNota])
 
   async function handleSincronizar() {
-    if (!nota?.focus_ref) return
+    if (!nota) return
     setSincronizando(true)
     try {
       const res = await fetch('/api/nfse/sincronizar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ref: nota.focus_ref, id: nota.id }),
+        body: JSON.stringify({ id: nota.id }),
       })
       const json = await res.json() as { ok?: boolean; error?: string; status?: string; retorno?: Record<string, unknown> }
       console.log('[sincronizar retorno]', json)
@@ -106,7 +107,7 @@ export default function NFSeVisualizarPage() {
       const res = await fetch('/api/nfse/cancelar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ref: nota.focus_ref, id: nota.id }),
+        body: JSON.stringify({ id: nota.id }),
       })
       const json = await res.json() as { ok?: boolean; error?: string }
       if (json.ok) {
@@ -176,8 +177,8 @@ export default function NFSeVisualizarPage() {
               Sincronizar status
             </Button>
           )}
-          {nota.link_pdf && (
-            <a href={nota.link_pdf} target="_blank" rel="noreferrer">
+          {(nota.link_pdf || nota.contora_document_id) && (
+            <a href={nota.link_pdf || `/api/fiscal/artefato?tipo=nfse&id=${nota.id}&formato=pdf`} target="_blank" rel="noreferrer">
               <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar PDF</Button>
             </a>
           )}

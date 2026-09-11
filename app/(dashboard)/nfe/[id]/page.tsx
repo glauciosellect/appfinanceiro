@@ -65,13 +65,13 @@ export default function NFeVisualizarPage() {
   useEffect(() => { fetchNota() }, [fetchNota])
 
   async function handleSincronizar() {
-    if (!nota?.focus_ref) return
+    if (!nota?.contora_document_id) return
     setSincronizando(true)
     try {
       const res = await fetch('/api/fiscal/sincronizar-nfe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ref: nota.focus_ref, id: nota.id }),
+        body: JSON.stringify({ id: nota.id }),
       })
       const json = await res.json() as { ok?: boolean; error?: string; status?: string; retorno?: Record<string, unknown> }
       if (json.ok) {
@@ -141,21 +141,24 @@ export default function NFeVisualizarPage() {
           <Link href="/nfe"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Link>
         </Button>
         <div className="flex gap-2">
-          {nota.status === 'processando' && nota.focus_ref && (
+          {nota.status === 'processando' && nota.contora_document_id && (
             <Button variant="outline" size="sm" onClick={handleSincronizar} disabled={sincronizando}>
               {sincronizando ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
               Sincronizar status
             </Button>
           )}
-          {nota.danfe_url && (
-            <a href={nota.danfe_url} target="_blank" rel="noreferrer">
+          {(nota.danfe_url || nota.contora_document_id) && (
+            <a href={nota.danfe_url || `/api/fiscal/artefato?tipo=nfe&id=${nota.id}&formato=pdf`} target="_blank" rel="noreferrer">
               <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar DANFE</Button>
             </a>
           )}
-          {nota.xml_url && (
+          {(nota.xml_url || nota.contora_document_id) && (
             <Button variant="outline" size="sm" onClick={async () => {
               const filename = `nfe_${nota.numero || nota.id}.xml`
-              const res = await fetch(`/api/fiscal/download-xml?url=${encodeURIComponent(nota.xml_url!)}&filename=${filename}`)
+              const url = nota.xml_url
+                ? `/api/fiscal/download-xml?url=${encodeURIComponent(nota.xml_url)}&filename=${filename}`
+                : `/api/fiscal/artefato?tipo=nfe&id=${nota.id}&formato=xml`
+              const res = await fetch(url)
               const blob = await res.blob()
               const link = document.createElement('a')
               link.href = URL.createObjectURL(blob)

@@ -128,7 +128,7 @@ export default function TermosPage() {
         </Highlight>
         <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>
-            A transmissão é realizada via <strong>Focus NFe</strong>, sujeita à disponibilidade dos
+            A transmissão é realizada via <strong>Fiscal Contora</strong>, sujeita à disponibilidade dos
             sistemas das prefeituras e da SEFAZ.
           </li>
           <li>
@@ -139,7 +139,7 @@ export default function TermosPage() {
             fornecidos pelo usuário ou por indisponibilidade dos órgãos públicos.
           </li>
           <li>
-            Cada CNPJ emitente ocupa um slot de licença Focus NFe. O número de CNPJs disponíveis
+            Cada CNPJ emitente ocupa um slot de licença na Fiscal Contora. O número de CNPJs disponíveis
             depende do plano contratado.
           </li>
         </ul>
