@@ -73,7 +73,7 @@ export default function OrcamentoPublicoPage() {
   }
 
   const fc = fiscalConfig ?? {}
-  const nomeEmpresa      = (fc as FiscalConfig).razao_social || 'Empresa'
+  const nomeEmpresa      = (fc as FiscalConfig).nome_fantasia || (fc as FiscalConfig).razao_social || 'Empresa'
   const mostrarLogo      = (fc as FiscalConfig).mostrar_logo ?? true
   const mostrarCnpj      = (fc as FiscalConfig).mostrar_cnpj ?? true
   const mostrarEndereco  = (fc as FiscalConfig).mostrar_endereco ?? true
@@ -107,6 +107,9 @@ export default function OrcamentoPublicoPage() {
             )}
             <div>
               <p className="font-bold text-lg text-gray-900">{nomeEmpresa}</p>
+              {(fc as FiscalConfig).nome_fantasia && (fc as FiscalConfig).razao_social && (fc as FiscalConfig).razao_social !== (fc as FiscalConfig).nome_fantasia && (
+                <p className="text-[10px] text-gray-400">{(fc as FiscalConfig).razao_social}</p>
+              )}
               <div className="text-xs text-gray-500 space-y-0.5">
                 {mostrarCnpj && (fc as FiscalConfig).cnpj && <p>CNPJ: {(fc as FiscalConfig).cnpj}</p>}
                 {mostrarEndereco && enderecoCompleto && <p>{enderecoCompleto}</p>}

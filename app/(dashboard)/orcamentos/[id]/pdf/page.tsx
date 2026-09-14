@@ -9,6 +9,7 @@ import { ArrowLeft, Printer, Copy, Loader2, Package, Wrench, Share2, Download } 
 import { createClient } from '@/lib/supabase/client'
 import { getPedidoComItens } from '@/lib/supabase/pedidos'
 import { getFiscalConfig } from '@/lib/supabase/fiscal'
+import { getPerfilEmpresa, type PerfilEmpresa } from '@/lib/supabase/perfil-empresa'
 import { gerarPdfDeElemento } from '@/lib/pdf/gerar-pdf-elemento'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -23,6 +24,7 @@ export default function OrcamentoPdfPage() {
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [itens, setItens] = useState<PedidoItem[]>([])
   const [fiscalConfig, setFiscalConfig] = useState<FiscalConfig | null>(null)
+  const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
   const [loading, setLoading] = useState(true)
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [baixandoPdf, setBaixandoPdf] = useState(false)
@@ -35,15 +37,17 @@ export default function OrcamentoPdfPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const [resultado, fiscal] = await Promise.all([
+      const [resultado, fiscal, perfilEmpresa] = await Promise.all([
         getPedidoComItens(user.id, pedidoId),
         getFiscalConfig(user.id),
+        getPerfilEmpresa(user.id),
       ])
       if (resultado) {
         setPedido(resultado.pedido)
         setItens(resultado.itens)
       }
       setFiscalConfig(fiscal)
+      setPerfil(perfilEmpresa)
     } catch {
       toast('Erro ao carregar orçamento', 'error')
     } finally {
@@ -168,7 +172,12 @@ export default function OrcamentoPdfPage() {
   const subtotalServicos = itensServico.reduce((s, i) => s + i.subtotal, 0)
   const subtotalProdutos = itensProduto.reduce((s, i) => s + i.subtotal, 0)
 
-  const nomeEmpresa = fiscalConfig?.razao_social || 'Empresa'
+  // Nome fantasia (perfil_empresa) é o nome comercial que o cliente reconhece;
+  // fiscal_config só guarda razão social, sem campo de nome fantasia — por
+  // isso a logo enviada e o nome fantasia vêm sempre de perfil_empresa,
+  // com fiscal_config como fallback (ex.: URL de logo colada manualmente).
+  const nomeEmpresa = perfil?.nome_fantasia || fiscalConfig?.razao_social || 'Empresa'
+  const logoUrl = perfil?.logo_url || fiscalConfig?.logo_url || null
   const mostrarLogo      = fiscalConfig?.mostrar_logo ?? true
   const mostrarCnpj      = fiscalConfig?.mostrar_cnpj ?? true
   const mostrarEndereco  = fiscalConfig?.mostrar_endereco ?? true
@@ -220,14 +229,17 @@ export default function OrcamentoPdfPage() {
         {/* Cabeçalho da empresa */}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] border-b-2 border-gray-700">
           <div className="p-3 sm:border-r border-b sm:border-b-0 border-gray-700 flex items-center gap-3">
-            {mostrarLogo && fiscalConfig?.logo_url && (
+            {mostrarLogo && logoUrl && (
               <div className="w-14 h-14 shrink-0 border border-gray-300 rounded overflow-hidden flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img id="orcamento-logo" src={fiscalConfig.logo_url} alt="Logo" crossOrigin="anonymous" className="w-full h-full object-contain p-1" />
+                <img id="orcamento-logo" src={logoUrl} alt="Logo" crossOrigin="anonymous" className="w-full h-full object-contain p-1" />
               </div>
             )}
             <div className="space-y-0.5">
               <p className="font-bold text-base text-gray-900 leading-tight">{nomeEmpresa}</p>
+              {perfil?.nome_fantasia && fiscalConfig?.razao_social && fiscalConfig.razao_social !== perfil.nome_fantasia && (
+                <p className="text-[9px] text-gray-500 leading-tight">{fiscalConfig.razao_social}</p>
+              )}
               {mostrarCnpj && fiscalConfig?.cnpj && <p>CNPJ: <strong>{fiscalConfig.cnpj}</strong></p>}
               {mostrarEndereco && enderecoCompleto && <p>Endereço: <strong>{enderecoCompleto}</strong></p>}
               <div className="flex gap-4">
