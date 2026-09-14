@@ -140,7 +140,7 @@ export default function NFSePage() {
           <CheckCircle2 className="h-5 w-5 text-white" />
         </div>
         <div>
-          <p className="font-semibold text-green-800 text-sm">Integração ativa — Focus NFe</p>
+          <p className="font-semibold text-green-800 text-sm">Integração ativa — Fiscal Contora</p>
           <p className="text-green-700 text-sm">Emita NFS-e diretamente pelo Syncromoney, sem acessar o portal da prefeitura.</p>
         </div>
       </div>

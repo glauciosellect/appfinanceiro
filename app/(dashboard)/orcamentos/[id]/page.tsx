@@ -136,7 +136,8 @@ export default function OrcamentoDetalhePage() {
         informacoes_adicionais: informacoesAdicionais || undefined,
       })
       setPedido(atualizado)
-    } catch {
+    } catch (err) {
+      console.error('Erro ao salvar cabeçalho do orçamento:', err)
       _toast('Erro ao salvar orçamento', 'error')
     }
   }
@@ -158,7 +159,8 @@ export default function OrcamentoDetalhePage() {
       const atualizado = await recalcularTotaisPedido(userId, pedido.id)
       setPedido(atualizado)
       _toast('Orçamento salvo!', 'success')
-    } catch {
+    } catch (err) {
+      console.error('Erro ao salvar orçamento:', err)
       _toast('Erro ao salvar orçamento', 'error')
     } finally {
       setSalvando(false)

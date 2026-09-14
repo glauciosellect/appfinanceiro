@@ -9,9 +9,9 @@ const TABELA_POR_TIPO: Record<TipoDocumentoArtefato, string> = {
 }
 
 // Proxy de download de PDF/XML — a Contora exige Bearer token pra baixar
-// artefato (diferente da Focus NFe, que dava um link público direto), então
-// o navegador não pode buscar isso sozinho. Esta rota busca no servidor
-// (autenticado) e devolve o binário pro usuário dono da nota.
+// artefato (não é um link público), então o navegador não pode buscar isso
+// sozinho. Esta rota busca no servidor (autenticado) e devolve o binário
+// pro usuário dono da nota.
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

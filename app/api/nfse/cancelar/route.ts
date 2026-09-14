@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   await supabase
     .from('nfse')
-    .update({ status: 'cancelada', retorno_focusnfe: retorno, updated_at: new Date().toISOString() })
+    .update({ status: 'cancelada', retorno_provedor: retorno, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', user.id)
 

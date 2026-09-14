@@ -199,7 +199,7 @@ export default function NFSeVisualizarPage() {
           <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
           <div>
             <p className="font-semibold text-yellow-800 text-sm">Aguardando autorização da Prefeitura</p>
-            <p className="text-yellow-700 text-xs mt-0.5">Clique em &quot;Sincronizar status&quot; para consultar a situação atual na Focus NFe.</p>
+            <p className="text-yellow-700 text-xs mt-0.5">Clique em &quot;Sincronizar status&quot; para consultar a situação atual na Fiscal Contora.</p>
           </div>
         </div>
       )}

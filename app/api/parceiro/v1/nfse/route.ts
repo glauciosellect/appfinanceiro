@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       ambiente,
       erro_mensagem: erro ?? null,
       payload_enviado: payload,
-      retorno_focusnfe: retorno,
+      retorno_provedor: retorno,
       tomador_endereco: enderecoTomador || null,
       tomador_cidade: cidadeTomador ?? null,
     })

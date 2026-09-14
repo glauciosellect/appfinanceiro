@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       numero: retorno.numero ?? undefined,
       codigo_verificacao: retorno.codigo_verificacao ?? undefined,
       erro_mensagem: msgErro ?? null,
-      retorno_focusnfe: retorno,
+      retorno_provedor: retorno,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

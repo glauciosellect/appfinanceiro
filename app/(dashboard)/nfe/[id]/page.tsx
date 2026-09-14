@@ -181,7 +181,9 @@ export default function NFeVisualizarPage() {
           <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
           <div>
             <p className="font-semibold text-blue-800 text-sm">Aguardando autorização da SEFAZ</p>
-            <p className="text-blue-700 text-xs mt-0.5">Clique em &quot;Sincronizar status&quot; para consultar a situação atual na Focus NFe.</p>
+            <p className="text-blue-700 text-xs mt-0.5">
+              {nota.erro_mensagem || 'Clique em "Sincronizar status" para consultar a situação atual na Fiscal Contora.'}
+            </p>
           </div>
         </div>
       )}

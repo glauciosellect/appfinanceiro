@@ -110,8 +110,8 @@ export async function POST(req: NextRequest) {
   }
 
   // A Contora processa em fila (draft -> dispatch -> autorizado/erro de forma
-  // assíncrona) — igual à Focus NFe, o status inicial normalmente é
-  // "processando" e app/api/nfse/sincronizar faz o polling até autorizar.
+  // assíncrona) — o status inicial normalmente é "processando" e
+  // app/api/nfse/sincronizar faz o polling até autorizar.
   const statusMap: Record<string, string> = {
     authorized: 'autorizada',
     authorize_pending: 'processando',
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
       ambiente,
       erro_mensagem: erro ?? null,
       payload_enviado: payload,
-      retorno_focusnfe: retorno,
+      retorno_provedor: retorno,
     })
     .select()
     .single()

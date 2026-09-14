@@ -34,9 +34,7 @@ const CONTORA_BASE_URL = 'https://fiscal.contora.com.br/api/v1'
 const CONTORA_TOKEN_PRODUCAO = process.env.CONTORA_API_TOKEN ?? process.env.CONTORA_API_TOKEN_PRODUCAO ?? ''
 const CONTORA_TOKEN_HOMOLOGACAO = process.env.CONTORA_API_TOKEN_HOMOLOGACAO ?? ''
 
-// Diferente da Focus NFe (onde o CNPJ do parceiro precisava ser cadastrado
-// manualmente no painel antes deste script rodar), aqui cadastramos direto
-// na Contora e já guardamos o company_id retornado.
+// Cadastra o parceiro direto na Contora e já guarda o company_id retornado.
 async function cadastrarNaContora(dados) {
   const token = dados.ambiente === 'homologacao' ? (CONTORA_TOKEN_HOMOLOGACAO || CONTORA_TOKEN_PRODUCAO) : (CONTORA_TOKEN_PRODUCAO || CONTORA_TOKEN_HOMOLOGACAO)
   if (!token) throw new Error('CONTORA_API_TOKEN(_HOMOLOGACAO) não configurado no .env.local')

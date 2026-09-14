@@ -3,9 +3,9 @@ import { consultarNFSe, verificarAssinaturaWebhook } from '@/lib/fiscal/contora'
 import { getSupabaseAdmin } from '@/lib/parceiro/auth'
 
 // A Contora chama este endpoint via POST, assinado em X-Fiscal-Signature
-// (HMAC-SHA256 do corpo cru com CONTORA_WEBHOOK_SECRET) — diferente da Focus
-// NFe, que usava GET com ?ref=. Um único endpoint recebe eventos de todas as
-// empresas/documentos da conta; a nota é localizada por document_id.
+// (HMAC-SHA256 do corpo cru com CONTORA_WEBHOOK_SECRET). Um único endpoint
+// recebe eventos de todas as empresas/documentos da conta; a nota é
+// localizada por document_id.
 //
 // Formato do payload inferido do schema (WebhookTestPing) — evento em
 // `event`, documento em `data`/`document` — mas ainda não confirmado com uma
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       numero:             retorno?.numero ?? undefined,
       codigo_verificacao: retorno?.codigo_verificacao ?? undefined,
       erro_mensagem:      erro ?? null,
-      retorno_focusnfe:   retorno,
+      retorno_provedor:   retorno,
       updated_at:         new Date().toISOString(),
     })
     .eq('contora_document_id', documentId)
@@ -82,9 +82,9 @@ export async function POST(req: NextRequest) {
   // nem sabe que ela existe, só recebe este retorno.
   //
   // TODO: linkPdf/linkXml ainda não existem — a Contora exige Bearer token
-  // pra baixar artefato (não é mais um link público como na Focus NFe).
-  // Falta criar a rota proxy (ver baixarArtefato() em lib/fiscal/contora.ts)
-  // antes de preencher isso com uma URL real.
+  // pra baixar artefato (não é um link público). Falta criar a rota proxy
+  // (ver baixarArtefato() em lib/fiscal/contora.ts) antes de preencher isso
+  // com uma URL real.
   if (notaAtualizada?.parceiro_empresa_id) {
     await encaminharWebhookParceiro(notaAtualizada.parceiro_empresa_id, {
       referenciaExterna: notaAtualizada.referencia_externa,
@@ -121,7 +121,7 @@ async function encaminharWebhookParceiro(parceiroEmpresaId: string, payload: Rec
     })
     console.log('[nfse-webhook] encaminhado para parceiro', parceiroEmpresaId, '->', empresa.webhook_url)
   } catch (err) {
-    // Não derruba o webhook da Focus NFe por causa de uma falha no lado do
+    // Não derruba o webhook da Contora por causa de uma falha no lado do
     // parceiro — a nota já foi salva corretamente no passo anterior. O
     // parceiro pode consultar GET /api/parceiro/v1/nfse/:id como fallback.
     console.error('[nfse-webhook] falha ao encaminhar para parceiro:', err)

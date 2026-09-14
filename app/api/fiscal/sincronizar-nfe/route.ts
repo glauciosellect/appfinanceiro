@@ -39,8 +39,15 @@ export async function POST(req: NextRequest) {
     error: 'erro',
     cancelled: 'cancelada',
   }
-  const msgErro = retorno.erros?.map(e => `[${e.codigo}] ${e.mensagem}`).join('; ') ?? retorno.mensagem_sefaz ?? null
-  const status = msgErro ? 'erro' : (statusMap[retorno.processing_status ?? retorno.status ?? ''] ?? 'processando')
+  // Documento preso em "draft" sem nunca ter sido pego pela fila da Contora
+  // — não é uma autorização normal ainda em andamento, é a fila travada.
+  const presoSemFila = retorno.processing_status === 'draft' && (retorno.attempts_count ?? 0) === 0
+  const msgErro = retorno.erros?.map(e => `[${e.codigo}] ${e.mensagem}`).join('; ')
+    ?? retorno.mensagem_sefaz
+    ?? (presoSemFila
+      ? 'A Contora ainda não iniciou o processamento desta nota (não entrou na fila). Aguarde alguns minutos e sincronize de novo; se persistir, contate o suporte da Contora.'
+      : null)
+  const status = (msgErro && !presoSemFila) ? 'erro' : (statusMap[retorno.processing_status ?? retorno.status ?? ''] ?? 'processando')
 
   const { error: dbError } = await supabase
     .from('nfe_emitidas')

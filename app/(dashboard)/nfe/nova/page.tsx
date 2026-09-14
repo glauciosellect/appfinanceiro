@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, Truck } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, AlertCircle, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -110,6 +110,12 @@ export default function NovaNFePage() {
   const searchParams = useSearchParams()
   const reenviarId = searchParams.get('reenviar')
 
+  // Rascunho
+  const [draftId, setDraftId] = useState<string | null>(null)
+  const [salvandoRascunho, setSalvandoRascunho] = useState(false)
+  const [rascunhoSalvo, setRascunhoSalvo] = useState(false)
+  const [erroRascunho, setErroRascunho] = useState('')
+
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
@@ -128,6 +134,8 @@ export default function NovaNFePage() {
       .then(({ data }) => {
         if (!data) return
         const nota = data as NFeRecord
+        // Só reaproveita o mesmo registro em atualizações futuras se ainda for rascunho
+        if (nota.status === 'rascunho') setDraftId(nota.id)
         setNatureza(nota.natureza_operacao ?? 'Venda de Mercadoria')
         setDestinatario(nota.destinatario ?? '')
         setCnpj(nota.cnpj_destinatario ?? '')
@@ -270,6 +278,79 @@ export default function NovaNFePage() {
     (p) => !termoBusca || p.descricao.toLowerCase().includes(termoBusca.toLowerCase()) || p.codigo.includes(termoBusca)
   )
 
+  async function handleSalvarRascunho() {
+    if (!userId) return
+    setSalvandoRascunho(true)
+    setErroRascunho('')
+    setRascunhoSalvo(false)
+    try {
+      const itensSalvos = itens.map((it) => ({
+        codigo_produto: it.produto?.codigo ?? null,
+        descricao: it.produto?.descricao ?? '',
+        codigo_ncm: it.produto?.ncm ?? null,
+        cfop: it.produto?.cfop ?? null,
+        unidade_comercial: it.produto?.unidade ?? null,
+        quantidade_comercial: it.quantidade,
+        valor_unitario_comercial: it.valorUnitario,
+        valor_bruto: it.quantidade * it.valorUnitario,
+      }))
+      const payload = {
+        natureza_operacao: natureza,
+        destinatario: destinatario || '(sem destinatário)',
+        cnpj_destinatario: cnpj || null,
+        email_destinatario: email || null,
+        logradouro_destinatario: endLogradouro || null,
+        numero_destinatario: endNumero || null,
+        bairro_destinatario: endBairro || null,
+        municipio_destinatario: endMunicipio || null,
+        uf_destinatario: endUf || null,
+        cep_destinatario: endCep || null,
+        valor_total: total,
+        status: 'rascunho',
+        tipo: 'saida',
+        transportadora: transportadoraSelecionada?.razao_social ?? null,
+        itens: itensSalvos,
+      }
+
+      if (draftId) {
+        const { error } = await supabase
+          .from('nfe_emitidas')
+          .update(payload)
+          .eq('id', draftId)
+          .eq('user_id', userId)
+        if (error) throw error
+      } else {
+        const { data: maxRow } = await supabase
+          .from('nfe_emitidas')
+          .select('numero')
+          .eq('user_id', userId)
+          .order('numero', { ascending: false })
+          .limit(1)
+          .single()
+        const proximo = maxRow ? (maxRow.numero as number) + 1 : 1
+        const { data, error } = await supabase
+          .from('nfe_emitidas')
+          .insert({
+            ...payload,
+            user_id: userId,
+            numero: proximo,
+            serie: '1',
+            data_emissao: new Date().toISOString().slice(0, 10),
+            ambiente: 'homologacao',
+          })
+          .select('id')
+          .single()
+        if (error) throw error
+        setDraftId(data.id as string)
+      }
+      setRascunhoSalvo(true)
+    } catch (e) {
+      setErroRascunho(e instanceof Error ? e.message : 'Erro ao salvar rascunho')
+    } finally {
+      setSalvandoRascunho(false)
+    }
+  }
+
   async function handleTransmitir() {
     if (!userId) return
     if (!destinatario) { setErroTransmissao('Informe o destinatário.'); return }
@@ -341,13 +422,23 @@ export default function NovaNFePage() {
   }
 
   if (step === 'success') {
+    const statusReal = nfeEmitida?.status ?? 'processando'
+    const autorizada = statusReal === 'emitida'
+    const comErro = statusReal === 'erro'
+    const statusInfo = autorizada
+      ? { titulo: 'NF-e emitida com sucesso!', sub: 'Sua NF-e foi transmitida e autorizada pela SEFAZ.', badge: 'Autorizada', badgeClass: 'text-green-600' }
+      : comErro
+      ? { titulo: 'NF-e registrada, mas com erro', sub: nfeEmitida?.erro_mensagem || 'A SEFAZ/Contora rejeitou o envio. Veja os detalhes na tela da nota.', badge: 'Erro', badgeClass: 'text-red-600' }
+      : { titulo: 'NF-e registrada — aguardando autorização', sub: nfeEmitida?.erro_mensagem || 'A nota foi enviada, mas a autorização da SEFAZ ainda não foi confirmada. Acompanhe na tela da nota.', badge: 'Processando', badgeClass: 'text-amber-600' }
     return (
       <div className="max-w-lg mx-auto mt-16 text-center">
-        <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="h-10 w-10 text-green-600" />
+        <div className={`w-20 h-20 ${autorizada ? 'bg-green-100 dark:bg-green-900/30' : comErro ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'} rounded-full flex items-center justify-center mx-auto mb-6`}>
+          {autorizada
+            ? <CheckCircle2 className="h-10 w-10 text-green-600" />
+            : <AlertCircle className={`h-10 w-10 ${comErro ? 'text-red-600' : 'text-amber-600'}`} />}
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">NF-e emitida com sucesso!</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">Sua NF-e foi transmitida e autorizada pela SEFAZ.</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{statusInfo.titulo}</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">{statusInfo.sub}</p>
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-6 text-left space-y-1.5">
           <p className="text-sm text-gray-700 dark:text-gray-300">
             <span className="font-semibold">Número:</span>{' '}
@@ -370,7 +461,7 @@ export default function NovaNFePage() {
           )}
           <p className="text-sm">
             <span className="font-semibold text-gray-700 dark:text-gray-300">Status:</span>{' '}
-            <span className="text-green-600 font-semibold">Registrada</span>
+            <span className={`font-semibold ${statusInfo.badgeClass}`}>{statusInfo.badge}</span>
           </p>
           {nfeEmitida?.chave_acesso && (
             <p className="text-xs text-gray-400 mt-1 font-mono break-all">
@@ -754,8 +845,17 @@ export default function NovaNFePage() {
           {erroTransmissao && (
             <p className="text-sm text-red-600 dark:text-red-400 text-right">{erroTransmissao}</p>
           )}
+          {erroRascunho && (
+            <p className="text-sm text-red-600 dark:text-red-400 text-right">{erroRascunho}</p>
+          )}
+          {rascunhoSalvo && !erroRascunho && (
+            <p className="text-sm text-green-600 dark:text-green-400 text-right">Rascunho salvo.</p>
+          )}
           <div className="flex gap-3 justify-end">
-            <Button variant="outline"><Save className="h-4 w-4" />Salvar Rascunho</Button>
+            <Button variant="outline" onClick={handleSalvarRascunho} disabled={salvandoRascunho}>
+              <Save className="h-4 w-4" />
+              {salvandoRascunho ? 'Salvando…' : 'Salvar Rascunho'}
+            </Button>
             <Button onClick={handleTransmitir} disabled={transmitindo}>
               <Send className="h-4 w-4" />
               {transmitindo ? 'Registrando…' : 'Transmitir para SEFAZ'}

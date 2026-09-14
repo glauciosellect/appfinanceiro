@@ -35,7 +35,7 @@ DELETE FROM public.nfse;
 -- PASSO 3: LIMPAR CONFIGURAÇÃO FISCAL
 -- ============================================================
 -- Apaga as configurações fiscais (CNPJ, certificado, ambiente,
--- integração Focus NFe, etc.). Execute se quiser recomeçar do zero.
+-- integração Fiscal Contora, etc.). Execute se quiser recomeçar do zero.
 -- Deixe comentado se quiser MANTER a configuração da empresa.
 -- ============================================================
 

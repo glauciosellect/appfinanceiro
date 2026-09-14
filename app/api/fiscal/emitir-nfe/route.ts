@@ -11,7 +11,7 @@ const REGIME_MAP: Record<string, string> = {
 }
 
 // A Contora calcula a base do ICMS/PIS/COFINS sozinha (quantidade × preço −
-// desconto) — diferente da Focus NFe, não existe mais base_calculo manual.
+// desconto) — não há base_calculo manual.
 function taxCodes(regime: string): Partial<ItemNFe> {
   const isSimples = regime === '1'
   if (isSimples) {
@@ -211,6 +211,7 @@ export async function POST(req: NextRequest) {
     numero_destinatario:  body.destinatario.numero,
     bairro_destinatario:  body.destinatario.bairro,
     codigo_municipio_destinatario: codigoMunicipioDestinatario ?? undefined,
+    municipio_destinatario: body.destinatario.municipio,
     uf_destinatario:      body.destinatario.uf,
     cep_destinatario:     body.destinatario.cep,
     itens,
@@ -224,13 +225,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Contora não retornou o id do documento' }, { status: 502 })
   }
 
-  // Aguarda autorização (polling até 20s) — a Contora processa em fila
+  // Aguarda autorização (polling até 20s) — a Contora processa em fila.
+  // Inclui 'draft' porque é o estado logo após o dispatch, antes da fila
+  // pegar o job; se continuar 'draft' com attempts_count 0 no fim do loop,
+  // a fila da Contora nunca pegou o documento (ver statusFinal abaixo).
   let resultado = retorno
-  if (resultado.processing_status === 'queued' || resultado.processing_status === 'processing') {
+  const emProcessamento = (r: typeof retorno) =>
+    r.processing_status === 'queued' || r.processing_status === 'processing' || r.processing_status === 'draft'
+  if (emProcessamento(resultado)) {
     for (let i = 0; i < 8; i++) {
       await new Promise(r => setTimeout(r, 2500))
       resultado = await consultarNFe(fiscalCfg.contora_company_id, documentId, ambiente)
-      if (resultado.processing_status !== 'queued' && resultado.processing_status !== 'processing') break
+      if (!emProcessamento(resultado)) break
     }
   }
 
@@ -249,6 +255,15 @@ export async function POST(req: NextRequest) {
     cancelled: 'cancelada',
   }
   const statusFinal = autorizado ? 'emitida' : (statusMap[resultado.processing_status ?? resultado.status ?? ''] ?? 'processando')
+
+  // Documento nunca saiu de "draft" mesmo após o polling e a fila nunca
+  // tentou processá-lo — não é lentidão normal, é a fila da Contora não
+  // tendo pego o job. Guarda uma mensagem clara em vez de deixar
+  // "processando" silencioso sem explicação.
+  const presoSemFila = resultado.processing_status === 'draft' && (resultado.attempts_count ?? 0) === 0
+  const mensagemPresoSemFila = presoSemFila
+    ? 'A Contora ainda não iniciou o processamento desta nota (não entrou na fila). Clique em "Sincronizar status" em alguns minutos; se persistir, contate o suporte da Contora.'
+    : null
 
   // Em produção, usa o número retornado pela SEFAZ via Contora. Em
   // homologação, a numeração de teste pode divergir da sequência local, então
@@ -278,7 +293,7 @@ export async function POST(req: NextRequest) {
     cep_destinatario: body.destinatario.cep || null,
     valor_total: valorTotal,
     status: statusFinal,
-    erro_mensagem: resultado.erros?.map(e => e.mensagem).join('; ') ?? null,
+    erro_mensagem: resultado.erros?.map(e => e.mensagem).join('; ') ?? mensagemPresoSemFila,
     tipo: 'saida',
     itens,
     transportadora: body.frete.transportadora_nome || null,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { consultarNFe } from '@/lib/fiscal/contora'
 
 export async function GET() {
   const supabase = await createClient()
@@ -8,55 +9,40 @@ export async function GET() {
 
   const { data: config } = await supabase
     .from('fiscal_config')
-    .select('cnpj, numero_proximo_nfe, serie_nfe, habilita_nfe, habilita_nfse')
+    .select('cnpj, numero_proximo_nfe, serie_nfe, habilita_nfe, habilita_nfse, contora_company_id, ambiente')
     .eq('user_id', user.id)
     .single()
 
-  const ambiente = process.env.FOCUSNFE_AMBIENTE ?? 'homologacao'
-  const tokenProducao = process.env.FOCUSNFE_TOKEN_PRODUCAO ?? ''
-  const tokenHomologacao = process.env.FOCUSNFE_TOKEN_HOMOLOGACAO ?? ''
-  const tokenAtivo = ambiente === 'producao' ? tokenProducao : tokenHomologacao
-  const baseUrl = ambiente === 'producao'
-    ? 'https://api.focusnfe.com.br/v2'
-    : 'https://homologacao.focusnfe.com.br/v2'
+  const ambiente = (config?.ambiente as 'homologacao' | 'producao' | undefined) ?? 'homologacao'
 
   // Últimas 5 NF-e emitidas
   const { data: ultimasNfe } = await supabase
     .from('nfe_emitidas')
-    .select('id, numero, serie, status, focus_ref, ambiente, data_emissao, destinatario')
+    .select('id, numero, serie, status, contora_document_id, ambiente, data_emissao, destinatario')
     .eq('user_id', user.id)
     .order('id', { ascending: false })
     .limit(5)
 
-  const headersFocus = {
-    Authorization: `Basic ${Buffer.from(`${tokenAtivo}:`).toString('base64')}`,
-    'Content-Type': 'application/json',
-  }
-
-  // Consulta status real de cada NF-e na Focus NFe
+  // Consulta status real de cada NF-e direto na Contora
   const consultas = await Promise.all(
     (ultimasNfe ?? []).map(async (nfe) => {
-      if (!nfe.focus_ref) return { ...nfe, focus_status: null }
-      const url = `${baseUrl}/nfe/${encodeURIComponent(nfe.focus_ref)}`
+      if (!nfe.contora_document_id || !config?.contora_company_id) {
+        return { ...nfe, contora_status: null }
+      }
       try {
-        const res = await fetch(url, { headers: headersFocus })
-        const text = await res.text()
-        let parsed: unknown = null
-        try { parsed = JSON.parse(text) } catch { /* mantém parsed = null */ }
-        return { ...nfe, focus_status: { http: res.status, parsed, raw: text } }
+        const resultado = await consultarNFe(config.contora_company_id, nfe.contora_document_id, ambiente)
+        return { ...nfe, contora_status: resultado }
       } catch (err) {
-        return { ...nfe, focus_status: { error: String(err) } }
+        return { ...nfe, contora_status: { error: String(err) } }
       }
     })
   )
 
   const body = {
     ambiente,
-    base_url: baseUrl,
-    tem_token_producao: !!tokenProducao,
-    tem_token_homologacao: !!tokenHomologacao,
+    contora_company_id: config?.contora_company_id ?? null,
     fiscal_config_supabase: config,
-    ultimas_nfe_e_status_focus: consultas,
+    ultimas_nfe_e_status_contora: consultas,
   }
 
   return new NextResponse(JSON.stringify(body, null, 2), {

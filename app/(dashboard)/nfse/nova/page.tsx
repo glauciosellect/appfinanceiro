@@ -187,7 +187,7 @@ export default function NovaNFSePage() {
       } else {
         const retorno = json.retorno as Record<string, unknown> | undefined
         const erroDetalhado = retorno
-          ? `Focus NFe: ${JSON.stringify(retorno)}`
+          ? `Fiscal Contora: ${JSON.stringify(retorno)}`
           : (json.error as string) ?? 'Erro ao emitir NFS-e'
         setErroMsg(erroDetalhado)
         setEtapa('erro')
@@ -265,7 +265,7 @@ export default function NovaNFSePage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Emitir Nova NFS-e</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Prefeitura de Juiz de Fora / MG — via Focus NFe</p>
+          <p className="text-sm text-gray-500 mt-0.5">Prefeitura de Juiz de Fora / MG — via Fiscal Contora</p>
         </div>
       </div>
 

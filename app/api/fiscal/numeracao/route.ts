@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Diferente da Focus NFe, a Contora não mantém um "próximo número" do lado
-// dela pra sincronizar — o number/series vai explícito em cada draft (ver
-// emitirNFe em lib/fiscal/contora.ts). Então isso é só configuração local:
-// o próximo número emitido usa o que estiver salvo aqui.
+// A Contora não mantém um "próximo número" do lado dela pra sincronizar — o
+// number/series vai explícito em cada draft (ver emitirNFe em
+// lib/fiscal/contora.ts). Então isso é só configuração local: o próximo
+// número emitido usa o que estiver salvo aqui.
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

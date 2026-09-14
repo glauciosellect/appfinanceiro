@@ -1,21 +1,20 @@
-// Cliente da Fiscal Contora — substitui lib/fiscal/focusnfe.ts.
+// Cliente da Fiscal Contora.
 //
-// Diferença estrutural principal em relação à Focus NFe: aqui cada tenant é
-// uma "empresa" identificada por um UUID interno da Contora (não o CNPJ), que
-// precisa ser criado uma vez (cadastrarEmpresa) e guardado em
-// fiscal_config.contora_company_id. Toda rota de documento é
+// Cada tenant é uma "empresa" identificada por um UUID interno da Contora
+// (não o CNPJ), que precisa ser criado uma vez (cadastrarEmpresa) e guardado
+// em fiscal_config.contora_company_id. Toda rota de documento é
 // /companies/{company}/... com esse UUID no path.
 //
-// Outra diferença: emissão é sempre draft -> dispatch -> poll (a Contora
-// processa em fila e assina/transmite de forma assíncrona), e os artefatos
-// (PDF/XML) exigem Bearer token para download — não são links públicos como
-// os da Focus NFe. Por isso baixarArtefato() existe: uma rota própria do
-// SyncroMoney deve proxyar esse download para o navegador do usuário.
+// Emissão é sempre draft -> dispatch -> poll (a Contora processa em fila e
+// assina/transmite de forma assíncrona), e os artefatos (PDF/XML) exigem
+// Bearer token para download — não são links públicos. Por isso
+// baixarArtefato() existe: uma rota própria do SyncroMoney deve proxyar esse
+// download para o navegador do usuário.
 
 // A Contora escopa a API key por ambiente — uma chave de produção não cria
 // nem consulta nada em homologação (erro environment_mismatch), mesmo que a
-// empresa tenha allows_homologation. Por isso, igual à Focus NFe antes,
-// mantemos os dois tokens e escolhemos por chamada conforme o ambiente.
+// empresa tenha allows_homologation. Por isso mantemos os dois tokens e
+// escolhemos por chamada conforme o ambiente.
 const TOKEN_PRODUCAO = process.env.CONTORA_API_TOKEN ?? process.env.CONTORA_API_TOKEN_PRODUCAO ?? ''
 const TOKEN_HOMOLOGACAO = process.env.CONTORA_API_TOKEN_HOMOLOGACAO ?? ''
 const BASE_URL = 'https://fiscal.contora.com.br/api/v1'
@@ -59,6 +58,12 @@ export interface ContoraRetorno {
   codigo_verificacao?: string
   mensagem_sefaz?: string
   erros?: Array<{ codigo: string; mensagem: string }>
+  /** Quantas vezes a fila da Contora tentou processar o documento. Continua
+   * 0 quando o dispatch nunca chegou a entrar na fila (documento preso em
+   * "draft" indefinidamente) — usado para distinguir isso de um
+   * processamento normal ainda em andamento. */
+  attempts_count?: number
+  queued_at?: string | null
 }
 
 /** Extrai mensagem de erro de qualquer resposta da Contora — tanto erro de
@@ -156,8 +161,8 @@ export async function cadastrarEmpresa(params: CadastrarEmpresaParams): Promise<
   return { ok: !erro && !!data?.id, contora_company_id: data?.id, erro: erro ?? undefined }
 }
 
-/** Envia o certificado A1 (.pfx) da empresa. Diferente da Focus NFe, a Contora
- * espera multipart/form-data (arquivo binário), não base64 em JSON. */
+/** Envia o certificado A1 (.pfx) da empresa. A Contora espera
+ * multipart/form-data (arquivo binário), não base64 em JSON. */
 export async function enviarCertificado(
   companyId: string,
   pfxBase64: string,
@@ -197,8 +202,8 @@ export interface ItemNFe {
   quantidade_comercial: number
   valor_unitario_comercial: number
   // valor do desconto (em R$, não percentual) — a Contora calcula a base do
-  // ICMS sozinha como quantidade × preço − desconto, não existe mais um
-  // "icms_base_calculo" manual como na Focus NFe.
+  // ICMS sozinha como quantidade × preço − desconto, não existe um
+  // "icms_base_calculo" manual.
   valor_desconto?: number
   icms_origem: string
   icms_situacao_tributaria: string
@@ -226,6 +231,7 @@ export interface EmitirNFeParams {
   numero_destinatario?: string
   bairro_destinatario?: string
   codigo_municipio_destinatario?: string
+  municipio_destinatario?: string
   uf_destinatario?: string
   cep_destinatario?: string
   itens: ItemNFe[]
@@ -252,6 +258,7 @@ function montarPayloadNFe(params: EmitirNFeParams) {
                     number: params.numero_destinatario ?? 'S/N',
                     district: params.bairro_destinatario ?? '',
                     city_code: params.codigo_municipio_destinatario ?? '',
+                    city_name: params.municipio_destinatario ?? '',
                     state_code: params.uf_destinatario ?? '',
                     postal_code: (params.cep_destinatario ?? '').replace(/\D/g, ''),
                   },
@@ -323,6 +330,8 @@ function normalizarNFe(json: Record<string, unknown>, documentId: string): Conto
     chave_nfe: data.access_key as string | undefined,
     mensagem_sefaz: data.sefaz_status_message as string | undefined,
     erros: erro ? [{ codigo: (data.last_error_code as string) ?? '?', mensagem: erro }] : undefined,
+    attempts_count: data.attempts_count as number | undefined,
+    queued_at: data.queued_at as string | null | undefined,
   }
 }
 
@@ -473,9 +482,9 @@ export type TipoDocumentoArtefato = 'nfe' | 'nfce' | 'nfse'
 export type TipoArtefato = 'xml_unsigned' | 'xml_signed' | 'xml_authorized' | 'xml_cancelled' | 'pdf_danfe'
 
 // ============================================================
-// Webhooks — a Contora usa 1 endpoint por conta (não por nota, como a Focus
-// NFe fazia). Cadastre uma vez via criarWebhookEndpoint(); os eventos chegam
-// assinados em X-Fiscal-Signature (HMAC-SHA256 do corpo cru, hex).
+// Webhooks — a Contora usa 1 endpoint por conta (não por nota). Cadastre uma
+// vez via criarWebhookEndpoint(); os eventos chegam assinados em
+// X-Fiscal-Signature (HMAC-SHA256 do corpo cru, hex).
 // ============================================================
 
 import { createHmac, timingSafeEqual } from 'crypto'
