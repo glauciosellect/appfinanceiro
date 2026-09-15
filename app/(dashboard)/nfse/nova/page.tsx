@@ -35,7 +35,14 @@ const SERVICOS_LC116 = [
   { codigo: '7.01',  descricao: 'Engenharia, agronomia, agrimensura, arquitetura',           aliquota: 3, codigoMunicipal: '070100100', cnae: '7112000', indop: '100301', cClassTrib: '200052', nbs: '114021100' },
   { codigo: '10.01', descricao: 'Agenciamento, corretagem de seguros',                       aliquota: 5, codigoMunicipal: '100102', cnae: '6622300', indop: '100301', cClassTrib: '000001', nbs: '109061100' },
   { codigo: '14.01', descricao: 'Manutenção e conservação de aparelhos e equipamentos',      aliquota: 2, codigoMunicipal: '140101', cnae: '9521500', indop: '050101', cClassTrib: '000001', nbs: '120011000' },
-  { codigo: '14.06', descricao: 'Instalação e montagem de aparelhos, máquinas e equipamentos', aliquota: 2, codigoMunicipal: '140601', cnae: '4321500', indop: '050101', cClassTrib: '000001', nbs: '101061200' },
+  // codigoComplementarMunicipal '006' confirmado no Emissor Nacional para
+  // Juiz de Fora: 14.06.01.006 — "...prestados ao usuário final,
+  // exclusivamente com material por ele fornecido" (bate com o cTribNac
+  // 140601). Sem esse complemento a Contora recusa com E0312/E0314 nesse
+  // município. Outros itens do catálogo ainda não têm esse valor
+  // verificado — confira no Emissor Nacional antes de assumir que não
+  // precisam.
+  { codigo: '14.06', descricao: 'Instalação e montagem de aparelhos, máquinas e equipamentos', aliquota: 2, codigoMunicipal: '140601', codigoComplementarMunicipal: '006', cnae: '4321500', indop: '050101', cClassTrib: '000001', nbs: '101061200' },
   { codigo: '17.01', descricao: 'Assessoria ou consultoria de qualquer natureza',            aliquota: 2, codigoMunicipal: '170101', cnae: '7020400', indop: '100301', cClassTrib: '000001', nbs: '106084000' },
   { codigo: '17.06', descricao: 'Propaganda e publicidade',                                  aliquota: 2, codigoMunicipal: '170601', cnae: '7311400', indop: '100301', cClassTrib: '000001', nbs: '114061100' },
   { codigo: '17.19', descricao: 'Contabilidade, auditoria, guarda-livros',                   aliquota: 2, codigoMunicipal: '171901', cnae: '6920601', indop: '100301', cClassTrib: '200052', nbs: '113022100' },
@@ -46,6 +53,7 @@ const SERVICOS_LC116 = [
 interface ItemForm {
   codigoServico: string
   codigoMunicipal: string
+  codigoComplementarMunicipal: string
   cnae: string
   indop: string
   cClassTrib: string
@@ -82,7 +90,7 @@ export default function NovaNFSePage() {
   })
   const [dataCompetencia, setDataCompetencia] = useState(new Date().toISOString().split('T')[0])
   const [itens, setItens] = useState<ItemForm[]>([
-    { codigoServico: '', codigoMunicipal: '', cnae: '', indop: '', cClassTrib: '', nbs: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 },
+    { codigoServico: '', codigoMunicipal: '', codigoComplementarMunicipal: '', cnae: '', indop: '', cClassTrib: '', nbs: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 },
   ])
   const [issRetidoFonte, setIssRetidoFonte] = useState(false)
   const [resultadoEmissao, setResultadoEmissao] = useState<Record<string, unknown> | null>(null)
@@ -129,7 +137,7 @@ export default function NovaNFSePage() {
   const valorLiquido = issRetidoFonte ? totalServicos - valorIss : totalServicos
 
   function addItem() {
-    setItens([...itens, { codigoServico: '', codigoMunicipal: '', cnae: '', indop: '', cClassTrib: '', nbs: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 }])
+    setItens([...itens, { codigoServico: '', codigoMunicipal: '', codigoComplementarMunicipal: '', cnae: '', indop: '', cClassTrib: '', nbs: '', descricao: '', quantidade: 1, valorUnitario: 0, aliquota: 2 }])
   }
   function removeItem(idx: number) {
     setItens(itens.filter((_, i) => i !== idx))
@@ -141,7 +149,7 @@ export default function NovaNFSePage() {
     const svc = SERVICOS_LC116.find(s => s.codigo === codigo)
     if (svc) {
       setItens(itens.map((it, i) =>
-        i === idx ? { ...it, codigoServico: svc.codigo, codigoMunicipal: svc.codigoMunicipal, cnae: svc.cnae, indop: svc.indop ?? '', cClassTrib: svc.cClassTrib ?? '', nbs: svc.nbs ?? '', descricao: svc.descricao, aliquota: svc.aliquota } : it
+        i === idx ? { ...it, codigoServico: svc.codigo, codigoMunicipal: svc.codigoMunicipal, codigoComplementarMunicipal: svc.codigoComplementarMunicipal ?? '', cnae: svc.cnae, indop: svc.indop ?? '', cClassTrib: svc.cClassTrib ?? '', nbs: svc.nbs ?? '', descricao: svc.descricao, aliquota: svc.aliquota } : it
       ))
     }
   }
@@ -186,6 +194,7 @@ export default function NovaNFSePage() {
           aliquota_iss:         aliquotaPrincipal,
           codigo_servico:       itens[0].codigoServico,
           codigo_lc116:                    itens[0].codigoMunicipal || itens[0].codigoServico,
+          codigo_complementar_municipal:   itens[0].codigoComplementarMunicipal || undefined,
           codigo_cnae:                     itens[0].cnae || undefined,
           codigo_indicador_operacao:        itens[0].indop || undefined,
           ibs_cbs_classificacao_tributaria: itens[0].cClassTrib || undefined,

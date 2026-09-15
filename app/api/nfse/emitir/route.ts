@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     aliquota_iss,
     codigo_servico,
     codigo_lc116,
+    codigo_complementar_municipal,
     discriminacao,
     data_competencia,
     codigo_cnae,
@@ -90,10 +91,15 @@ export async function POST(req: NextRequest) {
     // desdobramento) da tabela oficial do Sistema Nacional NFS-e — não é o
     // item curto da LC116 (ex: "14.06", em codigo_servico), que está em
     // formato antigo e não é aceito pela validação nacional.
-    // municipal_tax_code (cTribMun) fica de fora: é opcional e específico
-    // por município — sem uma tabela confiável para o município do
-    // prestador, é mais seguro omitir do que enviar um valor inventado.
+    // codigo_complementar_municipal (cTribMun) NÃO é opcional em todo
+    // município: um mesmo cTribNac pode ter mais de um desdobramento
+    // municipal (ex: Juiz de Fora exige "006" para 140601 — descoberto via
+    // erro E0312/E0314 depois de tentar omitir). Cada item do catálogo só
+    // deve preencher esse campo com um valor confirmado no Emissor
+    // Nacional para o município do prestador — sem confirmação, fica de
+    // fora e o próprio erro da Contora aponta se falta.
     national_tax_code: codigoLc116Digits.length >= 6 ? codigoLc116Digits.slice(0, 6) : undefined,
+    municipal_tax_code: codigo_complementar_municipal ?? undefined,
     nbs_code: codigo_nbs ?? undefined,
     cnae: codigo_cnae ?? undefined,
     descricao: discriminacao,
