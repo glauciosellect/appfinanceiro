@@ -86,13 +86,14 @@ export async function POST(req: NextRequest) {
     iss_withheld: Boolean(iss_retido),
     iss_rate: aliquota_iss ? Number(aliquota_iss) : undefined,
     // codigo_lc116 aqui vem do catálogo de serviços do formulário (campo
-    // codigoMunicipal, ex: "140600100" para o item 14.06): são os 6 dígitos
-    // do cTribNac (código de tributação nacional) seguidos dos 3 dígitos do
-    // cTribMun (código de tributação municipal) — não é o item curto da
-    // LC116 (ex: "14.06", em codigo_servico), que está em formato antigo e
-    // não deve ir para nenhum dos dois campos do padrão nacional.
+    // codigoMunicipal) já como o cTribNac de 6 dígitos (item+subitem+
+    // desdobramento) da tabela oficial do Sistema Nacional NFS-e — não é o
+    // item curto da LC116 (ex: "14.06", em codigo_servico), que está em
+    // formato antigo e não é aceito pela validação nacional.
+    // municipal_tax_code (cTribMun) fica de fora: é opcional e específico
+    // por município — sem uma tabela confiável para o município do
+    // prestador, é mais seguro omitir do que enviar um valor inventado.
     national_tax_code: codigoLc116Digits.length >= 6 ? codigoLc116Digits.slice(0, 6) : undefined,
-    municipal_tax_code: codigoLc116Digits.length > 6 ? codigoLc116Digits.slice(6, 9) : undefined,
     nbs_code: codigo_nbs ?? undefined,
     cnae: codigo_cnae ?? undefined,
     descricao: discriminacao,

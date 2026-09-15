@@ -9,23 +9,38 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 
+// codigoMunicipal = cTribNac (código de tributação nacional, 6 dígitos
+// item+subitem+desdobramento) da tabela oficial do Sistema Nacional NFS-e
+// (338 códigos). Os valores antigos aqui eram um placeholder inventado
+// (item+subitem + "00"/"100") que a Contora rejeita com E0310 por não
+// existir na lista nacional — confirmados 1:1 contra a tabela oficial.
+// ATENÇÃO 6.02, 6.09 e 7.01: a descrição combina serviços que na lista
+// nacional são códigos DIFERENTES e não têm um único cTribNac equivalente
+// (ex.: "Medicina e biomedicina" = 040101 OU 040102, não um código só).
+// Mantidos com o código antigo (que também falhará com E0310) até decisão
+// de como desmembrar esses itens — não devem ser usados para emitir nota
+// até isso ser revisado com o contador.
 const SERVICOS_LC116 = [
-  { codigo: '1.01',  descricao: 'Análise e desenvolvimento de sistemas',                    aliquota: 2, codigoMunicipal: '010100100', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
-  { codigo: '1.02',  descricao: 'Programação',                                               aliquota: 2, codigoMunicipal: '010200100', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
-  { codigo: '1.03',  descricao: 'Processamento de dados e congêneres',                       aliquota: 2, codigoMunicipal: '010300100', cnae: '6311900', indop: '100301', cClassTrib: '000001', nbs: '115061000' },
-  { codigo: '1.04',  descricao: 'Elaboração de programas de computadores',                   aliquota: 2, codigoMunicipal: '010400100', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
-  { codigo: '1.05',  descricao: 'Licenciamento ou cessão de direito de uso de programas',    aliquota: 2, codigoMunicipal: '010500100', cnae: '5820901', indop: '100501', cClassTrib: '000001', nbs: '110332100' },
-  { codigo: '1.07',  descricao: 'Suporte técnico em informática',                            aliquota: 2, codigoMunicipal: '010700100', cnae: '6209100', indop: '050101', cClassTrib: '000001', nbs: '115013000' },
+  { codigo: '1.01',  descricao: 'Análise e desenvolvimento de sistemas',                    aliquota: 2, codigoMunicipal: '010101', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
+  { codigo: '1.02',  descricao: 'Programação',                                               aliquota: 2, codigoMunicipal: '010201', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
+  { codigo: '1.03',  descricao: 'Processamento de dados e congêneres',                       aliquota: 2, codigoMunicipal: '010301', cnae: '6311900', indop: '100301', cClassTrib: '000001', nbs: '115061000' },
+  { codigo: '1.04',  descricao: 'Elaboração de programas de computadores',                   aliquota: 2, codigoMunicipal: '010401', cnae: '6201501', indop: '100301', cClassTrib: '000001', nbs: '115021000' },
+  { codigo: '1.05',  descricao: 'Licenciamento ou cessão de direito de uso de programas',    aliquota: 2, codigoMunicipal: '010501', cnae: '5820901', indop: '100501', cClassTrib: '000001', nbs: '110332100' },
+  { codigo: '1.07',  descricao: 'Suporte técnico em informática',                            aliquota: 2, codigoMunicipal: '010701', cnae: '6209100', indop: '050101', cClassTrib: '000001', nbs: '115013000' },
+  // ⚠️ Sem cTribNac único válido (Medicina=040101 / Biomedicina=040102) — revisar antes de usar
   { codigo: '6.02',  descricao: 'Medicina e biomedicina',                                    aliquota: 3, codigoMunicipal: '060200100', cnae: '8630501', indop: '030101', cClassTrib: '000001', nbs: '126022000' },
+  // ⚠️ Sem cTribNac único válido (Terapia ocup.=040801 / Psicanálise=041501 / Psicologia=041601) — revisar antes de usar
   { codigo: '6.09',  descricao: 'Psicologia, psicanálise, terapia ocupacional',              aliquota: 3, codigoMunicipal: '060900100', cnae: '8650006', indop: '030101', cClassTrib: '000001', nbs: '126023000' },
+  // ⚠️ Sem cTribNac único válido (Engenharia=070101 / Agronomia=070102 / Agrimensura=070103 / Arquitetura=070104) — revisar antes de usar
   { codigo: '7.01',  descricao: 'Engenharia, agronomia, agrimensura, arquitetura',           aliquota: 3, codigoMunicipal: '070100100', cnae: '7112000', indop: '100301', cClassTrib: '200052', nbs: '114021100' },
-  { codigo: '10.01', descricao: 'Agenciamento, corretagem de seguros',                       aliquota: 5, codigoMunicipal: '100100100', cnae: '6622300', indop: '100301', cClassTrib: '000001', nbs: '109061100' },
-  { codigo: '14.01', descricao: 'Manutenção e conservação de aparelhos e equipamentos',      aliquota: 2, codigoMunicipal: '140100900', cnae: '9521500', indop: '050101', cClassTrib: '000001', nbs: '120011000' },
-  { codigo: '14.06', descricao: 'Instalação e montagem de aparelhos, máquinas e equipamentos', aliquota: 2, codigoMunicipal: '140600100', cnae: '4321500', indop: '050101', cClassTrib: '000001', nbs: '101061200' },
-  { codigo: '17.01', descricao: 'Assessoria ou consultoria de qualquer natureza',            aliquota: 2, codigoMunicipal: '170100100', cnae: '7020400', indop: '100301', cClassTrib: '000001', nbs: '106084000' },
-  { codigo: '17.06', descricao: 'Propaganda e publicidade',                                  aliquota: 2, codigoMunicipal: '170600100', cnae: '7311400', indop: '100301', cClassTrib: '000001', nbs: '114061100' },
-  { codigo: '17.19', descricao: 'Contabilidade, auditoria, guarda-livros',                   aliquota: 2, codigoMunicipal: '171900100', cnae: '6920601', indop: '100301', cClassTrib: '200052', nbs: '113022100' },
-  { codigo: '25.01', descricao: 'Estúdios fotográficos e cinematográficos',                  aliquota: 2, codigoMunicipal: '250100100', cnae: '7420001', indop: '100301', cClassTrib: '000001', nbs: '114053000' },
+  { codigo: '10.01', descricao: 'Agenciamento, corretagem de seguros',                       aliquota: 5, codigoMunicipal: '100102', cnae: '6622300', indop: '100301', cClassTrib: '000001', nbs: '109061100' },
+  { codigo: '14.01', descricao: 'Manutenção e conservação de aparelhos e equipamentos',      aliquota: 2, codigoMunicipal: '140101', cnae: '9521500', indop: '050101', cClassTrib: '000001', nbs: '120011000' },
+  { codigo: '14.06', descricao: 'Instalação e montagem de aparelhos, máquinas e equipamentos', aliquota: 2, codigoMunicipal: '140601', cnae: '4321500', indop: '050101', cClassTrib: '000001', nbs: '101061200' },
+  { codigo: '17.01', descricao: 'Assessoria ou consultoria de qualquer natureza',            aliquota: 2, codigoMunicipal: '170101', cnae: '7020400', indop: '100301', cClassTrib: '000001', nbs: '106084000' },
+  { codigo: '17.06', descricao: 'Propaganda e publicidade',                                  aliquota: 2, codigoMunicipal: '170601', cnae: '7311400', indop: '100301', cClassTrib: '000001', nbs: '114061100' },
+  { codigo: '17.19', descricao: 'Contabilidade, auditoria, guarda-livros',                   aliquota: 2, codigoMunicipal: '171901', cnae: '6920601', indop: '100301', cClassTrib: '200052', nbs: '113022100' },
+  // Item real na lista nacional é 13.03 (não 25.01, que é serviços funerários)
+  { codigo: '13.03', descricao: 'Estúdios fotográficos e cinematográficos',                  aliquota: 2, codigoMunicipal: '130301', cnae: '7420001', indop: '100301', cClassTrib: '000001', nbs: '114053000' },
 ]
 
 interface ItemForm {
