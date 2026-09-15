@@ -29,14 +29,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 interface ItemNFe {
-  codigo?: string
+  codigo_produto?: string
   descricao?: string
-  ncm?: string
+  codigo_ncm?: string
   cfop?: string
-  unidade?: string
-  quantidade?: number
-  valor_unitario?: number
-  valor_total?: number
+  unidade_comercial?: string
+  quantidade_comercial?: number
+  valor_unitario_comercial?: number
   icms_aliquota?: number
 }
 
@@ -118,7 +117,7 @@ export default function NFeVisualizarPage() {
   const tel      = perfil?.telefone || '—'
 
   const itens: ItemNFe[] = Array.isArray(nota.itens) ? nota.itens as ItemNFe[] : []
-  const totalProdutos = itens.reduce((s, i) => s + (i.valor_total ?? 0), 0) || nota.valor_total
+  const totalProdutos = itens.reduce((s, i) => s + (i.quantidade_comercial ?? 0) * (i.valor_unitario_comercial ?? 0), 0) || nota.valor_total
   const valorICMS     = totalProdutos * 0.12
   const valorPIS      = totalProdutos * 0.0065
   const valorCOFINS   = totalProdutos * 0.03
@@ -174,6 +173,19 @@ export default function NFeVisualizarPage() {
           </Button>
         </div>
       </div>
+
+      {/* Banner homologação — evita confundir uma nota de teste com uma nota
+          real, já que o DANFE oficial baixado da Contora mostra essa marca
+          d'água mas esta tela (impressão/preview do app) não mostrava nada. */}
+      {nota.ambiente === 'homologacao' && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-300 rounded-xl">
+          <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-800 text-sm">Nota emitida em ambiente de homologação — sem valor fiscal</p>
+            <p className="text-amber-700 text-xs mt-0.5">Esta é uma nota de teste. Ela não vale como documento fiscal real, mesmo que apareça como &quot;autorizada&quot;.</p>
+          </div>
+        </div>
+      )}
 
       {/* Banner processando */}
       {nota.status === 'processando' && (
@@ -345,18 +357,20 @@ export default function NFeVisualizarPage() {
               {itens.length === 0 ? (
                 <tr><td colSpan={10} className="border border-gray-200 px-2 py-6 text-center text-gray-500 text-xs">Nenhum item.</td></tr>
               ) : itens.map((item, i) => {
-                const total   = item.valor_total ?? 0
+                const quantidade = item.quantidade_comercial ?? 0
+                const valorUnitario = item.valor_unitario_comercial ?? 0
+                const total   = quantidade * valorUnitario
                 const bcIcms  = total
                 const vlrIcms = total * ((item.icms_aliquota ?? 12) / 100)
                 return (
                   <tr key={i} className={i % 2 === 0 ? '' : 'bg-gray-50'}>
-                    <td className="border border-gray-200 px-1 py-1 font-mono text-gray-700">{item.codigo || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 font-mono text-gray-700">{item.codigo_produto || '—'}</td>
                     <td className="border border-gray-200 px-1 py-1 font-medium text-gray-800">{item.descricao || '—'}</td>
-                    <td className="border border-gray-200 px-1 py-1 font-mono text-gray-600">{item.ncm || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 font-mono text-gray-600">{item.codigo_ncm || '—'}</td>
                     <td className="border border-gray-200 px-1 py-1 font-mono text-gray-600">{item.cfop || '—'}</td>
-                    <td className="border border-gray-200 px-1 py-1 text-gray-600">{item.unidade || '—'}</td>
-                    <td className="border border-gray-200 px-1 py-1 text-gray-700">{(item.quantidade ?? 0).toFixed(4)}</td>
-                    <td className="border border-gray-200 px-1 py-1 text-right text-gray-700">{formatCurrency(item.valor_unitario ?? 0)}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-gray-600">{item.unidade_comercial || '—'}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-gray-700">{quantidade.toFixed(4)}</td>
+                    <td className="border border-gray-200 px-1 py-1 text-right text-gray-700">{formatCurrency(valorUnitario)}</td>
                     <td className="border border-gray-200 px-1 py-1 text-right font-semibold text-gray-900">{formatCurrency(total)}</td>
                     <td className="border border-gray-200 px-1 py-1 text-right text-gray-600">{formatCurrency(bcIcms)}</td>
                     <td className="border border-gray-200 px-1 py-1 text-right text-gray-600">{formatCurrency(vlrIcms)}</td>
