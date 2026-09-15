@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
     ? await buscarCodigoMunicipio(tomador_municipio, tomador_uf)
     : null
 
+  const codigoLc116Digits: string = codigo_lc116 ? codigo_lc116.replace(/\D/g, '') : ''
+
   const payload = {
     companyId: fiscalConfig.contora_company_id as string,
     ambiente,
@@ -83,14 +85,14 @@ export async function POST(req: NextRequest) {
     valor_servicos: Number(valor_servicos),
     iss_withheld: Boolean(iss_retido),
     iss_rate: aliquota_iss ? Number(aliquota_iss) : undefined,
-    // codigo_lc116 aqui já vem completo do catálogo de serviços do formulário
-    // (campo codigoMunicipal, ex: "140600100" para o item 14.06) — não é o
-    // item curto da LC116 (ex: "14.06") que precisaria de derivação. Só
-    // limpamos a formatação, sem forçar padding: preencher com zeros um
-    // código incompleto geraria um national_tax_code plausível mas errado
-    // em vez de deixar claro que faltou informação.
-    municipal_tax_code: codigo_servico ?? undefined,
-    national_tax_code: codigo_lc116 ? (codigo_lc116.replace(/\D/g, '') || undefined) : undefined,
+    // codigo_lc116 aqui vem do catálogo de serviços do formulário (campo
+    // codigoMunicipal, ex: "140600100" para o item 14.06): são os 6 dígitos
+    // do cTribNac (código de tributação nacional) seguidos dos 3 dígitos do
+    // cTribMun (código de tributação municipal) — não é o item curto da
+    // LC116 (ex: "14.06", em codigo_servico), que está em formato antigo e
+    // não deve ir para nenhum dos dois campos do padrão nacional.
+    national_tax_code: codigoLc116Digits.length >= 6 ? codigoLc116Digits.slice(0, 6) : undefined,
+    municipal_tax_code: codigoLc116Digits.length > 6 ? codigoLc116Digits.slice(6, 9) : undefined,
     nbs_code: codigo_nbs ?? undefined,
     cnae: codigo_cnae ?? undefined,
     descricao: discriminacao,
