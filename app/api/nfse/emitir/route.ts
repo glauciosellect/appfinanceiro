@@ -83,11 +83,14 @@ export async function POST(req: NextRequest) {
     valor_servicos: Number(valor_servicos),
     iss_withheld: Boolean(iss_retido),
     iss_rate: aliquota_iss ? Number(aliquota_iss) : undefined,
-    // codigo_lc116 (ex: "14.06") não é o national_tax_code de 6 dígitos direto —
-    // a Contora deriva boa parte disso sozinha quando cnae/nbs são informados;
-    // passamos os dois códigos brutos e deixamos a API validar/derivar.
+    // codigo_lc116 aqui já vem completo do catálogo de serviços do formulário
+    // (campo codigoMunicipal, ex: "140600100" para o item 14.06) — não é o
+    // item curto da LC116 (ex: "14.06") que precisaria de derivação. Só
+    // limpamos a formatação, sem forçar padding: preencher com zeros um
+    // código incompleto geraria um national_tax_code plausível mas errado
+    // em vez de deixar claro que faltou informação.
     municipal_tax_code: codigo_servico ?? undefined,
-    national_tax_code: codigo_lc116 ? codigo_lc116.replace(/\D/g, '').padEnd(6, '0') : undefined,
+    national_tax_code: codigo_lc116 ? (codigo_lc116.replace(/\D/g, '') || undefined) : undefined,
     nbs_code: codigo_nbs ?? undefined,
     cnae: codigo_cnae ?? undefined,
     descricao: discriminacao,
