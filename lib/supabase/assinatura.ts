@@ -52,9 +52,9 @@ export function assinaturaAtiva(assinatura: Assinatura | null): boolean {
 
 export const TRIAL_DIAS = 14
 
-// Trial gratuito de 14 dias a partir do cadastro — vale SOMENTE para o
-// plano PRO. O Premium (PDV/Caixa/Fiscal) nunca tem trial: é pago desde o
-// primeiro dia. `criadoEm` é auth.users.created_at do usuário logado.
+// Trial gratuito de 14 dias a partir do cadastro. Vale para qualquer plano
+// escolhido no cadastro (Intro, PRO ou Premium). `criadoEm` é
+// auth.users.created_at do usuário logado.
 export function emTrialPro(criadoEm: string | null | undefined): boolean {
   if (!criadoEm) return false
   const inicio = new Date(criadoEm).getTime()
@@ -79,7 +79,7 @@ export function isPro(assinatura: Assinatura | null): boolean {
 }
 
 // Tem especificamente o plano PREMIUM ativo — libera o que é exclusivo
-// dele (NF-e, NFS-e, NF-C, PDV, Caixa). Premium NUNCA tem trial.
+// dele (NF-e, NFS-e, NF-C, PDV, Caixa). Para o acesso durante o trial, use `podeUsarPremium`.
 export function isPremium(assinatura: Assinatura | null): boolean {
   return assinaturaAtiva(assinatura) && assinatura?.plano === 'premium'
 }
@@ -89,6 +89,19 @@ export function isPremium(assinatura: Assinatura | null): boolean {
 // assinado nada — `assinatura` pode ser null neste caso).
 export function podeUsarPro(assinatura: Assinatura | null, criadoEm: string | null | undefined): boolean {
   return isPro(assinatura) || emTrialPro(criadoEm)
+}
+
+// Acesso ao conteúdo PREMIUM: assinatura PREMIUM ativa, OU trial de 14 dias de
+// quem escolheu o Premium no cadastro (user_metadata.plano_escolhido). Essa
+// preferência é editável pelo usuário, mas só vale dentro dos 14 dias do cadastro
+// e nunca sobrepõe uma assinatura paga ativa de outro plano.
+export function podeUsarPremium(
+  assinatura: Assinatura | null,
+  criadoEm: string | null | undefined,
+  planoEscolhido: unknown
+): boolean {
+  if (isPremium(assinatura)) return true
+  return !assinaturaAtiva(assinatura) && emTrialPro(criadoEm) && planoEscolhido === 'premium'
 }
 
 // Acesso ao sistema INTRO (/intro): assinatura INTRO ativa, OU ainda dentro

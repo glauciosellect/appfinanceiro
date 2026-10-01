@@ -256,7 +256,7 @@ const steps: Step[] = [
       'Você pode emitir NFS-e (serviços) sem certificado digital',
       'Para NF-e (produtos) e para operar o PDV é necessário assinar o plano Premium — não há período de teste para ele',
     ],
-    tip: 'O plano PRO já tem 14 dias de teste grátis. O Premium (PDV, Caixa e Fiscal) é cobrado desde a ativação, sem trial, através da página "Assinar".',
+    tip: 'Todos os planos têm 14 dias de teste grátis a partir do cadastro. Para continuar depois do teste, assine pela página "Assinar".',
   },
 ]
 

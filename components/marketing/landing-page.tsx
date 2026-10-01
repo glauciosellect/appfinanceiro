@@ -432,6 +432,32 @@ const ORCAMENTO_FEATURES = [
 
 const PLANS = [
   {
+    key: 'intro' as const,
+    name: 'INTRO',
+    price: 'R$ 57,90',
+    period: '/mês',
+    description: 'Para lojas que vendem em consignação: PDV, estoque e acerto com fornecedores',
+    savings: null,
+    badge: 'Para lojistas',
+    features: [
+      'Clientes, fornecedores e produtos',
+      'Entrada de mercadoria com margem e validade',
+      'Consignação com acerto por fornecedor',
+      'PDV com leitor de código de barras',
+      'Caixa do dia por forma de pagamento',
+      'Estoque total e por fornecedor',
+      'Contas a pagar e a receber',
+      'Dashboard e relatórios (PDF e Excel)',
+      'Recibo do fornecedor com confirmação RECEBIDO',
+      'Não emite nota fiscal',
+    ],
+    trial: true,
+    cta: 'Começar 14 dias grátis',
+    highlight: false,
+    premium: false,
+    intro: true,
+  },
+  {
     key: 'pro' as const,
     name: 'PRO',
     price: 'R$ 97,00',
@@ -456,6 +482,7 @@ const PLANS = [
     cta: 'Começar 14 dias grátis',
     highlight: true,
     premium: false,
+    intro: false,
   },
   {
     key: 'premium' as const,
@@ -480,10 +507,11 @@ const PLANS = [
       'ISS retido na fonte',
       'Suporte prioritário',
     ],
-    trial: false,
-    cta: 'Ativar módulo Premium',
+    trial: true,
+    cta: 'Começar 14 dias grátis',
     highlight: false,
     premium: true,
+    intro: false,
   },
 ]
 
@@ -821,7 +849,7 @@ export function LandingPageContent() {
               <Button asChild size="lg" className="mt-8 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold gap-2 shadow-lg shadow-[#FBBF24]/25 transition-transform hover:scale-[1.03]">
                 <Link href={registerLink('premium')}>
                   <Zap className="h-4 w-4" />
-                  Ativar módulo Premium
+                  Testar o Premium 14 dias grátis
                 </Link>
               </Button>
             </div>
@@ -1242,17 +1270,19 @@ export function LandingPageContent() {
               Simples e transparente
             </h2>
             <p className="mt-3 text-[#6B7280]">
-              14 dias grátis no plano PRO. Sem cartão de crédito para começar.
+              Escolha o plano que combina com o seu negócio e teste 14 dias grátis. Sem cartão de crédito para começar.
             </p>
           </div>
 
-          <div className="mx-auto grid max-w-3xl gap-6 pt-6 sm:grid-cols-2">
+          <div className="mx-auto grid max-w-md gap-6 pt-6 lg:max-w-6xl lg:grid-cols-3">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
                 className={`relative flex flex-col rounded-2xl p-7 transition-transform duration-300 hover:-translate-y-1 ${
                   plan.premium
                     ? 'border-2 border-[#FBBF24] bg-[#0F172A] shadow-xl shadow-[#FBBF24]/10'
+                    : plan.intro
+                    ? 'border-2 border-[#16A34A] bg-white shadow-xl shadow-[#16A34A]/10'
                     : plan.highlight
                     ? 'border-2 border-[#2563EB] bg-white shadow-xl shadow-[#2563EB]/10'
                     : 'border border-[#E5E7EB] bg-[#F9FAFB]'
@@ -1263,6 +1293,8 @@ export function LandingPageContent() {
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold shadow-md ${
                       plan.premium
                         ? 'bg-[#FBBF24] text-[#111827]'
+                        : plan.intro
+                        ? 'bg-[#16A34A] text-white'
                         : 'bg-[#2563EB] text-white'
                     }`}>
                       <Zap className="h-3 w-3" />
@@ -1312,11 +1344,13 @@ export function LandingPageContent() {
                   className={
                     plan.premium
                       ? 'w-full bg-[#FBBF24] hover:bg-[#F59E0B] text-[#111827] font-bold shadow-md shadow-[#FBBF24]/25 transition-transform hover:scale-[1.03]'
+                      : plan.intro
+                      ? 'w-full bg-[#16A34A] hover:bg-[#15803D] text-white shadow-md shadow-[#16A34A]/25 transition-transform hover:scale-[1.03]'
                       : plan.highlight
                       ? 'w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-md shadow-[#2563EB]/25 transition-transform hover:scale-[1.03]'
                       : 'w-full'
                   }
-                  variant={plan.premium || plan.highlight ? 'default' : 'outline'}
+                  variant={plan.premium || plan.highlight || plan.intro ? 'default' : 'outline'}
                 >
                   <Link href={registerLink(plan.key)}>
                     {plan.cta}

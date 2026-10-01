@@ -20,11 +20,13 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [planoEscolhido, setPlanoEscolhido] = useState<'intro' | 'pro' | 'premium' | null>(null)
 
   useEffect(() => {
     const plano = new URLSearchParams(window.location.search).get('plano')
     if (plano === 'intro' || plano === 'pro' || plano === 'premium') {
       sessionStorage.setItem('plano_selecionado', plano)
+      setPlanoEscolhido(plano)
     }
   }, [])
 
@@ -102,6 +104,12 @@ export default function RegisterPage() {
           <CardDescription className="text-center">
             Comece a controlar suas finanças gratuitamente
           </CardDescription>
+          {planoEscolhido && (
+            <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm text-blue-800">
+              Você escolheu o <strong>SyncroMoney {planoEscolhido === 'intro' ? 'Intro' : planoEscolhido === 'pro' ? 'PRO' : 'Premium'}</strong>.
+              Teste grátis por 14 dias, sem cartão.
+            </div>
+          )}
         </CardHeader>
 
         <form onSubmit={handleRegister}>

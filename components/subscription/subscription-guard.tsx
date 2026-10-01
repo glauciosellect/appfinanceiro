@@ -36,7 +36,8 @@ export function SubscriptionGuard({ children }: Props) {
       setDiasTrial(diasRestantesTrial(user.created_at))
       // Trial de 14 dias grátis vale para acesso PRO (assinatura ativa OU
       // ainda dentro do prazo desde o cadastro). O Premium (PDV/Caixa/
-      // Fiscal) segue gateado à parte por isPremium — nunca tem trial.
+      // Fiscal) segue gateado à parte por isPremium, que também libera o
+      // trial de 14 dias para quem escolheu o Premium no cadastro.
       setStatus(podeUsarPro(ass, user.created_at) ? 'ok' : 'blocked')
     }
     verificar()

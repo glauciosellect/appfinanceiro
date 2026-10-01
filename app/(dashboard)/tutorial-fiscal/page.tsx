@@ -75,7 +75,7 @@ const steps: Step[] = [
     items: [
       'Acesse "Assinar" (ou o aviso de upgrade que aparece nas seções PREMIUM do menu)',
       'Escolha o plano PREMIUM (R$ 147/mês)',
-      'Confirme o pagamento — a assinatura é ativada imediatamente, sem trial',
+      'Confirme o pagamento — a assinatura é ativada imediatamente',
       'Após ativar, as seções "PDV & CAIXA" e "FISCAL" aparecem liberadas no menu lateral',
       'Volte em Configurações → aba Fiscal para marcar os tipos de nota que pretende emitir: NFS-e (serviços) e/ou NF-e (produtos)',
       'Clique em "Ativar Emissão Fiscal" — o sistema sincroniza automaticamente seu CNPJ, IE, regime tributário e endereço com a nuvem fiscal',
