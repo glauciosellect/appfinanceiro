@@ -4,16 +4,17 @@ export const dynamic = 'force-dynamic'
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { ArrowLeft, Copy, Printer, Share2, XCircle } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { ArrowLeft, Copy, Pencil, Printer, Share2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReciboDocumento } from '@/components/intro/recibo-documento'
 import { createClient } from '@/lib/supabase/client'
-import { cancelarAcerto, getAcerto, linkRecibo, mensagemAcerto, type ReciboDados } from '@/lib/intro/acertos'
+import { AVISO_EDITAR_ACERTO, cancelarAcerto, getAcerto, linkRecibo, mensagemAcerto, urlRefazerAcerto, type ReciboDados } from '@/lib/intro/acertos'
 import { compartilharTexto } from '@/lib/intro/vendas'
 
 export default function AcertoDetalhePage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [acerto, setAcerto] = useState<(ReciboDados & { token_publico: string; id: string }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
@@ -46,6 +47,20 @@ export default function AcertoDetalhePage() {
     }
   }
 
+  // Editar = cancelar o acerto enviado e refazer com o mesmo fornecedor e período
+  async function editar() {
+    if (!acerto) return
+    if (!confirm(AVISO_EDITAR_ACERTO)) return
+    setErro('')
+    const e = await cancelarAcerto(id)
+    if (e) { setErro(e); return }
+    const s = acerto.snapshot
+    // O fornecedor é buscado pelo acerto (o snapshot guarda só o nome)
+    const { data } = await createClient().from('acertos_fornecedor').select('fornecedor_id').eq('id', id).maybeSingle()
+    const fornecedorId = (data as { fornecedor_id: string } | null)?.fornecedor_id
+    router.push(fornecedorId ? urlRefazerAcerto(fornecedorId, s.periodo.ini, s.periodo.fim) : '/intro/acertos/novo')
+  }
+
   async function cancelar() {
     if (!confirm('Cancelar este acerto? As vendas voltam a ficar pendentes e a conta a pagar é cancelada.')) return
     setErro('')
@@ -69,6 +84,9 @@ export default function AcertoDetalhePage() {
           </>
         )}
         <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4 mr-1" />Imprimir / PDF</Button>
+        {acerto.status === 'enviado' && (
+          <Button size="sm" variant="outline" onClick={editar}><Pencil className="h-4 w-4 mr-1" />Editar</Button>
+        )}
         {acerto.status === 'enviado' && (
           <Button size="sm" variant="outline" className="text-red-600" onClick={cancelar}><XCircle className="h-4 w-4 mr-1" />Cancelar acerto</Button>
         )}

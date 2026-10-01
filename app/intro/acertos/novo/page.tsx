@@ -30,8 +30,8 @@ function NovoAcertoConteudo() {
   const params = useSearchParams()
   const [fornecedores, setFornecedores] = useState<Forn[]>([])
   const [fornecedorId, setFornecedorId] = useState(params.get('fornecedor') ?? '')
-  const [ini, setIni] = useState(primeiroDiaDoMes())
-  const [fim, setFim] = useState(hojeISO())
+  const [ini, setIni] = useState(params.get('ini') ?? primeiroDiaDoMes())
+  const [fim, setFim] = useState(params.get('fim') ?? hojeISO())
   const [previa, setPrevia] = useState<Previa | null>(null)
   const [escolhas, setEscolhas] = useState<Record<string, Escolha>>({})
   const [carregando, setCarregando] = useState(false)
@@ -46,6 +46,12 @@ function NovoAcertoConteudo() {
       setFornecedores((data ?? []) as Forn[])
     }
     carregar()
+  }, [])
+
+  // Vindo de "Editar": fornecedor e período já preenchidos, então calcula na hora
+  useEffect(() => {
+    if (params.get('fornecedor') && params.get('ini') && params.get('fim')) calcular()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function calcular() {

@@ -63,6 +63,15 @@ export async function fecharAcerto(p: {
   return { id: (data as { id: string }).id, erro: null }
 }
 
+// Caminho da tela "Novo acerto" já preenchida com o fornecedor e o período de um acerto
+// (usado em "Editar": o acerto enviado é cancelado e refeito).
+export function urlRefazerAcerto(fornecedorId: string, ini: string, fim: string): string {
+  return `/intro/acertos/novo?fornecedor=${fornecedorId}&ini=${ini}&fim=${fim}`
+}
+
+export const AVISO_EDITAR_ACERTO =
+  'Um acerto já enviado não pode ser alterado: para editar, ele será CANCELADO e você fará um novo com o mesmo fornecedor e período. O link que você já enviou deixa de valer. Continuar?'
+
 export async function cancelarAcerto(id: string): Promise<string | null> {
   const { error } = await createClient().rpc('intro_cancelar_acerto', { p_id: id })
   return error ? error.message : null
@@ -95,6 +104,7 @@ export interface ReciboDados {
 
 export interface AcertoLinha {
   id: string
+  fornecedor_id: string
   numero: number
   periodo_ini: string
   periodo_fim: string
@@ -109,7 +119,7 @@ export interface AcertoLinha {
 export async function listarAcertos(userId: string): Promise<AcertoLinha[]> {
   const { data, error } = await createClient()
     .from('acertos_fornecedor')
-    .select('id, numero, periodo_ini, periodo_fim, total_vendido, total_repasse, status, token_publico, recebido_em, fornecedores(nome)')
+    .select('id, fornecedor_id, numero, periodo_ini, periodo_fim, total_vendido, total_repasse, status, token_publico, recebido_em, fornecedores(nome)')
     .eq('user_id', userId)
     .order('numero', { ascending: false })
   if (error) throw error
