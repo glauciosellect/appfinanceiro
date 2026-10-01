@@ -144,3 +144,21 @@ export async function compartilharTexto(titulo: string, texto: string): Promise<
     return 'falhou'
   }
 }
+
+// Telefone no formato do WhatsApp (DDI + DDD + número, só dígitos). Aceita número do
+// Brasil com ou sem 55; devolve null se não parecer um telefone válido.
+export function telefoneParaWhatsApp(telefone: string | null | undefined): string | null {
+  const d = (telefone ?? '').replace(/\D/g, '')
+  if (d.length === 10 || d.length === 11) return '55' + d
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) return d
+  return null
+}
+
+// Abre uma conversa do WhatsApp com a mensagem pronta. Usa o WhatsApp que o usuário já tem
+// (comum ou Business, aplicativo ou web). Com telefone, abre direto a conversa com o contato;
+// sem telefone, o WhatsApp pede para escolher o contato.
+export function abrirWhatsApp(telefone: string | null | undefined, texto: string): void {
+  const numero = telefoneParaWhatsApp(telefone)
+  const url = `https://wa.me/${numero ?? ''}?text=${encodeURIComponent(texto)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}

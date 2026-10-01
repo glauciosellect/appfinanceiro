@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, Clock, Minus, Pause, Plus, Receipt, Search, Share2, Trash2, X } from 'lucide-react'
+import { Check, Clock, MessageCircle, Minus, Pause, Plus, Receipt, Search, Share2, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -14,7 +14,7 @@ import { getSessaoAbertaHoje } from '@/lib/supabase/caixa'
 import { getIntroConfig, type IntroConfig } from '@/lib/intro/config'
 import { COLUNAS_PRODUTO, hojeISO, type ProdutoIntro } from '@/lib/intro/produtos'
 import {
-  FORMAS_PAGAMENTO, cancelarVendaIntro, compartilharTexto, excluirVendaEmEspera, listarVendasDaSessao,
+  FORMAS_PAGAMENTO, abrirWhatsApp, cancelarVendaIntro, compartilharTexto, excluirVendaEmEspera, listarVendasDaSessao,
   listarVendasEmEspera, salvarVenda, textoComprovante,
   type FormaPagamentoIntro, type VendaDoDia, type VendaEmEspera,
 } from '@/lib/intro/vendas'
@@ -283,6 +283,11 @@ export default function IntroPdvPage() {
     limparVenda()
   }
 
+  // WhatsApp (comum ou Business): o WhatsApp pede para escolher o contato
+  function whatsapp(v: VendaDoDia) {
+    abrirWhatsApp(null, textoComprovante(config ?? { nome_loja: '', cnpj_cpf: '', telefone: '' }, v))
+  }
+
   async function compartilhar(v: VendaDoDia) {
     const r = await compartilharTexto(`Venda ${v.numero_sequencial}`, textoComprovante(config ?? { nome_loja: '', cnpj_cpf: '', telefone: '' }, v))
     setAviso(r === 'copiado' ? 'Comprovante copiado.' : r === 'falhou' ? 'Não foi possível compartilhar.' : '')
@@ -516,7 +521,8 @@ export default function IntroPdvPage() {
                 )}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => compartilhar(concluida.venda)}><Share2 className="h-4 w-4 mr-1" />Comprovante</Button>
+                <Button variant="outline" className="flex-1" onClick={() => whatsapp(concluida.venda)}><MessageCircle className="h-4 w-4 mr-1" />WhatsApp</Button>
+                <Button variant="outline" className="flex-1" onClick={() => compartilhar(concluida.venda)}><Share2 className="h-4 w-4 mr-1" />Outros</Button>
                 <Button className="flex-1 bg-emerald-600 hover:bg-emerald-500" onClick={() => { setConcluida(null); buscaRef.current?.focus() }}>Nova venda</Button>
               </div>
             </div>
@@ -579,7 +585,8 @@ export default function IntroPdvPage() {
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={() => compartilhar(v)}><Share2 className="h-3.5 w-3.5" /></Button>
+                  <Button size="sm" variant="outline" title="Enviar pelo WhatsApp" onClick={() => whatsapp(v)}><MessageCircle className="h-3.5 w-3.5" /></Button>
+                  <Button size="sm" variant="outline" title="Outros aplicativos" onClick={() => compartilhar(v)}><Share2 className="h-3.5 w-3.5" /></Button>
                   <Button size="sm" variant="outline" className="text-red-600" onClick={() => cancelarVenda(v)}>Cancelar</Button>
                 </div>
               </div>

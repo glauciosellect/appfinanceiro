@@ -5,12 +5,12 @@ export const dynamic = 'force-dynamic'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Copy, Pencil, Printer, Share2, XCircle } from 'lucide-react'
+import { ArrowLeft, Copy, MessageCircle, Pencil, Printer, Share2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReciboDocumento } from '@/components/intro/recibo-documento'
 import { createClient } from '@/lib/supabase/client'
 import { AVISO_EDITAR_ACERTO, cancelarAcerto, getAcerto, linkRecibo, mensagemAcerto, urlRefazerAcerto, type ReciboDados } from '@/lib/intro/acertos'
-import { compartilharTexto } from '@/lib/intro/vendas'
+import { abrirWhatsApp, compartilharTexto } from '@/lib/intro/vendas'
 
 export default function AcertoDetalhePage() {
   const { id } = useParams<{ id: string }>()
@@ -28,6 +28,14 @@ export default function AcertoDetalhePage() {
   }, [id])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // Abre o WhatsApp (comum ou Business) direto na conversa com o fornecedor
+  function enviarWhatsApp() {
+    if (!acerto) return
+    setMsg('')
+    setErro('')
+    abrirWhatsApp(acerto.snapshot.fornecedor.telefone, mensagemAcerto(acerto.snapshot, linkRecibo(acerto.token_publico)))
+  }
 
   async function compartilhar() {
     if (!acerto) return
@@ -79,7 +87,8 @@ export default function AcertoDetalhePage() {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white flex-1">Acerto nº {acerto.numero}</h1>
         {acerto.status !== 'cancelado' && (
           <>
-            <Button size="sm" onClick={compartilhar}><Share2 className="h-4 w-4 mr-1" />Enviar ao fornecedor</Button>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500" onClick={enviarWhatsApp}><MessageCircle className="h-4 w-4 mr-1" />Enviar por WhatsApp</Button>
+            <Button size="sm" variant="outline" onClick={compartilhar}><Share2 className="h-4 w-4 mr-1" />Outros apps</Button>
             <Button size="sm" variant="outline" onClick={copiarLink}><Copy className="h-4 w-4 mr-1" />Copiar link</Button>
           </>
         )}
