@@ -12,13 +12,27 @@ import {
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
-type PlanoKey = 'pro' | 'premium'
+type PlanoKey = 'intro' | 'pro' | 'premium'
 type MetodoPagamento = 'CREDIT_CARD' | 'PIX'
 
 const PLANOS: Record<PlanoKey, { nome: string; preco: string; valor: number }> = {
+  intro: { nome: 'INTRO', preco: 'R$ 57,90', valor: 57.9 },
   pro: { nome: 'PRO', preco: 'R$ 97,00', valor: 97 },
   premium: { nome: 'PREMIUM', preco: 'R$ 147,00', valor: 147 },
 }
+
+const FEATURES_INTRO = [
+  'Cadastro de Clientes, Fornecedores e Produtos',
+  'Entrada de mercadoria com margem e validade',
+  'Consignação com acerto por fornecedor',
+  'PDV com leitor de código de barras',
+  'Caixa do dia por forma de pagamento',
+  'Estoque total e por fornecedor',
+  'Contas a Pagar e a Receber',
+  'Dashboard e Relatórios',
+  'Recibo para o fornecedor com confirmação "RECEBIDO"',
+  'Não emite nota fiscal',
+]
 
 const FEATURES_PRO = [
   'Dashboard completo com KPIs',
@@ -64,7 +78,7 @@ export default function AssinarPage() {
 
   useEffect(() => {
     const plano = sessionStorage.getItem('plano_selecionado')
-    if (plano === 'pro' || plano === 'premium') {
+    if (plano === 'intro' || plano === 'pro' || plano === 'premium') {
       setPlanoSelecionado(plano)
       sessionStorage.removeItem('plano_selecionado')
     }
@@ -89,7 +103,7 @@ export default function AssinarPage() {
         .single()
       if (assinatura?.status === 'active') {
         if (pollRef.current) clearInterval(pollRef.current)
-        router.push('/dashboard?assinatura=sucesso')
+        router.push(planoSelecionado === 'intro' ? '/intro?assinatura=sucesso' : '/dashboard?assinatura=sucesso')
       }
     }, 5000)
   }
@@ -105,7 +119,7 @@ export default function AssinarPage() {
         .eq('user_id', data.user.id)
         .single()
       if (assinatura?.status === 'active') {
-        router.push('/dashboard?assinatura=sucesso')
+        router.push(planoSelecionado === 'intro' ? '/intro?assinatura=sucesso' : '/dashboard?assinatura=sucesso')
         return
       }
     }
@@ -243,7 +257,40 @@ export default function AssinarPage() {
             </div>
 
             {/* Planos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {/* INTRO */}
+              <button
+                onClick={() => setPlanoSelecionado('intro')}
+                className={cn(
+                  'relative rounded-2xl p-6 text-left border-2 transition-all',
+                  planoSelecionado === 'intro'
+                    ? 'border-emerald-500 bg-emerald-500/10'
+                    : 'border-white/10 bg-white/5 hover:border-white/30'
+                )}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={cn(
+                    'h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0',
+                    planoSelecionado === 'intro' ? 'border-emerald-500 bg-emerald-500' : 'border-slate-500'
+                  )}>
+                    {planoSelecionado === 'intro' && <div className="h-2 w-2 rounded-full bg-white" />}
+                  </div>
+                  <span className="text-white font-semibold">SyncroMoney {PLANOS.intro.nome}</span>
+                </div>
+                <div className="mb-1">
+                  <span className="text-2xl font-bold text-white">{PLANOS.intro.preco}</span>
+                  <span className="text-slate-400 text-sm ml-1">/mês</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-white/10 space-y-1">
+                  {['PDV, Caixa e Estoque', 'Consignação com fornecedores', 'Sem emissão de nota fiscal'].map(f => (
+                    <div key={f} className="flex items-center gap-1.5">
+                      <Check className="h-3 w-3 text-emerald-400 shrink-0" />
+                      <span className="text-slate-400 text-xs">{f}</span>
+                    </div>
+                  ))}
+                </div>
+              </button>
+
               {/* PRO */}
               <button
                 onClick={() => setPlanoSelecionado('pro')}
@@ -327,10 +374,10 @@ export default function AssinarPage() {
                 : 'bg-white/5 border-white/10'
             )}>
               <p className={cn('font-semibold mb-4', isPremium ? 'text-amber-300' : 'text-white')}>
-                {isPremium ? '⚡ Tudo incluído no PREMIUM:' : 'Tudo incluído no PRO:'}
+                {isPremium ? '⚡ Tudo incluído no PREMIUM:' : `Tudo incluído no ${PLANOS[planoSelecionado].nome}:`}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {(isPremium ? FEATURES_PREMIUM : FEATURES_PRO).map((f) => (
+                {(planoSelecionado === 'intro' ? FEATURES_INTRO : isPremium ? FEATURES_PREMIUM : FEATURES_PRO).map((f) => (
                   <div key={f} className="flex items-center gap-2">
                     <Check className={cn('h-4 w-4 shrink-0', isPremium ? 'text-amber-400' : 'text-green-400')} />
                     <span className="text-slate-300 text-sm">{f}</span>
@@ -404,7 +451,9 @@ export default function AssinarPage() {
                 'w-full disabled:opacity-60 font-bold py-4 rounded-2xl text-lg transition-colors flex items-center justify-center gap-2',
                 isPremium
                   ? 'bg-amber-400 hover:bg-amber-300 text-slate-900'
-                  : 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : planoSelecionado === 'intro'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white'
               )}
             >
               {loading ? (

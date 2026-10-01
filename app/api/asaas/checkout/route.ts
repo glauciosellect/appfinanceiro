@@ -9,12 +9,14 @@ import {
   cancelarAssinatura,
 } from '@/lib/asaas'
 
-const VALORES: Record<'pro' | 'premium', number> = {
+const VALORES: Record<'intro' | 'pro' | 'premium', number> = {
+  intro: 57.9,
   pro: 97.0,
   premium: 147.0,
 }
 
-const NOMES: Record<'pro' | 'premium', string> = {
+const NOMES: Record<'intro' | 'pro' | 'premium', string> = {
+  intro: 'SyncroMoney INTRO',
   pro: 'SyncroMoney PRO',
   premium: 'SyncroMoney PREMIUM',
 }
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const { plano, metodoPagamento, cpfCnpj, nome } = await req.json()
 
-    if (plano !== 'pro' && plano !== 'premium') {
+    if (plano !== 'intro' && plano !== 'pro' && plano !== 'premium') {
       return NextResponse.json({ error: 'plano inválido' }, { status: 400 })
     }
     if (metodoPagamento !== 'PIX' && metodoPagamento !== 'CREDIT_CARD') {
@@ -72,8 +74,8 @@ export async function POST(req: NextRequest) {
       customerId = customer.id
     }
 
-    const value = VALORES[plano as 'pro' | 'premium']
-    const description = `Assinatura ${NOMES[plano as 'pro' | 'premium']}`
+    const value = VALORES[plano as 'intro' | 'pro' | 'premium']
+    const description = `Assinatura ${NOMES[plano as 'intro' | 'pro' | 'premium']}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     if (metodoPagamento === 'CREDIT_CARD') {
@@ -81,7 +83,7 @@ export async function POST(req: NextRequest) {
         customerId,
         value,
         description,
-        successUrl: `${appUrl}/dashboard?assinatura=sucesso`,
+        successUrl: `${appUrl}${plano === 'intro' ? '/intro' : '/dashboard'}?assinatura=sucesso`,
         cancelUrl: `${appUrl}/assinar?cancelado=true`,
       })
 

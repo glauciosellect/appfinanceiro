@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { carregarContextoSistema, rotaInicial } from '@/lib/intro/sistema-client'
 import { Logo } from '@/components/logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,7 +70,8 @@ export default function LoginPage() {
       }
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      const ctx = await carregarContextoSistema()
+      router.push(ctx ? rotaInicial(ctx.sistema) : '/dashboard')
       router.refresh()
     }
   }

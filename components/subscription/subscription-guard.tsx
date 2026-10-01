@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { carregarContextoSistema } from '@/lib/intro/sistema-client'
 import { podeUsarPro, diasRestantesTrial, ehEmailVitalicio, type Assinatura } from '@/lib/supabase/assinatura'
 import { Loader2, Lock, LogOut } from 'lucide-react'
 import { Logo } from '@/components/logo'
@@ -19,22 +20,18 @@ export function SubscriptionGuard({ children }: Props) {
 
   useEffect(() => {
     async function verificar() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      const ctx = await carregarContextoSistema()
+      if (!ctx) { router.push('/login'); return }
+      const { user, assinatura: ass } = ctx
+
+      // Plano INTRO usa o sistema próprio em /intro.
+      if (ctx.sistema === 'intro') { router.replace('/intro'); return }
 
       if (ehEmailVitalicio(user.email)) {
         setStatus('ok')
         return
       }
 
-      const { data } = await supabase
-        .from('assinaturas')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-
-      const ass = data as Assinatura | null
       setAssinatura(ass)
       setDiasTrial(diasRestantesTrial(user.created_at))
       // Trial de 14 dias grátis vale para acesso PRO (assinatura ativa OU

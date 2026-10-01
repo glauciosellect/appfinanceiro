@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 
 export type StatusAssinatura = 'pending' | 'active' | 'past_due' | 'canceled'
-export type PlanoAssinatura = 'pro' | 'premium'
+export type PlanoAssinatura = 'intro' | 'pro' | 'premium'
 export type BillingType = 'PIX' | 'CREDIT_CARD'
 
 // Acesso vitalício por e-mail (dono/desenvolvedor) — bypassa a tabela
@@ -74,7 +74,8 @@ export function diasRestantesTrial(criadoEm: string | null | undefined): number 
 // exclusivo do módulo fiscal/PDV. Note: isto NÃO considera o trial — use
 // `podeUsarPro()` para a checagem completa (assinatura ativa OU em trial).
 export function isPro(assinatura: Assinatura | null): boolean {
-  return assinaturaAtiva(assinatura)
+  // O plano INTRO é um sistema à parte (/intro): não libera nada do app PRO/PREMIUM.
+  return assinaturaAtiva(assinatura) && assinatura?.plano !== 'intro'
 }
 
 // Tem especificamente o plano PREMIUM ativo — libera o que é exclusivo
@@ -88,4 +89,11 @@ export function isPremium(assinatura: Assinatura | null): boolean {
 // assinado nada — `assinatura` pode ser null neste caso).
 export function podeUsarPro(assinatura: Assinatura | null, criadoEm: string | null | undefined): boolean {
   return isPro(assinatura) || emTrialPro(criadoEm)
+}
+
+// Acesso ao sistema INTRO (/intro): assinatura INTRO ativa, OU ainda dentro
+// dos 14 dias de trial gratuito contados do cadastro.
+export function podeUsarIntro(assinatura: Assinatura | null, criadoEm: string | null | undefined): boolean {
+  const intro = assinaturaAtiva(assinatura) && assinatura?.plano === 'intro'
+  return intro || emTrialPro(criadoEm)
 }

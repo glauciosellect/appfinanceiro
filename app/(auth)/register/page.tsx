@@ -23,7 +23,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     const plano = new URLSearchParams(window.location.search).get('plano')
-    if (plano === 'pro' || plano === 'premium') {
+    if (plano === 'intro' || plano === 'pro' || plano === 'premium') {
       sessionStorage.setItem('plano_selecionado', plano)
     }
   }, [])
@@ -43,7 +43,14 @@ export default function RegisterPage() {
 
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({ email, password })
+    // Preferência de plano (só decide qual sistema abre durante o trial; o
+    // acesso pago vem sempre da tabela `assinaturas`).
+    const planoEscolhido = sessionStorage.getItem('plano_selecionado')
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: planoEscolhido ? { data: { plano_escolhido: planoEscolhido } } : undefined,
+    })
 
     if (error) {
       setError(`Erro ao criar conta: ${error.message}`)
