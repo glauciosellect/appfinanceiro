@@ -9,13 +9,13 @@ import { ArrowLeft, Copy, MessageCircle, Pencil, Printer, Share2, XCircle } from
 import { Button } from '@/components/ui/button'
 import { ReciboDocumento } from '@/components/intro/recibo-documento'
 import { createClient } from '@/lib/supabase/client'
-import { AVISO_EDITAR_ACERTO, cancelarAcerto, getAcerto, linkRecibo, mensagemAcerto, urlRefazerAcerto, type ReciboDados } from '@/lib/intro/acertos'
+import { AVISO_EDITAR_ACERTO, cancelarAcerto, getAcerto, linkRecibo, mensagemAcerto, urlRefazerAcerto, type EvidenciasRecebimento, type ReciboDados } from '@/lib/intro/acertos'
 import { abrirWhatsApp, compartilharTexto } from '@/lib/intro/vendas'
 
 export default function AcertoDetalhePage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const [acerto, setAcerto] = useState<(ReciboDados & { token_publico: string; id: string }) | null>(null)
+  const [acerto, setAcerto] = useState<(ReciboDados & EvidenciasRecebimento & { token_publico: string; id: string }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
@@ -108,6 +108,17 @@ export default function AcertoDetalhePage() {
       )}
 
       <ReciboDocumento dados={acerto} />
+
+      {acerto.status === 'recebido' && (
+        <div className="rounded-xl border border-gray-300 bg-white p-4 text-xs text-gray-700 space-y-1 print:border-gray-700">
+          <p className="font-bold text-sm text-gray-900">Registro da confirmação (guarde para sua segurança)</p>
+          <p>Confirmado por: <strong>{acerto.recebido_nome}</strong> · CPF/CNPJ {acerto.recebido_documento}</p>
+          <p>Data e hora: <strong>{acerto.recebido_em ? new Date(acerto.recebido_em).toLocaleString('pt-BR') : ''}</strong></p>
+          <p>Endereço IP: <strong>{acerto.recebido_ip || 'não registrado'}</strong></p>
+          <p className="break-words">Aparelho/navegador: {acerto.recebido_user_agent || 'não registrado'}</p>
+          <p className="break-all">Código de integridade do documento (SHA-256): {acerto.hash}</p>
+        </div>
+      )}
     </div>
   )
 }

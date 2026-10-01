@@ -102,6 +102,12 @@ export interface ReciboDados {
   recebido_documento: string | null
 }
 
+// Provas gravadas na confirmação do fornecedor (só o lojista vê)
+export interface EvidenciasRecebimento {
+  recebido_ip: string | null
+  recebido_user_agent: string | null
+}
+
 export interface AcertoLinha {
   id: string
   fornecedor_id: string
@@ -126,15 +132,15 @@ export async function listarAcertos(userId: string): Promise<AcertoLinha[]> {
   return (data ?? []) as unknown as AcertoLinha[]
 }
 
-export async function getAcerto(userId: string, id: string): Promise<(ReciboDados & { token_publico: string; id: string }) | null> {
+export async function getAcerto(userId: string, id: string): Promise<(ReciboDados & EvidenciasRecebimento & { token_publico: string; id: string }) | null> {
   const { data, error } = await createClient()
     .from('acertos_fornecedor')
-    .select('id, status, numero, snapshot, hash_sha256, enviado_em, recebido_em, recebido_nome, recebido_documento, token_publico')
+    .select('id, status, numero, snapshot, hash_sha256, enviado_em, recebido_em, recebido_nome, recebido_documento, recebido_ip, recebido_user_agent, token_publico')
     .eq('id', id)
     .eq('user_id', userId)
     .maybeSingle()
   if (error || !data) return null
-  const d = data as unknown as ReciboDados & { hash_sha256: string | null; token_publico: string; id: string }
+  const d = data as unknown as ReciboDados & EvidenciasRecebimento & { hash_sha256: string | null; token_publico: string; id: string }
   return { ...d, hash: d.hash_sha256 }
 }
 

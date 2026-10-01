@@ -17,6 +17,8 @@ export function InstallPrompt() {
   const [instalando, setInstalando] = useState(false)
 
   useEffect(() => {
+    // Páginas públicas para terceiros (recibo do fornecedor): ele só precisa confirmar o recebimento
+    if (window.location.pathname.startsWith('/recibo/')) return
     // Não mostrar se já instalado como PWA
     if (window.matchMedia('(display-mode: standalone)').matches) return
     // Não mostrar se já dispensou antes

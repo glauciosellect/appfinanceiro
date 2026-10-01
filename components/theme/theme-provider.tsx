@@ -24,7 +24,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('theme') as Theme | null
-    const preferred = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    // O recibo do fornecedor é um documento: sempre claro (fundo branco), qualquer que seja o modo do aparelho
+    const documentoPublico = window.location.pathname.startsWith('/recibo/')
+    const preferred: Theme = documentoPublico
+      ? 'light'
+      : saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     setTheme(preferred)
     document.documentElement.classList.toggle('dark', preferred === 'dark')
     setMounted(true)
