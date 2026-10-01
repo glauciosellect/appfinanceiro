@@ -29,7 +29,7 @@ const items: NavItem[] = [
   { href: '/intro/contas-pagar',   label: 'Contas a pagar',        icon: TrendingDown },
   { href: '/intro/contas-receber', label: 'Contas a receber',      icon: TrendingUp },
   { href: '/intro/acertos',         label: 'Acerto com fornecedor', icon: FileCheck2 },
-  { href: '/intro/relatorios',     label: 'Relatórios',            icon: BarChart3,    emBreve: true },
+  { href: '/intro/relatorios',     label: 'Relatórios',            icon: BarChart3 },
   { href: '/intro/configuracoes',  label: 'Configurações',         icon: Settings },
 ]
 

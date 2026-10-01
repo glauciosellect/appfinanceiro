@@ -78,7 +78,7 @@ export default function EstoquePage() {
         consignado: unidades(ls.filter((l) => l.consignado)),
         custo: valorCusto(ls),
         venda: valorVenda(ls),
-        baixo: saldo <= Number(p.estoque_minimo),
+        baixo: Number(p.estoque_minimo) > 0 && saldo <= Number(p.estoque_minimo),
         alerta: ls.some((l) => ['vencido', 'vencendo'].includes(situacaoValidade(l.validade, diasAlerta))),
       }
     })
