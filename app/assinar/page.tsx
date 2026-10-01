@@ -70,6 +70,7 @@ export default function AssinarPage() {
   const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamento>('CREDIT_CARD')
   const [cpfCnpj, setCpfCnpj] = useState('')
   const [nome, setNome] = useState('')
+  const [telefone, setTelefone] = useState('')
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [pix, setPix] = useState<QrCodePix | null>(null)
@@ -144,6 +145,12 @@ export default function AssinarPage() {
       return
     }
 
+    const telDigitos = telefone.replace(/\D/g, '')
+    if (telDigitos.length < 10 || telDigitos.length > 11) {
+      setErro('Informe um telefone com DDD para continuar.')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -155,6 +162,7 @@ export default function AssinarPage() {
           metodoPagamento,
           cpfCnpj: cpfCnpj.replace(/\D/g, ''),
           nome: nome.trim() || undefined,
+          telefone: telDigitos,
         }),
       })
       const json = await res.json()
@@ -432,6 +440,17 @@ export default function AssinarPage() {
                   value={cpfCnpj}
                   onChange={(e) => setCpfCnpj(e.target.value)}
                   placeholder="Somente números"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Telefone com DDD *</label>
+                <input
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  placeholder="(32) 99999-9999"
+                  inputMode="tel"
+                  autoComplete="tel"
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>

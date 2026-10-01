@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   AsaasError,
+  atualizarClienteAsaas,
+  buscarClienteAsaasPorReferencia,
   criarClienteAsaas,
   criarCheckoutAssinatura,
   criarAssinaturaPix,
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const { plano, metodoPagamento, cpfCnpj, nome } = await req.json()
+    const { plano, metodoPagamento, cpfCnpj, nome, telefone } = await req.json()
 
     if (plano !== 'intro' && plano !== 'pro' && plano !== 'premium') {
       return NextResponse.json({ error: 'plano inválido' }, { status: 400 })
@@ -41,6 +43,11 @@ export async function POST(req: NextRequest) {
     }
     if (!cpfCnpj || typeof cpfCnpj !== 'string' || cpfCnpj.trim().length < 11) {
       return NextResponse.json({ error: 'CPF/CNPJ obrigatório' }, { status: 400 })
+    }
+
+    const telefoneDigitos = typeof telefone === 'string' ? telefone.replace(/\D/g, '') : ''
+    if (telefoneDigitos.length < 10 || telefoneDigitos.length > 11) {
+      return NextResponse.json({ error: 'Telefone obrigatório: informe com DDD (ex.: 32 99999-9999)' }, { status: 400 })
     }
 
     const { data: existente } = await supabase
@@ -65,14 +72,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const nomeCliente = nome && typeof nome === 'string' && nome.trim() ? nome.trim() : (user.email ?? 'Cliente SyncroMoney')
+
+    // Reaproveita o cliente do Asaas de tentativas anteriores (evita duplicar a cada tentativa)
+    if (!customerId) {
+      customerId = (await buscarClienteAsaasPorReferencia(user.id))?.id
+    }
+
     if (!customerId) {
       const customer = await criarClienteAsaas({
-        name: nome && typeof nome === 'string' && nome.trim() ? nome.trim() : (user.email ?? 'Cliente SyncroMoney'),
+        name: nomeCliente,
         cpfCnpj: cpfCnpj.replace(/\D/g, ''),
         email: user.email,
+        telefone: telefoneDigitos,
         externalReference: user.id,
       })
       customerId = customer.id
+    } else {
+      // Cliente já existente: garante telefone e nome atuais (exigidos pelo checkout de cartão)
+      try {
+        await atualizarClienteAsaas(customerId, { name: nomeCliente, email: user.email ?? undefined, telefone: telefoneDigitos })
+      } catch (err) {
+        console.error('Falha ao atualizar cliente no Asaas:', err)
+      }
     }
 
     const value = VALORES[plano as 'intro' | 'pro' | 'premium']

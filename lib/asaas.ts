@@ -55,10 +55,19 @@ export interface AsaasCustomer {
   id: string
 }
 
+// O checkout de cartão do Asaas exige telefone no cadastro do cliente ("O campo phone deve existir
+// para o customer informado"). Telefone com 11 dígitos também vai como celular.
+function camposTelefone(telefone?: string): { phone?: string; mobilePhone?: string } {
+  const d = (telefone ?? '').replace(/\D/g, '')
+  if (d.length < 10) return {}
+  return d.length === 11 ? { phone: d, mobilePhone: d } : { phone: d }
+}
+
 export async function criarClienteAsaas(params: {
   name: string
   cpfCnpj: string
   email?: string
+  telefone?: string
   externalReference: string
 }): Promise<AsaasCustomer> {
   return asaasFetch<AsaasCustomer>('/customers', {
@@ -67,7 +76,30 @@ export async function criarClienteAsaas(params: {
       name: params.name,
       cpfCnpj: params.cpfCnpj,
       email: params.email,
+      ...camposTelefone(params.telefone),
       externalReference: params.externalReference,
+    }),
+  })
+}
+
+// Cliente já criado antes para este usuário (tentativas anteriores), pelo externalReference.
+export async function buscarClienteAsaasPorReferencia(externalReference: string): Promise<AsaasCustomer | null> {
+  const r = await asaasFetch<{ data?: AsaasCustomer[] }>(
+    `/customers?externalReference=${encodeURIComponent(externalReference)}&limit=1`
+  )
+  return r.data?.[0] ?? null
+}
+
+export async function atualizarClienteAsaas(
+  id: string,
+  params: { name?: string; email?: string; telefone?: string }
+): Promise<void> {
+  await asaasFetch(`/customers/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      ...(params.name ? { name: params.name } : {}),
+      ...(params.email ? { email: params.email } : {}),
+      ...camposTelefone(params.telefone),
     }),
   })
 }
