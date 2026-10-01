@@ -35,6 +35,8 @@ export interface ResultadoVenda {
   venda_id: string
   numero: string
   total: number
+  // produtos vendidos sem saldo em estoque (o saldo fica negativo até a próxima entrada)
+  sem_estoque?: { produto: string; quantidade: number }[]
 }
 
 // Mensagens de RAISE EXCEPTION do banco chegam em error.message, já em português.

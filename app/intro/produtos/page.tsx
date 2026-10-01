@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { getIntroConfig } from '@/lib/intro/config'
-import { proximoCodigo } from '@/lib/intro/produtos'
+import { encontrarDuplicado, proximoCodigo } from '@/lib/intro/produtos'
 
 // Catálogo do Intro: mesma tabela do SyncroMoney padrão (produtos_fiscais),
 // sem campos fiscais (NCM/CFOP). O estoque NÃO é editado aqui: ele nasce da
@@ -47,6 +47,7 @@ export default function IntroProdutosPage() {
   const [form, setForm] = useState<FormData>({})
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
+  const [duplicadoProd, setDuplicadoProd] = useState<Produto | null>(null)
   const [margemPadrao, setMargemPadrao] = useState(30)
 
   const carregar = useCallback(async () => {
@@ -98,10 +99,15 @@ export default function IntroProdutosPage() {
     return custo > 0 ? arredondar(custo * (1 + (f.margem_lucro ?? 0) / 100)) : (f.preco_venda ?? 0)
   }
 
-  async function salvar() {
+  async function salvar(forcar = false) {
     setErro('')
     const descricao = (form.descricao ?? '').trim()
     if (!descricao) { setErro('Informe o nome do produto.'); return }
+    // Nome repetido: pergunta antes de criar outro cadastro (ou ao renomear para um nome que já existe)
+    if (!forcar) {
+      const dup = encontrarDuplicado(produtos, descricao, modo === 'editar' ? form.id : undefined)
+      if (dup) { setDuplicadoProd(dup); return }
+    }
     const preco = precoDoForm(form)
     if (preco <= 0) { setErro('Informe o custo e a margem, ou o preço de venda.'); return }
 
@@ -289,11 +295,32 @@ export default function IntroProdutosPage() {
             {erro && <p className="text-sm text-red-600">{erro}</p>}
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setOpen(false)} disabled={salvando}>Cancelar</Button>
-              <Button className="flex-1" onClick={salvar} disabled={salvando}>
+              <Button className="flex-1" onClick={() => salvar()} disabled={salvando}>
                 <Save className="h-4 w-4 mr-1" />{salvando ? 'Salvando...' : modo === 'novo' ? 'Cadastrar' : 'Salvar'}
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!duplicadoProd} onOpenChange={(o) => !o && setDuplicadoProd(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Já existe um produto com esse nome</DialogTitle></DialogHeader>
+          {duplicadoProd && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>{duplicadoProd.descricao}</strong>
+                {duplicadoProd.barcode ? ` (código ${duplicadoProd.barcode})` : duplicadoProd.plu ? ` (PLU ${duplicadoProd.plu})` : ''}
+                {' '}já está cadastrado, com estoque de {Number(duplicadoProd.estoque)}. É o mesmo produto?
+                Para somar estoque dele, registre uma entrada de mercadoria.
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => { const p = duplicadoProd; setDuplicadoProd(null); setOpen(false); abrirEditar(p) }}>Sim, editar o produto que já existe</Button>
+                <Button variant="outline" onClick={() => { setDuplicadoProd(null); salvar(true) }}>Não, é outro produto: salvar mesmo assim</Button>
+                <Button variant="ghost" onClick={() => setDuplicadoProd(null)}>Voltar</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

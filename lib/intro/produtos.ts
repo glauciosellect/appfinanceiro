@@ -69,6 +69,23 @@ export async function criarProdutoRapido(
   return { produto: data as ProdutoIntro, erro: null }
 }
 
+// Nome comparável: minúsculas, sem acento e sem espaços repetidos ("Teclado " = "teclado").
+export function normalizarNome(nome: string): string {
+  return nome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Procura, na lista já carregada, um produto com o mesmo nome (para perguntar antes de duplicar).
+export function encontrarDuplicado<T extends { id: string; descricao: string }>(produtos: T[], nome: string, ignorarId?: string): T | null {
+  const alvo = normalizarNome(nome)
+  if (!alvo) return null
+  return produtos.find((p) => p.id !== ignorarId && normalizarNome(p.descricao) === alvo) ?? null
+}
+
 export function hojeISO(): string {
   const d = new Date()
   const mm = String(d.getMonth() + 1).padStart(2, '0')

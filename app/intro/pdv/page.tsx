@@ -64,7 +64,7 @@ export default function IntroPdvPage() {
   const [finalizando, setFinalizando] = useState(false)
 
   // venda concluída
-  const [concluida, setConcluida] = useState<{ venda: VendaDoDia; troco: number } | null>(null)
+  const [concluida, setConcluida] = useState<{ venda: VendaDoDia; troco: number; semEstoque: { produto: string; quantidade: number }[] } | null>(null)
 
   // espera / vendas do dia
   const [esperaOpen, setEsperaOpen] = useState(false)
@@ -205,15 +205,37 @@ export default function IntroPdvPage() {
     if (carrinho.length === 0) return
     setPagErro('')
     setVencFiado('')
-    setLinhasPag([{ forma: 'Dinheiro', valor: String(total), recebido: '', parcelas: 1 }])
+    setLinhasPag([])
     setPagOpen(true)
   }
 
   const somaPag = arred(linhasPag.reduce((s, l) => s + num(l.valor), 0))
   const faltando = arred(total - somaPag)
 
+  // Escolher a forma já preenche o valor: sem nada escolhido, vem o total (pagamento único);
+  // se já falta pagar parte, vem o que falta. Se uma única forma já cobre tudo, escolher
+  // outra apenas TROCA a forma (para dividir, reduza o valor da primeira antes).
   function adicionarForma(forma: FormaPagamentoIntro) {
-    setLinhasPag((ls) => [...ls, { forma, valor: faltando > 0 ? String(faltando) : '', recebido: '', parcelas: 1 }])
+    setPagErro('')
+    setLinhasPag((ls) => {
+      const soma = arred(ls.reduce((acc, l) => acc + num(l.valor), 0))
+      const falta = arred(total - soma)
+      if (ls.length === 1 && falta <= 0.005) {
+        return ls[0].forma === forma ? ls : [{ forma, valor: String(total), recebido: '', parcelas: 1 }]
+      }
+      return [...ls, { forma, valor: falta > 0 ? String(falta) : '', recebido: '', parcelas: 1 }]
+    })
+  }
+
+  // Enter conclui a venda (menos em listas de seleção); nos botões de forma de pagamento
+  // o Enter também conclui, em vez de repetir o clique.
+  function aoTeclarPagamento(e: React.KeyboardEvent) {
+    if (e.key !== 'Enter' || finalizando) return
+    const alvo = e.target as HTMLElement
+    if (alvo.tagName === 'SELECT' || alvo.tagName === 'TEXTAREA') return
+    if (alvo.tagName === 'BUTTON' && !alvo.hasAttribute('data-forma')) return
+    e.preventDefault()
+    finalizar()
   }
   function alterarLinha(i: number, parcial: Partial<LinhaPagamento>) {
     setLinhasPag((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...parcial } : l)))
@@ -254,7 +276,7 @@ export default function IntroPdvPage() {
     const vendas = await listarVendasDaSessao(userId, sessao!.id).catch(() => [])
     const venda = vendas.find((v) => v.id === resultado.venda_id)
     setPagOpen(false)
-    if (venda) setConcluida({ venda, troco: trocoTotal })
+    if (venda) setConcluida({ venda, troco: trocoTotal, semEstoque: resultado.sem_estoque ?? [] })
     // atualiza saldo de estoque exibido
     const { data } = await supabase.from('produtos_fiscais').select(COLUNAS_PRODUTO).eq('user_id', userId).eq('ativo', true).is('deleted_at', null).order('descricao')
     setProdutos((data ?? []) as ProdutoIntro[])
@@ -347,7 +369,7 @@ export default function IntroPdvPage() {
               <div key={it.produto.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{it.produto.descricao}</p>
-                  <p className="text-xs text-gray-400">{formatCurrency(it.preco)} cada{it.quantidade > Number(it.produto.estoque) && <span className="text-red-500"> · estoque {Number(it.produto.estoque)}</span>}</p>
+                  <p className="text-xs text-gray-400">{formatCurrency(it.preco)} cada{it.quantidade > Number(it.produto.estoque) && <span className="text-amber-600"> · estoque {Number(it.produto.estoque)}: a venda deixa o saldo negativo</span>}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => alterarQtd(i, it.quantidade - 1)} className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Minus className="h-3.5 w-3.5" /></button>
@@ -398,64 +420,78 @@ export default function IntroPdvPage() {
 
       {/* Pagamento */}
       <Dialog open={pagOpen} onOpenChange={(o) => !finalizando && setPagOpen(o)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" onKeyDown={aoTeclarPagamento}>
           <DialogHeader><DialogTitle>Pagamento — {formatCurrency(total)}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-3">
-              {linhasPag.map((l, i) => (
-                <div key={i} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{l.forma}</span>
-                    {linhasPag.length > 1 && <button onClick={() => setLinhasPag((ls) => ls.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-600"><X className="h-4 w-4" /></button>}
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                {linhasPag.length === 0
+                  ? 'Como o cliente vai pagar? Escolha a forma e tecle Enter para concluir.'
+                  : 'Para dividir o pagamento, reduza o valor acima e escolha outra forma.'}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {FORMAS_PAGAMENTO.map((f) => {
+                  const ativa = linhasPag.some((l) => l.forma === f)
+                  return (
+                    <Button key={f} type="button" data-forma={f} variant={ativa ? 'default' : 'outline'}
+                      className={cn(ativa && 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600')}
+                      onClick={() => adicionarForma(f)}>
+                      {f}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {linhasPag.map((l, i) => (
+              <div key={i} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm text-gray-900 dark:text-white">{l.forma}</span>
+                  <button onClick={() => setLinhasPag((ls) => ls.filter((_, idx) => idx !== i))} title="Remover" className="text-gray-400 hover:text-red-600"><X className="h-4 w-4" /></button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-gray-500">{l.forma === 'Dinheiro' ? 'Valor pago em dinheiro (R$)' : 'Valor (R$)'}</label>
+                    <Input type="number" min="0" step="0.01" value={l.valor} onChange={(e) => alterarLinha(i, { valor: e.target.value })} />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  {l.forma === 'Dinheiro' && (
                     <div>
-                      <label className="text-xs text-gray-500">Valor da venda (R$)</label>
-                      <Input type="number" min="0" step="0.01" value={l.valor} onChange={(e) => alterarLinha(i, { valor: e.target.value })} />
+                      <label className="text-xs text-gray-500">Cliente entregou (R$)</label>
+                      <Input type="number" min="0" step="0.01" placeholder="só se precisar de troco" value={l.recebido} onChange={(e) => alterarLinha(i, { recebido: e.target.value })} />
                     </div>
-                    {l.forma === 'Dinheiro' && (
-                      <div>
-                        <label className="text-xs text-gray-500">Recebido (R$)</label>
-                        <Input type="number" min="0" step="0.01" value={l.recebido} onChange={(e) => alterarLinha(i, { recebido: e.target.value })} />
-                      </div>
-                    )}
-                    {l.forma === 'Cartão de Crédito' && (
-                      <div>
-                        <label className="text-xs text-gray-500">Parcelas</label>
-                        <select className="w-full h-10 rounded-md border border-input bg-background px-2 text-sm" value={l.parcelas} onChange={(e) => alterarLinha(i, { parcelas: Number(e.target.value) })}>
-                          {Array.from({ length: 12 }, (_, k) => k + 1).map((n) => <option key={n} value={n}>{n}x</option>)}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                  {l.forma === 'Dinheiro' && trocoDaLinha(l) > 0 && <p className="text-sm font-bold text-emerald-700">Troco: {formatCurrency(trocoDaLinha(l))}</p>}
-                  {l.forma === 'Fiado' && (
-                    <div className="space-y-2">
-                      {!clienteId && <p className="text-xs text-red-600">Escolha o cliente na tela de venda (campo “Cliente”) antes de finalizar.</p>}
-                      <div>
-                        <label className="text-xs text-gray-500">Vencimento do fiado (padrão: 30 dias)</label>
-                        <Input type="date" min={hojeISO()} value={vencFiado} onChange={(e) => setVencFiado(e.target.value)} />
-                      </div>
+                  )}
+                  {l.forma === 'Cartão de Crédito' && (
+                    <div>
+                      <label className="text-xs text-gray-500">Parcelas</label>
+                      <select className="w-full h-10 rounded-md border border-input bg-background px-2 text-sm" value={l.parcelas} onChange={(e) => alterarLinha(i, { parcelas: Number(e.target.value) })}>
+                        {Array.from({ length: 12 }, (_, k) => k + 1).map((n) => <option key={n} value={n}>{n}x</option>)}
+                      </select>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+                {l.forma === 'Dinheiro' && trocoDaLinha(l) > 0 && <p className="text-sm font-bold text-emerald-700">Troco a devolver: {formatCurrency(trocoDaLinha(l))}</p>}
+                {l.forma === 'Fiado' && (
+                  <div className="space-y-2">
+                    {!clienteId && <p className="text-xs text-red-600">Escolha o cliente na tela de venda (campo “Cliente”) antes de finalizar.</p>}
+                    <div>
+                      <label className="text-xs text-gray-500">Vencimento do fiado (padrão: 30 dias)</label>
+                      <Input type="date" min={hojeISO()} value={vencFiado} onChange={(e) => setVencFiado(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
 
-            <div className="flex flex-wrap gap-2">
-              {FORMAS_PAGAMENTO.map((f) => (
-                <Button key={f} type="button" size="sm" variant="outline" onClick={() => adicionarForma(f)}><Plus className="h-3.5 w-3.5 mr-1" />{f}</Button>
-              ))}
-            </div>
-
-            <div className={cn('flex justify-between rounded-lg px-3 py-2 text-sm font-semibold', Math.abs(faltando) <= 0.005 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
-              <span>{Math.abs(faltando) <= 0.005 ? 'Pagamento completo' : faltando > 0 ? 'Falta pagar' : 'Excede o total'}</span>
-              <span>{Math.abs(faltando) <= 0.005 ? formatCurrency(somaPag) : formatCurrency(Math.abs(faltando))}</span>
-            </div>
+            {linhasPag.length > 0 && (
+              <div className={cn('flex justify-between rounded-lg px-3 py-2 text-sm font-semibold', Math.abs(faltando) <= 0.005 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
+                <span>{Math.abs(faltando) <= 0.005 ? 'Pagamento completo' : faltando > 0 ? 'Falta pagar' : 'Excede o total'}</span>
+                <span>{Math.abs(faltando) <= 0.005 ? formatCurrency(somaPag) : formatCurrency(Math.abs(faltando))}</span>
+              </div>
+            )}
             {pagErro && <p className="text-sm text-red-600">{pagErro}</p>}
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setPagOpen(false)} disabled={finalizando}>Voltar</Button>
-              <Button className="flex-1 bg-emerald-600 hover:bg-emerald-500" onClick={finalizar} disabled={finalizando}>{finalizando ? 'Concluindo...' : 'Concluir venda'}</Button>
+              <Button className="flex-1 bg-emerald-600 hover:bg-emerald-500" onClick={finalizar} disabled={finalizando || linhasPag.length === 0}>{finalizando ? 'Concluindo...' : 'Concluir venda'}</Button>
             </div>
           </div>
         </DialogContent>
@@ -472,6 +508,12 @@ export default function IntroPdvPage() {
                 <p className="text-sm text-gray-500">Venda Nº {concluida.venda.numero_sequencial}</p>
                 <p className="text-3xl font-extrabold text-gray-900 dark:text-white">{formatCurrency(Number(concluida.venda.total))}</p>
                 {concluida.troco > 0 && <p className="mt-1 text-lg font-bold text-emerald-700">Troco: {formatCurrency(concluida.troco)}</p>}
+                {concluida.semEstoque.length > 0 && (
+                  <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-left text-xs text-amber-800">
+                    Vendido sem estoque: {concluida.semEstoque.map((x) => `${x.produto} (${x.quantidade} un.)`).join(', ')}.
+                    O saldo fica negativo até você registrar a entrada de mercadoria.
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => compartilhar(concluida.venda)}><Share2 className="h-4 w-4 mr-1" />Comprovante</Button>

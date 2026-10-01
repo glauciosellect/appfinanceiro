@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getIntroConfig } from '@/lib/intro/config'
 import { ajustarLote } from '@/lib/intro/entradas'
 import {
-  carregarLotesComSaldo, diasParaVencer, situacaoValidade, type LoteEstoque,
+  carregarLotesComSaldo, carregarPendencias, diasParaVencer, situacaoValidade, type LoteEstoque,
 } from '@/lib/intro/estoque'
 
 type Aba = 'total' | 'fornecedor' | 'lotes'
@@ -25,6 +25,7 @@ const arred = (n: number) => Math.round(n * 100) / 100
 export default function EstoquePage() {
   const [aba, setAba] = useState<Aba>('total')
   const [lotes, setLotes] = useState<LoteEstoque[]>([])
+  const [pend, setPend] = useState<Record<string, number>>({})
   const [produtos, setProdutos] = useState<ProdutoMin[]>([])
   const [diasAlerta, setDiasAlerta] = useState(15)
   const [loading, setLoading] = useState(true)
@@ -43,12 +44,14 @@ export default function EstoquePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     try {
-      const [ls, ps, cfg] = await Promise.all([
+      const [ls, ps, cfg, pe] = await Promise.all([
         carregarLotesComSaldo(user.id),
         supabase.from('produtos_fiscais').select('id, descricao, unidade, estoque_minimo, preco_venda').eq('user_id', user.id).eq('ativo', true).is('deleted_at', null).order('descricao'),
         getIntroConfig(user.id),
+        carregarPendencias(user.id).catch(() => ({} as Record<string, number>)),
       ])
       setLotes(ls)
+      setPend(pe)
       setProdutos((ps.data ?? []) as ProdutoMin[])
       setDiasAlerta(cfg.dias_alerta_validade)
     } catch (e) {
@@ -70,8 +73,11 @@ export default function EstoquePage() {
   const porProduto = useMemo(() => {
     return produtos.map((p) => {
       const ls = lotes.filter((l) => l.produto_id === p.id)
-      const saldo = unidades(ls)
+      // Vendas feitas sem estoque deixam o saldo negativo até a próxima entrada
+      const semEstoque = pend[p.id] ?? 0
+      const saldo = unidades(ls) - semEstoque
       return {
+        semEstoque,
         ...p,
         saldo,
         proprio: unidades(ls.filter((l) => !l.consignado)),
@@ -82,7 +88,7 @@ export default function EstoquePage() {
         alerta: ls.some((l) => ['vencido', 'vencendo'].includes(situacaoValidade(l.validade, diasAlerta))),
       }
     })
-  }, [produtos, lotes, diasAlerta])
+  }, [produtos, lotes, diasAlerta, pend])
 
   const linhasTotal = porProduto.filter((p) => !somenteAlerta || p.baixo || p.alerta)
 
@@ -200,10 +206,11 @@ export default function EstoquePage() {
                   <tr key={p.id}>
                     <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">
                       {p.descricao}
-                      {p.baixo && <span className="ml-2 text-[10px] font-semibold text-yellow-700 bg-yellow-50 px-1.5 py-0.5 rounded-full">estoque baixo</span>}
+                      {p.semEstoque > 0 && <span className="ml-2 text-[10px] font-semibold text-red-700 bg-red-50 px-1.5 py-0.5 rounded-full">vendido sem estoque</span>}
+                      {p.baixo && p.semEstoque === 0 && <span className="ml-2 text-[10px] font-semibold text-yellow-700 bg-yellow-50 px-1.5 py-0.5 rounded-full">estoque baixo</span>}
                       {p.alerta && <span className="ml-2 text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full">validade</span>}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold">{p.saldo} {p.unidade}</td>
+                    <td className={cn('px-4 py-3 text-right font-bold', p.saldo < 0 && 'text-red-600')}>{p.saldo} {p.unidade}</td>
                     <td className="px-4 py-3 text-right text-gray-600">{p.proprio}</td>
                     <td className="px-4 py-3 text-right text-gray-600">{p.consignado}</td>
                     <td className="px-4 py-3 text-right">{formatCurrency(p.custo)}</td>

@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getFornecedores } from '@/lib/supabase/fornecedores'
 import { getIntroConfig } from '@/lib/intro/config'
 import {
-  COLUNAS_PRODUTO, criarProdutoRapido, hojeISO, type ProdutoIntro,
+  COLUNAS_PRODUTO, criarProdutoRapido, encontrarDuplicado, hojeISO, type ProdutoIntro,
 } from '@/lib/intro/produtos'
 import { registrarEntrada, CONDICAO_LABEL, type CondicaoPagamento } from '@/lib/intro/entradas'
 import type { Fornecedor } from '@/types'
@@ -63,6 +63,7 @@ export default function NovaEntradaPage() {
   const [novoOpen, setNovoOpen] = useState(false)
   const [novo, setNovo] = useState({ descricao: '', barcode: '', unidade: 'UN', controla_validade: false })
   const [novoErro, setNovoErro] = useState('')
+  const [duplicado, setDuplicado] = useState<ProdutoIntro | null>(null)
 
   useEffect(() => {
     async function carregar() {
@@ -131,10 +132,24 @@ export default function NovaEntradaPage() {
 
   const total = linhas.reduce((s, l) => s + arred(l.quantidade * l.custo), 0)
 
-  async function cadastrarProduto() {
+  function fecharNovo() {
+    setNovo({ descricao: '', barcode: '', unidade: 'UN', controla_validade: false })
+    setDuplicado(null)
+    setNovoOpen(false)
+  }
+
+  // O produto já existe: usa o cadastrado em vez de criar outro com o mesmo nome.
+  function usarExistente(p: ProdutoIntro) {
+    if (!linhas.some((l) => l.produto.id === p.id)) adicionar(p)
+    fecharNovo()
+  }
+
+  async function cadastrarProduto(forcar = false) {
     setNovoErro('')
     const descricao = novo.descricao.trim()
     if (!descricao) { setNovoErro('Informe o nome do produto.'); return }
+    const dup = forcar ? null : encontrarDuplicado(produtos, descricao)
+    if (dup) { setDuplicado(dup); return }
     const { produto, erro } = await criarProdutoRapido(userId, {
       descricao,
       barcode: novo.barcode.trim() || null,
@@ -144,8 +159,7 @@ export default function NovaEntradaPage() {
     if (erro || !produto) { setNovoErro(erro ?? 'Erro ao cadastrar.'); return }
     setProdutos((ps) => [...ps, produto].sort((a, b) => a.descricao.localeCompare(b.descricao)))
     adicionar(produto)
-    setNovo({ descricao: '', barcode: '', unidade: 'UN', controla_validade: false })
-    setNovoOpen(false)
+    fecharNovo()
   }
 
   async function salvar() {
@@ -343,9 +357,23 @@ export default function NovaEntradaPage() {
         </div>
       </div>
 
-      <Dialog open={novoOpen} onOpenChange={setNovoOpen}>
+      <Dialog open={novoOpen} onOpenChange={(o) => { if (!o) fecharNovo(); else setNovoOpen(true) }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Cadastrar produto novo</DialogTitle></DialogHeader>
+          {duplicado ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Já existe um produto chamado <strong>{duplicado.descricao}</strong>
+                {duplicado.barcode ? ` (código ${duplicado.barcode})` : duplicado.plu ? ` (PLU ${duplicado.plu})` : ''}, com estoque de {Number(duplicado.estoque)}.
+                É o mesmo produto?
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => usarExistente(duplicado)}>Sim, usar o produto que já existe</Button>
+                <Button variant="outline" onClick={() => cadastrarProduto(true)}>Não, é outro produto: cadastrar mesmo assim</Button>
+                <Button variant="ghost" onClick={() => setDuplicado(null)}>Voltar</Button>
+              </div>
+            </div>
+          ) : (
           <div className="space-y-4">
             <div>
               <label className={rotulo}>Nome do produto *</label>
@@ -370,10 +398,11 @@ export default function NovaEntradaPage() {
             </label>
             {novoErro && <p className="text-sm text-red-600">{novoErro}</p>}
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setNovoOpen(false)}>Cancelar</Button>
-              <Button className="flex-1" onClick={cadastrarProduto}>Cadastrar e adicionar</Button>
+              <Button variant="outline" className="flex-1" onClick={fecharNovo}>Cancelar</Button>
+              <Button className="flex-1" onClick={() => cadastrarProduto()}>Cadastrar e adicionar</Button>
             </div>
           </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

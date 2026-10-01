@@ -46,3 +46,18 @@ export function diasParaVencer(validade: string): number {
   const ms = new Date(validade + 'T00:00:00').getTime() - new Date(hojeISO() + 'T00:00:00').getTime()
   return Math.round(ms / 86400000)
 }
+
+// Quantidades vendidas sem estoque que ainda não foram cobertas por uma entrada (por produto).
+export async function carregarPendencias(userId: string): Promise<Record<string, number>> {
+  const { data, error } = await createClient()
+    .from('vendas_sem_estoque')
+    .select('produto_id, pendente')
+    .eq('user_id', userId)
+    .gt('pendente', 0)
+  if (error) throw error
+  const mapa: Record<string, number> = {}
+  for (const r of (data ?? []) as { produto_id: string; pendente: number }[]) {
+    mapa[r.produto_id] = (mapa[r.produto_id] ?? 0) + Number(r.pendente)
+  }
+  return mapa
+}
