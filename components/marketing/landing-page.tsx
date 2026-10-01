@@ -301,15 +301,15 @@ function AcertoMockup() {
               <tr className="border-b border-[#D1D5DB] uppercase text-[#6B7280]">
                 <th className="px-3 py-1 text-left font-medium">Produto</th>
                 <th className="px-2 py-1 text-right font-medium">Qtd</th>
-                <th className="px-2 py-1 text-right font-medium">Vendido</th>
+                <th className="px-2 py-1 text-right font-medium">Valor unit.</th>
                 <th className="px-3 py-1 text-right font-medium">A receber</th>
               </tr>
             </thead>
             <tbody>
               {[
-                { p: 'Brigadeiro gourmet', q: '48', v: 'R$ 288,00', r: 'R$ 192,00' },
-                { p: 'Bolo de pote', q: '20', v: 'R$ 160,00', r: 'R$ 100,00' },
-                { p: 'Cookie tradicional', q: '35', v: 'R$ 175,00', r: 'R$ 105,00' },
+                { p: 'Brigadeiro gourmet', q: '48', v: 'R$ 4,00', r: 'R$ 192,00' },
+                { p: 'Bolo de pote', q: '20', v: 'R$ 5,00', r: 'R$ 100,00' },
+                { p: 'Cookie tradicional', q: '35', v: 'R$ 3,00', r: 'R$ 105,00' },
               ].map((row) => (
                 <tr key={row.p} className="border-b border-[#E5E7EB]">
                   <td className="px-3 py-1">{row.p}</td>
@@ -319,8 +319,7 @@ function AcertoMockup() {
                 </tr>
               ))}
               <tr className="bg-[#F9FAFB] font-bold">
-                <td className="px-3 py-1.5" colSpan={2}>TOTAL</td>
-                <td className="px-2 py-1.5 text-right">R$ 623,00</td>
+                <td className="px-3 py-1.5" colSpan={3}>TOTAL</td>
                 <td className="px-3 py-1.5 text-right">R$ 397,00</td>
               </tr>
             </tbody>

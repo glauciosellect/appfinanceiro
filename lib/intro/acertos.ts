@@ -74,9 +74,10 @@ export interface SnapshotAcerto {
   periodo: { ini: string; fim: string }
   loja: { nome: string; cnpj_cpf: string; telefone: string; endereco: string; logo_url: string }
   fornecedor: { nome: string; cpf_cnpj: string; telefone: string }
-  itens: { produto: string; quantidade: number; custo_unitario: number; total_vendido: number; valor_repasse: number }[]
+  itens: { produto: string; quantidade: number; custo_unitario: number; total_vendido?: number; valor_repasse: number }[]
   sobras: { produto: string; quantidade: number; validade: string | null; acao: AcaoSobra; nova_validade: string | null }[]
-  total_vendido: number
+  // só existe no registro do lojista; a página pública do fornecedor não recebe esse valor
+  total_vendido?: number
   total_repasse: number
   texto_recibo: string
 }

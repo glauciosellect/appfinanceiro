@@ -45,24 +45,21 @@ export function ReciboDocumento({ dados }: { dados: ReciboDados }) {
               <th className="px-3 py-1 text-left">Produto</th>
               <th className="px-3 py-1 text-right">Qtd</th>
               <th className="px-3 py-1 text-right">Valor unit.</th>
-              <th className="px-3 py-1 text-right">Total vendido</th>
               <th className="px-3 py-1 text-right">A receber</th>
             </tr>
           </thead>
           <tbody>
-            {s.itens.length === 0 && <tr><td colSpan={5} className="px-3 py-3 text-center text-gray-500">Nenhuma venda no período.</td></tr>}
+            {s.itens.length === 0 && <tr><td colSpan={4} className="px-3 py-3 text-center text-gray-500">Nenhuma venda no período.</td></tr>}
             {s.itens.map((i, idx) => (
               <tr key={idx} className="border-b border-gray-200">
                 <td className="px-3 py-1">{i.produto}</td>
                 <td className="px-3 py-1 text-right">{Number(i.quantidade)}</td>
                 <td className="px-3 py-1 text-right">{formatCurrency(Number(i.custo_unitario))}</td>
-                <td className="px-3 py-1 text-right">{formatCurrency(Number(i.total_vendido))}</td>
                 <td className="px-3 py-1 text-right font-medium">{formatCurrency(Number(i.valor_repasse))}</td>
               </tr>
             ))}
             <tr className="font-bold bg-gray-50">
               <td className="px-3 py-2" colSpan={3}>TOTAL</td>
-              <td className="px-3 py-2 text-right">{formatCurrency(Number(s.total_vendido))}</td>
               <td className="px-3 py-2 text-right">{formatCurrency(Number(s.total_repasse))}</td>
             </tr>
           </tbody>
