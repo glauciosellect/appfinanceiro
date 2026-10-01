@@ -63,11 +63,33 @@ function camposTelefone(telefone?: string): { phone?: string; mobilePhone?: stri
   return d.length === 11 ? { phone: d, mobilePhone: d } : { phone: d }
 }
 
+// O checkout de cartão também exige endereço no cadastro do cliente ("O campo address deve existir").
+export interface EnderecoAsaas {
+  cep: string
+  logradouro: string
+  numero: string
+  bairro?: string
+  complemento?: string
+}
+
+function camposEndereco(e?: EnderecoAsaas): Record<string, string> {
+  if (!e) return {}
+  const campos: Record<string, string> = {
+    postalCode: e.cep.replace(/\D/g, ''),
+    address: e.logradouro,
+    addressNumber: e.numero,
+  }
+  if (e.bairro) campos.province = e.bairro
+  if (e.complemento) campos.complement = e.complemento
+  return campos
+}
+
 export async function criarClienteAsaas(params: {
   name: string
   cpfCnpj: string
   email?: string
   telefone?: string
+  endereco?: EnderecoAsaas
   externalReference: string
 }): Promise<AsaasCustomer> {
   return asaasFetch<AsaasCustomer>('/customers', {
@@ -77,6 +99,7 @@ export async function criarClienteAsaas(params: {
       cpfCnpj: params.cpfCnpj,
       email: params.email,
       ...camposTelefone(params.telefone),
+      ...camposEndereco(params.endereco),
       externalReference: params.externalReference,
     }),
   })
@@ -92,7 +115,7 @@ export async function buscarClienteAsaasPorReferencia(externalReference: string)
 
 export async function atualizarClienteAsaas(
   id: string,
-  params: { name?: string; email?: string; telefone?: string }
+  params: { name?: string; email?: string; telefone?: string; endereco?: EnderecoAsaas }
 ): Promise<void> {
   await asaasFetch(`/customers/${encodeURIComponent(id)}`, {
     method: 'PUT',
@@ -100,6 +123,7 @@ export async function atualizarClienteAsaas(
       ...(params.name ? { name: params.name } : {}),
       ...(params.email ? { email: params.email } : {}),
       ...camposTelefone(params.telefone),
+      ...camposEndereco(params.endereco),
     }),
   })
 }

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const { plano, metodoPagamento, cpfCnpj, nome, telefone } = await req.json()
+    const { plano, metodoPagamento, cpfCnpj, nome, telefone, endereco } = await req.json()
 
     if (plano !== 'intro' && plano !== 'pro' && plano !== 'premium') {
       return NextResponse.json({ error: 'plano inválido' }, { status: 400 })
@@ -48,6 +48,21 @@ export async function POST(req: NextRequest) {
     const telefoneDigitos = typeof telefone === 'string' ? telefone.replace(/\D/g, '') : ''
     if (telefoneDigitos.length < 10 || telefoneDigitos.length > 11) {
       return NextResponse.json({ error: 'Telefone obrigatório: informe com DDD (ex.: 32 99999-9999)' }, { status: 400 })
+    }
+
+    // Endereço (exigido pelo Asaas para o checkout de cartão)
+    const cepDigitos = typeof endereco?.cep === 'string' ? endereco.cep.replace(/\D/g, '') : ''
+    const logradouro = typeof endereco?.logradouro === 'string' ? endereco.logradouro.trim() : ''
+    const numeroEnd = typeof endereco?.numero === 'string' ? endereco.numero.trim() : ''
+    if (cepDigitos.length !== 8 || !logradouro || !numeroEnd) {
+      return NextResponse.json({ error: 'Endereço obrigatório: informe CEP, rua e número' }, { status: 400 })
+    }
+    const enderecoAsaas = {
+      cep: cepDigitos,
+      logradouro: logradouro.slice(0, 100),
+      numero: numeroEnd.slice(0, 10),
+      bairro: typeof endereco?.bairro === 'string' ? endereco.bairro.trim().slice(0, 60) : undefined,
+      complemento: typeof endereco?.complemento === 'string' ? endereco.complemento.trim().slice(0, 40) : undefined,
     }
 
     const { data: existente } = await supabase
@@ -85,13 +100,14 @@ export async function POST(req: NextRequest) {
         cpfCnpj: cpfCnpj.replace(/\D/g, ''),
         email: user.email,
         telefone: telefoneDigitos,
+        endereco: enderecoAsaas,
         externalReference: user.id,
       })
       customerId = customer.id
     } else {
       // Cliente já existente: garante telefone e nome atuais (exigidos pelo checkout de cartão)
       try {
-        await atualizarClienteAsaas(customerId, { name: nomeCliente, email: user.email ?? undefined, telefone: telefoneDigitos })
+        await atualizarClienteAsaas(customerId, { name: nomeCliente, email: user.email ?? undefined, telefone: telefoneDigitos, endereco: enderecoAsaas })
       } catch (err) {
         console.error('Falha ao atualizar cliente no Asaas:', err)
       }

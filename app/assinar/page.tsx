@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
+import { buscarCEP, maskCEP } from '@/lib/masks'
 
 type PlanoKey = 'intro' | 'pro' | 'premium'
 type MetodoPagamento = 'CREDIT_CARD' | 'PIX'
@@ -71,6 +72,11 @@ export default function AssinarPage() {
   const [cpfCnpj, setCpfCnpj] = useState('')
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [cep, setCep] = useState('')
+  const [logradouro, setLogradouro] = useState('')
+  const [numeroEnd, setNumeroEnd] = useState('')
+  const [bairro, setBairro] = useState('')
+  const [buscandoCep, setBuscandoCep] = useState(false)
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [pix, setPix] = useState<QrCodePix | null>(null)
@@ -137,6 +143,19 @@ export default function AssinarPage() {
     }
   }
 
+  // Preenche rua e bairro a partir do CEP (o cliente ainda pode corrigir)
+  async function aoSairDoCep() {
+    const digitos = cep.replace(/\D/g, '')
+    if (digitos.length !== 8) return
+    setBuscandoCep(true)
+    const r = await buscarCEP(digitos).catch(() => null)
+    setBuscandoCep(false)
+    if (r) {
+      if (r.logradouro) setLogradouro(r.logradouro)
+      if (r.bairro) setBairro(r.bairro)
+    }
+  }
+
   async function handleAssinar() {
     setErro('')
 
@@ -148,6 +167,11 @@ export default function AssinarPage() {
     const telDigitos = telefone.replace(/\D/g, '')
     if (telDigitos.length < 10 || telDigitos.length > 11) {
       setErro('Informe um telefone com DDD para continuar.')
+      return
+    }
+
+    if (cep.replace(/\D/g, '').length !== 8 || !logradouro.trim() || !numeroEnd.trim()) {
+      setErro('Informe o endereço de cobrança: CEP, rua e número.')
       return
     }
 
@@ -163,6 +187,7 @@ export default function AssinarPage() {
           cpfCnpj: cpfCnpj.replace(/\D/g, ''),
           nome: nome.trim() || undefined,
           telefone: telDigitos,
+          endereco: { cep: cep.replace(/\D/g, ''), logradouro: logradouro.trim(), numero: numeroEnd.trim(), bairro: bairro.trim() },
         }),
       })
       const json = await res.json()
@@ -451,6 +476,45 @@ export default function AssinarPage() {
                   placeholder="(32) 99999-9999"
                   inputMode="tel"
                   autoComplete="tel"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">CEP *</label>
+                <input
+                  value={cep}
+                  onChange={(e) => setCep(maskCEP(e.target.value))}
+                  onBlur={aoSairDoCep}
+                  placeholder="00000-000"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+                {buscandoCep && <p className="text-slate-500 text-xs mt-1">Buscando endereço...</p>}
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Rua / Avenida *</label>
+                <input
+                  value={logradouro}
+                  onChange={(e) => setLogradouro(e.target.value)}
+                  autoComplete="address-line1"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Número *</label>
+                <input
+                  value={numeroEnd}
+                  onChange={(e) => setNumeroEnd(e.target.value)}
+                  placeholder="Ex.: 123 ou S/N"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-slate-400 text-xs mb-1 block">Bairro</label>
+                <input
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
