@@ -3,12 +3,14 @@
 //
 // Docs: https://docs.asaas.com/reference
 
+import { ICONE_ITEM_BASE64 } from '@/lib/asaas-icone'
+
 const ASAAS_BASE_URL =
   process.env.ASAAS_ENV === 'sandbox'
     ? 'https://api-sandbox.asaas.com/v3'
     : 'https://api.asaas.com/v3'
 
-class AsaasError extends Error {
+export class AsaasError extends Error {
   constructor(message: string, public status: number, public body: unknown) {
     super(message)
     this.name = 'AsaasError'
@@ -75,9 +77,12 @@ export interface AsaasCheckout {
   link: string
 }
 
+// A API de checkout do Asaas exige "items" (nome até 30 caracteres, quantidade, valor e imagem
+// em Base64); o valor e a descrição ficam dentro do item, não mais no nível principal.
 export async function criarCheckoutAssinatura(params: {
   customerId: string
   value: number
+  name: string
   description: string
   successUrl: string
   cancelUrl: string
@@ -92,8 +97,15 @@ export async function criarCheckoutAssinatura(params: {
         cycle: 'MONTHLY',
         nextDueDate: amanha(),
       },
-      value: params.value,
-      description: params.description,
+      items: [
+        {
+          name: params.name.slice(0, 30),
+          description: params.description.slice(0, 150),
+          quantity: 1,
+          value: params.value,
+          imageBase64: ICONE_ITEM_BASE64,
+        },
+      ],
       callback: {
         successUrl: params.successUrl,
         cancelUrl: params.cancelUrl,

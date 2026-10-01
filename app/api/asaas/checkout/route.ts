@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
+  AsaasError,
   criarClienteAsaas,
   criarCheckoutAssinatura,
   criarAssinaturaPix,
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
       const checkout = await criarCheckoutAssinatura({
         customerId,
         value,
+        name: NOMES[plano as 'intro' | 'pro' | 'premium'],
         description,
         successUrl: `${appUrl}${plano === 'intro' ? '/intro' : '/dashboard'}?assinatura=sucesso`,
         cancelUrl: `${appUrl}/assinar?cancelado=true`,
@@ -133,6 +135,10 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     console.error('Asaas checkout error:', err)
+    // Recusa por dado inválido (ex.: CPF/CNPJ): o Asaas explica o motivo em português, e o cliente pode corrigir
+    if (err instanceof AsaasError && err.status === 400) {
+      return NextResponse.json({ error: err.message }, { status: 400 })
+    }
     return NextResponse.json({ error: 'Erro ao criar pagamento' }, { status: 500 })
   }
 }

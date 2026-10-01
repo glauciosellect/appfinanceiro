@@ -15,6 +15,7 @@ interface AsaasWebhookPayload {
   event: string
   payment?: {
     id: string
+    customer?: string
     subscription?: string
     status?: string
   }
@@ -39,11 +40,28 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabaseAdmin()
 
-  const { data: assinaturaRow } = await supabase
+  let { data: assinaturaRow } = await supabase
     .from('assinaturas')
     .select('id, user_id')
     .eq('asaas_subscription_id', payment.subscription)
-    .single()
+    .maybeSingle()
+
+  // Pagamento por cartão: a assinatura só nasce no Asaas depois que o cliente paga no checkout,
+  // então ainda não temos o id dela. Localiza pelo cliente Asaas e guarda o id para os próximos eventos.
+  if (!assinaturaRow && payment.customer) {
+    const { data: porCliente } = await supabase
+      .from('assinaturas')
+      .select('id, user_id')
+      .eq('asaas_customer_id', payment.customer)
+      .maybeSingle()
+    if (porCliente) {
+      await supabase
+        .from('assinaturas')
+        .update({ asaas_subscription_id: payment.subscription })
+        .eq('id', porCliente.id)
+      assinaturaRow = porCliente
+    }
+  }
 
   if (!assinaturaRow) {
     // Assinatura não encontrada localmente — nada a fazer, mas 200 evita
