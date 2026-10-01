@@ -19,8 +19,8 @@ interface NavItem {
 // Itens "Em breve" ainda não têm tela (próximas fases do spec do Intro).
 const items: NavItem[] = [
   { href: '/intro',                label: 'Dashboard',             icon: LayoutDashboard },
-  { href: '/intro/pdv',            label: 'PDV',                   icon: ShoppingCart, emBreve: true },
-  { href: '/intro/caixa',          label: 'Caixa do dia',          icon: Wallet,       emBreve: true },
+  { href: '/intro/pdv',            label: 'PDV',                   icon: ShoppingCart },
+  { href: '/intro/caixa',          label: 'Caixa do dia',          icon: Wallet },
   { href: '/intro/entrada',        label: 'Entrada de mercadoria', icon: PackagePlus },
   { href: '/intro/estoque',        label: 'Estoque',               icon: Boxes },
   { href: '/intro/produtos',       label: 'Produtos',              icon: Package },
