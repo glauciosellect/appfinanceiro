@@ -205,7 +205,7 @@ export default function AssinarPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="flex justify-center mb-6">
-            <Logo size="lg" />
+            <Logo size="lg" sobreEscuro />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Escolha seu plano</h1>
           <p className="text-slate-400 text-lg">Cancele quando quiser, sem taxa de cancelamento.</p>

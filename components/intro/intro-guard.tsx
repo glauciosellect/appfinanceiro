@@ -42,7 +42,7 @@ export function IntroGuard({ children, onUser }: Props) {
   if (status === 'blocked') {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-4">
-        <Logo size="lg" className="mb-8" />
+        <Logo size="lg" sobreEscuro className="mb-8" />
         <div className="bg-white/10 backdrop-blur rounded-2xl p-8 max-w-md w-full text-center border border-white/20">
           <Lock className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">Acesso bloqueado</h2>
