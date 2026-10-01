@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn, formatCurrency } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { getIntroConfig } from '@/lib/intro/config'
+import { proximoCodigo } from '@/lib/intro/produtos'
 
 // Catálogo do Intro: mesma tabela do SyncroMoney padrão (produtos_fiscais),
 // sem campos fiscais (NCM/CFOP). O estoque NÃO é editado aqui: ele nasce da
@@ -95,17 +96,6 @@ export default function IntroProdutosPage() {
   function precoDoForm(f: FormData): number {
     const custo = f.preco_custo ?? 0
     return custo > 0 ? arredondar(custo * (1 + (f.margem_lucro ?? 0) / 100)) : (f.preco_venda ?? 0)
-  }
-
-  async function proximoCodigo(userId: string): Promise<{ codigo: string; plu: string }> {
-    const { data } = await supabase.from('produtos_fiscais').select('codigo, plu').eq('user_id', userId)
-    const linhas = (data ?? []) as { codigo: string; plu: string | null }[]
-    const maxNum = (vals: (string | null)[]) =>
-      vals.reduce((m, v) => (v && /^\d+$/.test(v) ? Math.max(m, Number(v)) : m), 0)
-    return {
-      codigo: String(maxNum(linhas.map((l) => l.codigo)) + 1).padStart(4, '0'),
-      plu: String(maxNum(linhas.map((l) => l.plu)) + 1),
-    }
   }
 
   async function salvar() {
