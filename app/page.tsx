@@ -21,6 +21,10 @@ function Navbar() {
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#FBBF24]" />
             Fiscal Premium
           </Link>
+          <Link href="#intro" className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors flex items-center gap-1">
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#16A34A]" />
+            Intro
+          </Link>
           <Link href="#pricing" className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors">Preços</Link>
         </nav>
         <div className="flex items-center gap-2">
@@ -35,7 +39,7 @@ function Navbar() {
         </div>
       </div>
       <div className="flex items-center gap-1 overflow-x-auto border-t border-[#F3F4F6] bg-white px-5 py-2 md:hidden">
-        {[{ href: '#features', label: 'Funcionalidades' }, { href: '#fiscal', label: '⚡ Fiscal' }, { href: '#pricing', label: 'Preços' }, { href: '/login', label: 'Entrar' }].map(({ href, label }) => (
+        {[{ href: '#features', label: 'Funcionalidades' }, { href: '#fiscal', label: '⚡ Fiscal' }, { href: '#intro', label: 'Intro' }, { href: '#pricing', label: 'Preços' }, { href: '/login', label: 'Entrar' }].map(({ href, label }) => (
           <Link key={href} href={href} className="shrink-0 rounded-full border border-[#E5E7EB] px-3 py-1 text-xs font-medium text-[#6B7280] hover:border-[#2563EB] hover:text-[#2563EB] transition-colors">{label}</Link>
         ))}
       </div>
@@ -56,7 +60,7 @@ function Footer() {
           </div>
           <div className="grid grid-cols-3 gap-6">
             {[
-              { title: 'Produto', items: [{ label: 'Funcionalidades', href: '#features' }, { label: 'Preços', href: '#pricing' }, { label: 'Entrar', href: '/login' }] },
+              { title: 'Produto', items: [{ label: 'Funcionalidades', href: '#features' }, { label: 'SyncroMoney Intro', href: '#intro' }, { label: 'Preços', href: '#pricing' }, { label: 'Entrar', href: '/login' }] },
               { title: 'Empresa', items: [{ label: 'Sobre', href: '#' }, { label: 'Contato', href: '#' }, { label: 'Blog', href: '#' }] },
               { title: 'Legal', items: [{ label: 'Privacidade', href: '/privacidade' }, { label: 'Termos', href: '/termos' }, { label: 'Cookies', href: '/cookies' }] },
             ].map(({ title, items }) => (

@@ -46,7 +46,7 @@ function waLink(message: string) {
 /* ─────────────────────────────────────────────────────────────
    REGISTRO — link para cadastro já com o plano escolhido
 ──────────────────────────────────────────────────────────────── */
-function registerLink(plano: 'pro' | 'premium') {
+function registerLink(plano: 'intro' | 'pro' | 'premium') {
   return `/register?plano=${plano}`
 }
 
@@ -265,6 +265,74 @@ function PdvMockup() {
           <div className="mt-1 flex items-center justify-center gap-1 rounded-lg bg-[#16A34A] py-2">
             <Printer className="h-3 w-3 text-white" />
             <span className="text-[7.5px] font-bold text-white">Finalizar Venda</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ACERTO MOCKUP — recibo do Intro (HTML estático, dados ilustrativos)
+──────────────────────────────────────────────────────────────── */
+function AcertoMockup() {
+  return (
+    <div className="pointer-events-none select-none overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl shadow-black/10 transition-transform duration-500 hover:scale-[1.02]">
+      <div className="flex items-center gap-1.5 border-b border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
+        <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+        <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+        <span className="h-3 w-3 rounded-full bg-[#28C840]" />
+        <div className="ml-3 flex h-5 max-w-48 flex-1 items-center rounded-md border border-[#E5E7EB] bg-white px-3">
+          <span className="text-[10px] text-[#9CA3AF]">syncromoney.com.br/recibo/…</span>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <div className="border-2 border-[#374151] text-[#111827]">
+          <div className="border-b-2 border-[#374151] bg-[#F9FAFB] py-2 text-center">
+            <p className="text-[11px] font-bold tracking-wide">ACERTO DE CONSIGNAÇÃO Nº 12</p>
+            <p className="text-[9px] text-[#6B7280]">Período: 01/09 a 30/09</p>
+          </div>
+          <div className="border-b border-[#374151] px-3 py-2 text-[10px]">
+            Fornecedor: <strong>Doces da Vovó</strong>
+          </div>
+          <table className="w-full text-[9px]">
+            <thead>
+              <tr className="border-b border-[#D1D5DB] uppercase text-[#6B7280]">
+                <th className="px-3 py-1 text-left font-medium">Produto</th>
+                <th className="px-2 py-1 text-right font-medium">Qtd</th>
+                <th className="px-2 py-1 text-right font-medium">Vendido</th>
+                <th className="px-3 py-1 text-right font-medium">A receber</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { p: 'Brigadeiro gourmet', q: '48', v: 'R$ 288,00', r: 'R$ 192,00' },
+                { p: 'Bolo de pote', q: '20', v: 'R$ 160,00', r: 'R$ 100,00' },
+                { p: 'Cookie tradicional', q: '35', v: 'R$ 175,00', r: 'R$ 105,00' },
+              ].map((row) => (
+                <tr key={row.p} className="border-b border-[#E5E7EB]">
+                  <td className="px-3 py-1">{row.p}</td>
+                  <td className="px-2 py-1 text-right">{row.q}</td>
+                  <td className="px-2 py-1 text-right">{row.v}</td>
+                  <td className="px-3 py-1 text-right font-semibold">{row.r}</td>
+                </tr>
+              ))}
+              <tr className="bg-[#F9FAFB] font-bold">
+                <td className="px-3 py-1.5" colSpan={2}>TOTAL</td>
+                <td className="px-2 py-1.5 text-right">R$ 623,00</td>
+                <td className="px-3 py-1.5 text-right">R$ 397,00</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="border-t border-[#D1D5DB] bg-[#F9FAFB] px-3 py-1 text-center text-[8px] font-bold uppercase tracking-widest text-[#374151]">Saldo na loja</p>
+          <div className="flex justify-between px-3 py-1.5 text-[9px]">
+            <span>Cookie tradicional · 6 un.</span>
+            <span className="font-medium text-[#B45309]">Trocar por validade nova</span>
+          </div>
+          <div className="m-3 rounded border-2 border-[#15803D] bg-[#F0FDF4] p-2.5 text-[#14532D]">
+            <p className="flex items-center gap-1 text-[11px] font-bold"><CheckCircle2 className="h-3.5 w-3.5" /> RECEBIDO</p>
+            <p className="mt-0.5 text-[9px]">Confirmado pelo fornecedor em 30/09 às 15:42</p>
           </div>
         </div>
       </div>
@@ -963,6 +1031,114 @@ export function LandingPageContent() {
                   <span className="text-xs font-medium text-slate-300">{label}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── INTRO ─────────────────────────────────────────────────────── */}
+      <section id="intro" className="relative overflow-hidden bg-[#F0FDF4] py-24">
+        <div aria-hidden className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#16A34A] opacity-10 blur-3xl animate-pulse-soft" />
+
+        <div className="relative mx-auto max-w-6xl px-5">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#16A34A]/30 bg-white px-3.5 py-1.5">
+                <Package className="h-3.5 w-3.5 text-[#16A34A]" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[#16A34A]">SyncroMoney Intro</span>
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#111827] sm:text-4xl">
+                Vende produtos de fornecedores em{' '}
+                <span className="text-[#16A34A]">consignação?</span>
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-[#374151]">
+                O Intro é a versão simples do SyncroMoney para quem tem loja. Você registra a mercadoria que chegou,
+                vende no PDV e, quando o fornecedor volta, fecha o acerto na hora, com recibo para ele confirmar pelo celular.
+                Sem planilha, sem caderno, sem esquecer quem deve a quem.
+              </p>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button asChild size="lg" className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold gap-2 shadow-lg shadow-[#16A34A]/25 transition-transform hover:scale-[1.03]">
+                  <Link href={registerLink('intro')}>
+                    Começar 14 dias grátis
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <p className="text-sm text-[#374151]">
+                  <strong className="text-[#111827]">R$ 57,90</strong>/mês depois do período grátis
+                </p>
+              </div>
+            </div>
+
+            <div className="animate-float">
+              <AcertoMockup />
+            </div>
+          </div>
+
+          {/* como funciona */}
+          <div className="mt-20">
+            <p className="mb-8 text-center text-sm font-semibold uppercase tracking-widest text-[#16A34A]">Como funciona</p>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { icon: Package, title: 'Entrada da mercadoria', desc: 'Cadastre o que chegou, com custo, margem de lucro e validade. À vista, a prazo ou em consignação.' },
+                { icon: ScanBarcode, title: 'Venda no PDV', desc: 'Leitor de código de barras e pagamento em Pix, crédito, débito, dinheiro ou fiado. O estoque baixa sozinho.' },
+                { icon: FileText, title: 'Acerto com o fornecedor', desc: 'Relatório por período com produto, quantidade, total vendido e valor a receber, mais o saldo para devolver ou trocar.' },
+                { icon: Send, title: 'Recibo e RECEBIDO', desc: 'Envie pelo WhatsApp. O fornecedor confere e confirma, e você guarda o comprovante com data e hora.' },
+              ].map(({ icon: Icon, title, desc }, i) => (
+                <div key={title} className="rounded-2xl border border-[#D1FAE5] bg-white p-6 shadow-sm">
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#16A34A] text-sm font-bold text-white">{i + 1}</span>
+                    <Icon className="h-5 w-5 text-[#16A34A]" />
+                  </div>
+                  <p className="text-base font-bold text-[#111827]">{title}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[#374151]">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* o que está incluído + preço */}
+          <div className="mt-16 grid gap-8 lg:grid-cols-3 lg:items-start">
+            <div className="rounded-2xl border border-[#D1FAE5] bg-white p-7 lg:col-span-2">
+              <p className="text-lg font-bold text-[#111827]">Tudo o que o Intro oferece</p>
+              <ul className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                {[
+                  'Cadastro de clientes, fornecedores e produtos',
+                  'Entrada de mercadoria com margem e validade',
+                  'Consignação com acerto por fornecedor',
+                  'PDV com leitor de código de barras',
+                  'Caixa do dia com entradas por forma de pagamento',
+                  'Estoque total da loja e por fornecedor',
+                  'Alerta de produtos vencendo',
+                  'Contas a pagar e a receber, com o total devido a cada fornecedor',
+                  'Dashboard e relatórios em PDF e Excel',
+                  'Recibo para o fornecedor confirmar pelo celular',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-[#374151]">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#D1FAE5] text-[#16A34A]">
+                      <Check className="h-3 w-3" />
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border-2 border-[#16A34A] bg-white p-7 text-center shadow-xl shadow-[#16A34A]/10">
+              <p className="text-sm font-bold uppercase tracking-wider text-[#6B7280]">Intro</p>
+              <div className="mt-2 flex items-baseline justify-center gap-1">
+                <span className="text-4xl font-extrabold tracking-tight text-[#111827]">R$ 57,90</span>
+                <span className="text-sm text-[#6B7280]">/mês</span>
+              </div>
+              <p className="mt-1.5 text-sm text-[#374151]">14 dias grátis, sem cartão para começar</p>
+              <Button asChild size="lg" className="mt-6 w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold shadow-md shadow-[#16A34A]/25 transition-transform hover:scale-[1.03]">
+                <Link href={registerLink('intro')}>Começar 14 dias grátis</Link>
+              </Button>
+              <p className="mt-3 text-xs text-[#6B7280]">Cancele quando quiser</p>
+              <p className="mt-5 border-t border-[#E5E7EB] pt-4 text-xs leading-relaxed text-[#6B7280]">
+                O Intro <strong className="text-[#374151]">não emite nota fiscal</strong>. Precisa emitir NF-e ou NFS-e?{' '}
+                <Link href="#pricing" className="font-semibold text-[#2563EB] hover:underline">Veja o plano Premium</Link>.
+              </p>
             </div>
           </div>
         </div>
