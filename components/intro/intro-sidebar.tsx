@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, X, Users, Building2, Package, PackagePlus, Boxes,
-  ShoppingCart, Wallet, TrendingDown, TrendingUp, BarChart3, Settings,
+  ShoppingCart, Wallet, TrendingDown, TrendingUp, BarChart3, Settings, FileCheck2,
 } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
@@ -26,8 +26,9 @@ const items: NavItem[] = [
   { href: '/intro/produtos',       label: 'Produtos',              icon: Package },
   { href: '/intro/clientes',       label: 'Clientes',              icon: Users },
   { href: '/intro/fornecedores',   label: 'Fornecedores',          icon: Building2 },
-  { href: '/intro/contas-pagar',   label: 'Contas a pagar',        icon: TrendingDown, emBreve: true },
-  { href: '/intro/contas-receber', label: 'Contas a receber',      icon: TrendingUp,   emBreve: true },
+  { href: '/intro/contas-pagar',   label: 'Contas a pagar',        icon: TrendingDown },
+  { href: '/intro/contas-receber', label: 'Contas a receber',      icon: TrendingUp },
+  { href: '/intro/acertos',         label: 'Acerto com fornecedor', icon: FileCheck2 },
   { href: '/intro/relatorios',     label: 'Relatórios',            icon: BarChart3,    emBreve: true },
   { href: '/intro/configuracoes',  label: 'Configurações',         icon: Settings },
 ]

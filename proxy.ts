@@ -43,12 +43,17 @@ export async function proxy(request: NextRequest) {
     '/api/fiscal/diagnostico',
   ]
 
+  // Recibo do fornecedor (SyncroMoney Intro): o fornecedor não tem login. A página
+  // e a rota de confirmação só operam sobre um token UUID (RPC SECURITY DEFINER).
+  const PUBLIC_PREFIXES = ['/recibo/', '/api/recibo/']
+  const isPublic = PUBLIC_PATHS.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
+
   // Rotas de API retornam JSON em vez de redirecionar para a home
-  if (!user && pathname.startsWith('/api/') && !PUBLIC_PATHS.includes(pathname)) {
+  if (!user && pathname.startsWith('/api/') && !isPublic) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  if (!user && !PUBLIC_PATHS.includes(pathname)) {
+  if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
