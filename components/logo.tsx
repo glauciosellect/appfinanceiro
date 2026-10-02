@@ -25,7 +25,7 @@ export function Logo({ size = 'md', className, sobreEscuro = false }: LogoProps)
   if (sobreEscuro) {
     return (
       <div className={cn('flex items-center', className)}>
-        <div className="rounded-2xl bg-white px-6 py-2 shadow-lg shadow-black/30">
+        <div className="rounded-2xl px-6 py-2 shadow-lg shadow-black/30" style={{ backgroundColor: '#ffffff' }}>
           <Image
             src="/logo-transparente.png"
             alt="SyncroMoney"

@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, Clock, MessageCircle, Minus, Pause, Plus, Receipt, Search, Share2, Trash2, X } from 'lucide-react'
+import { Check, Clock, MessageCircle, Maximize, Menu, Minimize, Minus, Pause, Plus, Receipt, Search, Share2, Trash2, Wallet, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -55,6 +55,7 @@ export default function IntroPdvPage() {
   const [clienteId, setClienteId] = useState('')
   const [vendaEsperaId, setVendaEsperaId] = useState<string | null>(null)
   const [aviso, setAviso] = useState('')
+  const [telaCheia, setTelaCheia] = useState(false)
 
   // pagamento
   const [pagOpen, setPagOpen] = useState(false)
@@ -309,30 +310,73 @@ export default function IntroPdvPage() {
     carregar()
   }
 
+  // Tela cheia do navegador (como um terminal de caixa); Esc volta ao normal
+  function alternarTelaCheia() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    else document.documentElement.requestFullscreen().catch(() => {})
+  }
+
+  useEffect(() => {
+    const aoMudar = () => setTelaCheia(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', aoMudar)
+    return () => document.removeEventListener('fullscreenchange', aoMudar)
+  }, [])
+
+  // Logo da loja (enviada em Configurações), grande e proporcional, sobre fundo branco para qualquer tema
+  const logoLoja = (
+    <div className="flex items-center gap-4 min-w-0">
+      {config?.logo_url ? (
+        <div className="h-20 sm:h-24 rounded-2xl px-4 py-2 flex items-center shrink-0 shadow-sm" style={{ backgroundColor: '#ffffff' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={config.logo_url} alt={config.nome_loja || 'Logo da loja'} className="h-full w-auto max-w-[280px] object-contain" />
+        </div>
+      ) : (
+        <div className="min-w-0">
+          <p className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white truncate">{config?.nome_loja || 'PDV'}</p>
+          {!config?.logo_url && (
+            <Link href="/intro/configuracoes" className="text-xs text-emerald-700 hover:underline">Envie a logo da sua loja em Configurações</Link>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
   // ---------- Telas de estado ----------
   if (carregando) return <p className="text-sm text-gray-500">Carregando...</p>
 
   if (!sessao) {
     return (
       <div className="max-w-md mx-auto mt-16 text-center space-y-4">
+        <div className="flex justify-center">{logoLoja}</div>
         <Receipt className="h-12 w-12 text-gray-300 mx-auto" />
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Caixa fechado</h1>
         <p className="text-sm text-gray-500">Abra o caixa do dia para começar a vender.</p>
-        <Button asChild><Link href="/intro/caixa">Abrir o caixa</Link></Button>
+        <div className="flex justify-center gap-2">
+          <Button asChild><Link href="/intro/caixa">Abrir o caixa</Link></Button>
+          <Button variant="outline" asChild><Link href="/intro">Voltar ao Menu</Link></Button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">PDV</h1>
-          <p className="text-xs text-gray-500">Caixa aberto por {sessao.operador}{vendaEsperaId ? ' · retomando venda em espera' : ''}</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-5 min-w-0">
+          {logoLoja}
+          <div className="hidden sm:block border-l border-gray-200 dark:border-gray-700 pl-5">
+            <p className="text-lg font-bold text-gray-900 dark:text-white">PDV</p>
+            <p className="text-xs text-gray-500">Caixa aberto por {sessao.operador}{vendaEsperaId ? ' · retomando venda em espera' : ''}</p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={abrirEsperas}><Clock className="h-4 w-4 mr-1" />Em espera</Button>
           <Button variant="outline" size="sm" onClick={abrirVendasDia}><Receipt className="h-4 w-4 mr-1" />Vendas do dia</Button>
+          <Button variant="outline" size="sm" asChild><Link href="/intro/caixa"><Wallet className="h-4 w-4 mr-1" />Caixa</Link></Button>
+          <Button variant="outline" size="sm" onClick={alternarTelaCheia} title="Tela cheia (Esc para sair)">
+            {telaCheia ? <Minimize className="h-4 w-4 mr-1" /> : <Maximize className="h-4 w-4 mr-1" />}Tela cheia
+          </Button>
+          <Button variant="outline" size="sm" asChild><Link href="/intro"><Menu className="h-4 w-4 mr-1" />Voltar ao Menu</Link></Button>
         </div>
       </div>
 
