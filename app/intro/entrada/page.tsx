@@ -62,7 +62,7 @@ export default function EntradasPage() {
                 {entradas.map((e) => (
                   <tr key={e.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                     <td className="px-4 py-3">
-                      <Link href={`/intro/entrada/${e.id}`} className="text-emerald-700 dark:text-emerald-400 font-medium hover:underline">{formatDate(e.data)}</Link>
+                      <Link href={`/intro/entrada/${e.id}`} prefetch={false} className="text-emerald-700 dark:text-emerald-400 font-medium hover:underline">{formatDate(e.data)}</Link>
                     </td>
                     <td className="px-4 py-3 text-gray-800 dark:text-gray-200">{e.fornecedores?.nome ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500">{e.numero_documento ?? '—'}</td>

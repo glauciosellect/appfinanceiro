@@ -88,6 +88,7 @@ export function IntroSidebar({ open, onClose }: Props) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={onClose}
                 className={cn(
                   base,
