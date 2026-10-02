@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Boxes, SlidersHorizontal } from 'lucide-react'
+import { AjusteEstoqueDialog } from '@/components/intro/ajuste-estoque-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -34,6 +35,8 @@ export default function EstoquePage() {
   const [somenteAlerta, setSomenteAlerta] = useState(false)
 
   const [ajuste, setAjuste] = useState<LoteEstoque | null>(null)
+  // ajuste do estoque do produto inteiro (regulariza saldo negativo, contagem, perdas)
+  const [ajusteProduto, setAjusteProduto] = useState<{ id: string; descricao: string; unidade: string; atual: number } | null>(null)
   const [delta, setDelta] = useState('')
   const [motivo, setMotivo] = useState('')
   const [ajusteErro, setAjusteErro] = useState('')
@@ -199,6 +202,7 @@ export default function EstoquePage() {
                   <th className="px-4 py-3 text-right">Consignado</th>
                   <th className="px-4 py-3 text-right">Valor custo</th>
                   <th className="px-4 py-3 text-right">Valor venda</th>
+                  <th className="w-24" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -215,10 +219,15 @@ export default function EstoquePage() {
                     <td className="px-4 py-3 text-right text-gray-600">{p.consignado}</td>
                     <td className="px-4 py-3 text-right">{formatCurrency(p.custo)}</td>
                     <td className="px-4 py-3 text-right text-green-700 dark:text-green-400">{formatCurrency(p.venda)}</td>
+                    <td className="px-2 text-right">
+                      <Button size="sm" variant={p.saldo < 0 ? 'default' : 'outline'} onClick={() => setAjusteProduto({ id: p.id, descricao: p.descricao, unidade: p.unidade, atual: p.saldo })}>
+                        Ajustar
+                      </Button>
+                    </td>
                   </tr>
                 ))}
                 {!loading && linhasTotal.length === 0 && (
-                  <tr><td colSpan={6} className="px-6 py-12 text-center">
+                  <tr><td colSpan={7} className="px-6 py-12 text-center">
                     <Boxes className="h-10 w-10 text-gray-300 mx-auto mb-2" />
                     <p className="text-gray-400">Nenhum produto para mostrar.</p>
                   </td></tr>
@@ -352,6 +361,15 @@ export default function EstoquePage() {
             </tbody>
           </table>
         </div></CardContent></Card>
+      )}
+
+      {ajusteProduto && (
+        <AjusteEstoqueDialog
+          produto={ajusteProduto}
+          atual={ajusteProduto.atual}
+          onClose={() => setAjusteProduto(null)}
+          onAjustado={() => { setAjusteProduto(null); carregar() }}
+        />
       )}
 
       <Dialog open={!!ajuste} onOpenChange={(o) => !o && setAjuste(null)}>

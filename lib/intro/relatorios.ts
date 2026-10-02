@@ -62,6 +62,42 @@ export const RELATORIOS: DefinicaoRelatorio[] = [
     ],
   },
   {
+    id: 'movimentacao_financeira', titulo: 'Movimentação financeira (entradas e saídas)', periodo: 'intervalo',
+    descricao: 'Tudo o que entrou e saiu no período: vendas recebidas, contas recebidas (inclui fiado) e contas pagas. Venda fiado só aparece quando for recebida.',
+    colunas: [
+      { key: 'data', label: 'Data', tipo: 'data' },
+      { key: 'tipo', label: 'Tipo', tipo: 'texto' },
+      { key: 'historico', label: 'Histórico', tipo: 'texto' },
+      { key: 'pessoa', label: 'Cliente / Fornecedor', tipo: 'texto' },
+      { key: 'entrada', label: 'Entrada', tipo: 'moeda', somar: true },
+      { key: 'saida', label: 'Saída', tipo: 'moeda', somar: true },
+    ],
+  },
+  {
+    id: 'contas_pagas', titulo: 'Contas pagas', periodo: 'intervalo',
+    descricao: 'Contas a pagar baixadas no período (pagamentos a fornecedores e outras despesas).',
+    colunas: [
+      { key: 'pago_em', label: 'Pago em', tipo: 'data' },
+      { key: 'vencimento', label: 'Vencimento', tipo: 'data' },
+      { key: 'fornecedor', label: 'Fornecedor', tipo: 'texto' },
+      { key: 'descricao', label: 'Descrição', tipo: 'texto' },
+      { key: 'origem', label: 'Origem', tipo: 'texto' },
+      { key: 'valor', label: 'Valor pago', tipo: 'moeda', somar: true },
+    ],
+  },
+  {
+    id: 'contas_recebidas', titulo: 'Contas recebidas', periodo: 'intervalo',
+    descricao: 'Contas a receber baixadas no período (fiado recebido e outros recebimentos).',
+    colunas: [
+      { key: 'recebido_em', label: 'Recebido em', tipo: 'data' },
+      { key: 'vencimento', label: 'Vencimento', tipo: 'data' },
+      { key: 'cliente', label: 'Cliente', tipo: 'texto' },
+      { key: 'descricao', label: 'Descrição', tipo: 'texto' },
+      { key: 'origem', label: 'Origem', tipo: 'texto' },
+      { key: 'valor', label: 'Valor recebido', tipo: 'moeda', somar: true },
+    ],
+  },
+  {
     id: 'estoque_fornecedor', titulo: 'Estoque por fornecedor', periodo: 'nenhum',
     descricao: 'Posição atual do estoque de cada fornecedor.',
     colunas: [

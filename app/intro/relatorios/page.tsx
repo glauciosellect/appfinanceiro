@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BarChart3, Download, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,12 @@ export default function RelatoriosPage() {
 
   const def = RELATORIOS.find((r) => r.id === tipoId)!
 
+  // Atalho vindo de Contas a pagar / a receber: /intro/relatorios?tipo=contas_pagas
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tipo')
+    if (t && RELATORIOS.some((r) => r.id === t)) setTipoId(t)
+  }, [])
+
   function escolher(id: string) {
     setTipoId(id)
     setLinhas(null)
@@ -64,6 +70,8 @@ export default function RelatoriosPage() {
   }
 
   const tot = linhas ? totais(def.colunas, linhas) : {}
+  // Movimentação financeira: saldo do período = entradas - saídas
+  const saldo = 'entrada' in tot && 'saida' in tot ? tot.entrada - tot.saida : null
 
   return (
     <div className="space-y-6">
@@ -112,6 +120,12 @@ export default function RelatoriosPage() {
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                 <p className="font-semibold text-gray-900 dark:text-white">{def.titulo}</p>
                 <p className="text-xs text-gray-500">{geradoDe} · {linhas.length} linha(s)</p>
+                {saldo !== null && (
+                  <p className="mt-2 text-sm">
+                    Saldo do período: <strong className={saldo < 0 ? 'text-red-600' : 'text-emerald-700'}>{formatarCelula(saldo, 'moeda')}</strong>
+                    <span className="text-gray-500"> (entradas {formatarCelula(tot.entrada, 'moeda')} − saídas {formatarCelula(tot.saida, 'moeda')})</span>
+                  </p>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

@@ -61,3 +61,38 @@ export async function carregarPendencias(userId: string): Promise<Record<string,
   }
   return mapa
 }
+
+// Saldo REAL de cada produto, em tempo real: soma dos lotes em estoque menos o que foi
+// vendido sem estoque e ainda não foi coberto. Pode ser negativo.
+export async function carregarSaldosPorProduto(userId: string): Promise<Record<string, number>> {
+  const supabase = createClient()
+  const [lotes, pend] = await Promise.all([
+    supabase.from('lotes_estoque').select('produto_id, qtd_saldo').eq('user_id', userId).eq('status', 'ativo').gt('qtd_saldo', 0),
+    carregarPendencias(userId).catch(() => ({} as Record<string, number>)),
+  ])
+  if (lotes.error) throw lotes.error
+  const saldos: Record<string, number> = {}
+  for (const r of (lotes.data ?? []) as { produto_id: string; qtd_saldo: number }[]) {
+    saldos[r.produto_id] = (saldos[r.produto_id] ?? 0) + Number(r.qtd_saldo)
+  }
+  for (const [produtoId, qtd] of Object.entries(pend)) {
+    saldos[produtoId] = (saldos[produtoId] ?? 0) - qtd
+  }
+  return saldos
+}
+
+// Ajusta o estoque de um produto para a quantidade realmente existente (intro_ajustar_estoque_produto).
+export async function ajustarEstoqueProduto(
+  produtoId: string,
+  novaQuantidade: number,
+  motivo: string,
+  fornecedorId: string | null
+): Promise<string | null> {
+  const { error } = await createClient().rpc('intro_ajustar_estoque_produto', {
+    p_produto: produtoId,
+    p_nova: novaQuantidade,
+    p_motivo: motivo,
+    p_fornecedor: fornecedorId,
+  })
+  return error ? error.message : null
+}

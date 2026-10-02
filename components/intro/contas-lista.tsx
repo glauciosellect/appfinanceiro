@@ -127,7 +127,12 @@ export function ContasLista({ tipo }: { tipo: TipoConta }) {
             {pagar ? 'Compras a prazo, acertos de consignação e outras contas da loja.' : 'Fiado de clientes e outros valores a receber.'}
           </p>
         </div>
-        <Button onClick={() => { setNovaErro(''); setNovaOpen(true) }}><Plus className="h-4 w-4 mr-1" />Nova conta</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href={pagar ? '/intro/relatorios?tipo=contas_pagas' : '/intro/relatorios?tipo=contas_recebidas'}>{pagar ? 'Ver pagamentos por período' : 'Ver recebimentos por período'}</Link>
+          </Button>
+          <Button onClick={() => { setNovaErro(''); setNovaOpen(true) }}><Plus className="h-4 w-4 mr-1" />Nova conta</Button>
+        </div>
       </div>
 
       {erro && <p className="text-sm text-red-600">{erro}</p>}
