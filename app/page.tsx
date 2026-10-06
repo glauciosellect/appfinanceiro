@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { BotaoTesteGratis } from '@/components/marketing/escolha-versao'
 import { Button } from '@/components/ui/button'
 import { MarketingLogo } from '@/components/shared/MarketingLogo'
 import { LandingPageContent } from '@/components/marketing/landing-page'
@@ -31,11 +32,9 @@ function Navbar() {
           <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex text-[#6B7280] hover:text-[#111827]">
             <Link href="/login">Entrar</Link>
           </Button>
-          <Button size="sm" asChild className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-sm px-4">
-            <Link href="/register?plano=pro">
-              Teste grátis — 14 dias
-            </Link>
-          </Button>
+          <BotaoTesteGratis size="sm" className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-sm px-4">
+            Teste grátis — 14 dias
+          </BotaoTesteGratis>
         </div>
       </div>
       <div className="flex items-center gap-1 overflow-x-auto border-t border-[#F3F4F6] bg-white px-5 py-2 md:hidden">

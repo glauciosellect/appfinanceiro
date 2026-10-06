@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { VERSOES } from '@/components/marketing/escolha-versao'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -30,9 +32,20 @@ export default function RegisterPage() {
     }
   }, [])
 
+  function escolherVersao(id: 'intro' | 'pro' | 'premium') {
+    setPlanoEscolhido(id)
+    sessionStorage.setItem('plano_selecionado', id)
+    setError('')
+  }
+
   async function handleRegister(e: React.SyntheticEvent) {
     e.preventDefault()
     setError('')
+
+    if (!planoEscolhido) {
+      setError('Escolha a versão que você quer testar.')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('As senhas não coincidem.')
@@ -47,7 +60,6 @@ export default function RegisterPage() {
     const supabase = createClient()
     // Preferência de plano (só decide qual sistema abre durante o trial; o
     // acesso pago vem sempre da tabela `assinaturas`).
-    const planoEscolhido = sessionStorage.getItem('plano_selecionado')
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -104,12 +116,35 @@ export default function RegisterPage() {
           <CardDescription className="text-center">
             Comece a controlar suas finanças gratuitamente
           </CardDescription>
-          {planoEscolhido && (
-            <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm text-blue-800">
-              Você escolheu o <strong>SyncroMoney {planoEscolhido === 'intro' ? 'Intro' : planoEscolhido === 'pro' ? 'PRO' : 'Premium'}</strong>.
-              Teste grátis por 14 dias, sem cartão.
+          <div className="mt-3 space-y-2">
+            <p className="text-center text-sm font-medium text-gray-700">Qual versão você quer testar por 14 dias?</p>
+            <div className="grid grid-cols-3 gap-2">
+              {VERSOES.map((v) => {
+                const ativa = planoEscolhido === v.id
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => escolherVersao(v.id)}
+                    className={cn(
+                      'rounded-lg border-2 px-2 py-2 text-center transition-colors',
+                      ativa ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                    )}
+                  >
+                    <p className="text-sm font-bold text-gray-900">{v.nome}</p>
+                    <p className="text-[11px] text-gray-500">{v.preco}/mês</p>
+                  </button>
+                )
+              })}
             </div>
-          )}
+            {planoEscolhido ? (
+              <p className="text-center text-xs text-gray-500">
+                {VERSOES.find((v) => v.id === planoEscolhido)?.descricao} Teste grátis, sem cartão.
+              </p>
+            ) : (
+              <p className="text-center text-xs text-amber-700">Escolha uma versão para continuar.</p>
+            )}
+          </div>
         </CardHeader>
 
         <form onSubmit={handleRegister}>

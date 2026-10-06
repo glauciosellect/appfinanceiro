@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BotaoTesteGratis } from '@/components/marketing/escolha-versao'
 import { Button } from '@/components/ui/button'
 import {
   LayoutDashboard,
@@ -616,16 +617,13 @@ export function LandingPageContent() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button
+                <BotaoTesteGratis
                   size="lg"
-                  asChild
                   className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2 px-7 shadow-md shadow-[#2563EB]/25 w-full sm:w-auto transition-transform hover:scale-[1.03]"
                 >
-                  <Link href={registerLink('pro')}>
-                    Começar 14 dias grátis
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
+                  Começar 14 dias grátis
+                  <ArrowRight className="h-4 w-4" />
+                </BotaoTesteGratis>
                 <Button
                   size="lg"
                   variant="outline"
@@ -784,16 +782,13 @@ export function LandingPageContent() {
                 ))}
               </div>
 
-              <Button
-                asChild
+              <BotaoTesteGratis
                 size="lg"
                 className="mt-8 bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2 shadow-md shadow-[#2563EB]/25 transition-transform hover:scale-[1.03]"
               >
-                <Link href={registerLink('pro')}>
-                  Começar 14 dias grátis
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
+                Começar 14 dias grátis
+                <ArrowRight className="h-4 w-4" />
+              </BotaoTesteGratis>
             </div>
           </div>
         </div>
@@ -1407,16 +1402,13 @@ export function LandingPageContent() {
           </p>
 
           <div className="mt-9 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
-            <Button
+            <BotaoTesteGratis
               size="lg"
-              asChild
               className="bg-white text-[#2563EB] hover:bg-[#F9FAFB] gap-2 px-8 font-bold shadow-lg transition-transform hover:scale-[1.04]"
             >
-              <Link href={registerLink('pro')}>
-                Começar 14 dias grátis
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
+              Começar 14 dias grátis
+              <ArrowRight className="h-4 w-4" />
+            </BotaoTesteGratis>
             <Button
               size="lg"
               asChild
