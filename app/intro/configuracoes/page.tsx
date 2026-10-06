@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { uploadLogo } from '@/lib/supabase/perfil-empresa'
 import { getIntroConfig, salvarIntroConfig, type IntroConfig } from '@/lib/intro/config'
 import { carregarContextoSistema } from '@/lib/intro/sistema-client'
+import { AlterarSenhaCard } from '@/components/intro/alterar-senha'
 import { diasRestantesTrial, assinaturaAtiva } from '@/lib/supabase/assinatura'
 import { maskPhone } from '@/lib/masks'
 
@@ -144,6 +145,8 @@ export default function IntroConfiguracoesPage() {
         </Button>
         {msg && <span className={msg.tipo === 'ok' ? 'text-sm text-green-600' : 'text-sm text-red-600'}>{msg.texto}</span>}
       </div>
+
+      <AlterarSenhaCard />
 
       <Card>
         <CardHeader><CardTitle className="text-base">Assinatura</CardTitle></CardHeader>
