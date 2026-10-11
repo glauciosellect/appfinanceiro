@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, FileText, Search } from 'lucide-react'
+import { Plus, FileText, Search, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getPedidos, getContadorPorStatus, createPedido } from '@/lib/supabase/pedidos'
+import { getPedidos, getContadorPorStatus, createPedido, excluirPedido } from '@/lib/supabase/pedidos'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -76,6 +76,17 @@ export default function OrcamentosPage() {
     } catch {
       _toast('Erro ao criar orçamento', 'error')
       setCriando(false)
+    }
+  }
+
+  async function handleExcluir(p: Pedido) {
+    if (!confirm(`Excluir o orçamento ${p.numero_sequencial}${p.clientes?.nome ? ' de ' + p.clientes.nome : ''}? Esta ação não pode ser desfeita.`)) return
+    try {
+      await excluirPedido(userId, p.id)
+      _toast('Orçamento excluído', 'success')
+      fetchTudo()
+    } catch {
+      _toast('Erro ao excluir orçamento', 'error')
     }
   }
 
@@ -182,9 +193,16 @@ export default function OrcamentosPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); router.push(`/orcamentos/${p.id}`) }}>
-                          Abrir
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); router.push(`/orcamentos/${p.id}`) }}>
+                            Abrir
+                          </Button>
+                          <Button size="sm" variant="outline" title="Excluir orçamento"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={(e) => { e.stopPropagation(); handleExcluir(p) }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

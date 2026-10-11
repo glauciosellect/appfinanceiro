@@ -443,6 +443,8 @@ export interface FluxoCaixaItem {
   saida: number
   saldo: number
   realizado: boolean
+  // Lançamento de pagamento/recebimento cuja conta já foi excluída (sobrou no extrato)
+  orfao?: { movId: string; contaCorrenteId: string; valor: number; credito: boolean }
 }
 
 // ============================================================
@@ -560,6 +562,7 @@ export interface Pedido {
   condicoes_pagamento?: string
   garantia?: string
   informacoes_adicionais?: string
+  vendedor?: string
   status: StatusPedido
   desconto_tipo: TipoDesconto
   desconto_valor: number
@@ -598,6 +601,7 @@ export interface PedidoFormData {
   condicoes_pagamento?: string
   garantia?: string
   informacoes_adicionais?: string
+  vendedor?: string
   desconto_tipo: TipoDesconto
   desconto_valor: number
 }

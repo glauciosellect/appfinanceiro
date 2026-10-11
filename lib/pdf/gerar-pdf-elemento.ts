@@ -1,4 +1,6 @@
-import html2canvas from 'html2canvas'
+// html2canvas-pro: o html2canvas original quebra com as cores oklch()/lab() do Tailwind 4
+// ("unsupported color function"), o que fazia o PDF falhar sempre.
+import html2canvas from 'html2canvas-pro'
 import { jsPDF } from 'jspdf'
 
 /**

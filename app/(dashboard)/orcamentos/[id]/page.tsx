@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Trash2, Package, Wrench, Search, FileOutput } from 'lucide-react'
+import { ArrowLeft, Trash2, Package, Wrench, Search, FileOutput, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getPedidoComItens,
@@ -18,6 +18,9 @@ import {
 import { getClientes } from '@/lib/supabase/clientes'
 import { getProdutosFiscaisParaCatalogo } from '@/lib/supabase/produtos'
 import { getServicos } from '@/lib/supabase/servicos'
+import { NovoClienteDialog, NovoServicoDialog } from '@/components/orcamentos/cadastro-rapido'
+import { ProdutoFormDialog } from '@/components/intro/produto-form'
+import { COLUNAS_PRODUTO, type ProdutoIntro } from '@/lib/intro/produtos'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -64,6 +67,13 @@ export default function OrcamentoDetalhePage() {
   const [descontoValor, setDescontoValor] = useState(0)
   const [salvando, setSalvando] = useState(false)
 
+  const [vendedor, setVendedor] = useState('')
+  const [vendedoresSugeridos, setVendedoresSugeridos] = useState<string[]>([])
+  // Cadastros rápidos sem sair do orçamento
+  const [novoCliente, setNovoCliente] = useState(false)
+  const [novoServico, setNovoServico] = useState<{ nome: string } | null>(null)
+  const [novoProduto, setNovoProduto] = useState<{ nome: string; existentes: ProdutoIntro[] } | null>(null)
+
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id)
@@ -89,12 +99,16 @@ export default function OrcamentoDetalhePage() {
         setCondicoesPagamento(resultado.pedido.condicoes_pagamento ?? '')
         setGarantia(resultado.pedido.garantia ?? '')
         setInformacoesAdicionais(resultado.pedido.informacoes_adicionais ?? '')
+        setVendedor(resultado.pedido.vendedor ?? '')
         setDescontoTipo(resultado.pedido.desconto_tipo)
         setDescontoValor(resultado.pedido.desconto_valor)
       }
       setClientes(_clientes)
       setProdutos(_produtos)
       setServicos(_servicos)
+      // Vendedores já usados em outros orçamentos viram sugestão (a coluna só existe após a migração)
+      const { data: usados } = await createClient().from('pedidos').select('vendedor').eq('user_id', userId).not('vendedor', 'is', null)
+      setVendedoresSugeridos([...new Set((usados ?? []).map((r: { vendedor: string | null }) => (r.vendedor ?? '').trim()).filter(Boolean))])
     } catch {
       _toast('Erro ao carregar orçamento', 'error')
     } finally {
@@ -114,6 +128,35 @@ export default function OrcamentoDetalhePage() {
     }
   }
 
+  function aoCriarCliente(c: Cliente) {
+    setClientes((prev) => [...prev, c].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setNovoCliente(false)
+    handleClienteChange(c.id)
+  }
+
+  function aoCriarServico(s: Servico) {
+    setServicos((prev) => [...prev, s])
+    setNovoServico(null)
+    handleAdicionarItem({ tipo: 'servico', id: s.id, nome: s.nome, preco: s.preco_unitario })
+  }
+
+  function aoCriarProduto(p: ProdutoIntro) {
+    setProdutos((prev) => [...prev, { id: p.id, nome: p.descricao, preco: Number(p.preco_venda) || 0 }])
+    setNovoProduto(null)
+    handleAdicionarItem({ tipo: 'produto', id: p.id, nome: p.descricao, preco: Number(p.preco_venda) || 0 })
+  }
+
+  async function abrirNovoProduto() {
+    const { data } = await createClient()
+      .from('produtos_fiscais')
+      .select(COLUNAS_PRODUTO)
+      .eq('user_id', userId)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .order('descricao')
+    setNovoProduto({ nome: buscaProduto.trim(), existentes: (data ?? []) as unknown as ProdutoIntro[] })
+  }
+
   async function handleStatusChange(status: StatusPedido) {
     if (!pedido) return
     try {
@@ -122,6 +165,12 @@ export default function OrcamentoDetalhePage() {
     } catch {
       _toast('Erro ao atualizar status', 'error')
     }
+  }
+
+  // Só envia o vendedor quando mudou: assim salvar o orçamento continua funcionando
+  // mesmo antes da coluna "vendedor" existir no banco.
+  function camposVendedor(): { vendedor?: string } {
+    return vendedor.trim() !== (pedido?.vendedor ?? '') ? { vendedor: vendedor.trim() } : {}
   }
 
   async function handleSalvarCabecalho() {
@@ -134,6 +183,7 @@ export default function OrcamentoDetalhePage() {
         condicoes_pagamento: condicoesPagamento || undefined,
         garantia: garantia || undefined,
         informacoes_adicionais: informacoesAdicionais || undefined,
+        ...camposVendedor(),
       })
       setPedido(atualizado)
     } catch (err) {
@@ -142,7 +192,7 @@ export default function OrcamentoDetalhePage() {
     }
   }
 
-  async function handleSalvarOrcamento() {
+  async function handleSalvarOrcamento(gerarDepois = false) {
     if (!pedido) return
     setSalvando(true)
     try {
@@ -153,11 +203,13 @@ export default function OrcamentoDetalhePage() {
         condicoes_pagamento: condicoesPagamento || undefined,
         garantia: garantia || undefined,
         informacoes_adicionais: informacoesAdicionais || undefined,
+        ...camposVendedor(),
         desconto_tipo: descontoTipo,
         desconto_valor: descontoValor,
       })
       const atualizado = await recalcularTotaisPedido(userId, pedido.id)
       setPedido(atualizado)
+      if (gerarDepois) { router.push(`/orcamentos/${pedido.id}/pdf`); return }
       _toast('Orçamento salvo!', 'success')
     } catch (err) {
       console.error('Erro ao salvar orçamento:', err)
@@ -274,7 +326,12 @@ export default function OrcamentoDetalhePage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label>Cliente</Label>
+              <div className="flex items-center justify-between">
+                <Label>Cliente</Label>
+                <button type="button" onClick={() => setNovoCliente(true)} className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline">
+                  <Plus className="h-3.5 w-3.5" />Novo cliente
+                </button>
+              </div>
               <Select value={pedido.cliente_id ?? ''} onValueChange={handleClienteChange}>
                 <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
                 <SelectContent>
@@ -295,6 +352,15 @@ export default function OrcamentoDetalhePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><Label>Referência</Label><Input value={referencia} onChange={(e) => setReferencia(e.target.value)} onBlur={handleSalvarCabecalho} placeholder="Opcional" /></div>
             <div><Label>Observações</Label><Input value={observacoes} onChange={(e) => setObservacoes(e.target.value)} onBlur={handleSalvarCabecalho} placeholder="Opcional" /></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Vendedor</Label>
+              <Input list="vendedores-sugeridos" value={vendedor} onChange={(e) => setVendedor(e.target.value)} onBlur={handleSalvarCabecalho} placeholder="Nome de quem está vendendo (aparece no orçamento)" />
+              <datalist id="vendedores-sugeridos">
+                {vendedoresSugeridos.map((v) => <option key={v} value={v} />)}
+              </datalist>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -345,7 +411,12 @@ export default function OrcamentoDetalhePage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Serviços</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>Serviços</CardTitle>
+          <Button type="button" size="sm" variant="outline" onClick={() => setNovoServico({ nome: buscaServico.trim() })}>
+            <Plus className="h-4 w-4 mr-1" />Novo serviço
+          </Button>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -481,7 +552,12 @@ export default function OrcamentoDetalhePage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Produtos</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>Produtos</CardTitle>
+          <Button type="button" size="sm" variant="outline" onClick={abrirNovoProduto}>
+            <Plus className="h-4 w-4 mr-1" />Novo produto
+          </Button>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -659,11 +735,30 @@ export default function OrcamentoDetalhePage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-center sm:justify-end">
-        <Button size="lg" onClick={handleSalvarOrcamento} disabled={salvando} className="w-full sm:w-auto">
+      <div className="flex flex-col-reverse sm:flex-row justify-center sm:justify-end gap-3">
+        <Button size="lg" variant="outline" onClick={() => handleSalvarOrcamento(true)} disabled={salvando} className="w-full sm:w-auto">
+          <FileOutput className="h-4 w-4 mr-2" />
+          Gerar Orçamento
+        </Button>
+        <Button size="lg" onClick={() => handleSalvarOrcamento()} disabled={salvando} className="w-full sm:w-auto">
           {salvando ? 'Salvando...' : 'Salvar Orçamento'}
         </Button>
       </div>
+
+      {novoCliente && <NovoClienteDialog userId={userId} onClose={() => setNovoCliente(false)} onCriado={aoCriarCliente} />}
+      {novoServico && <NovoServicoDialog userId={userId} nomeInicial={novoServico.nome} onClose={() => setNovoServico(null)} onCriado={aoCriarServico} />}
+      {novoProduto && (
+        <ProdutoFormDialog
+          modo="novo"
+          nomeInicial={novoProduto.nome}
+          produtosExistentes={novoProduto.existentes}
+          margemPadrao={30}
+          onClose={() => setNovoProduto(null)}
+          onSalvo={aoCriarProduto}
+          onUsarExistente={(p) => aoCriarProduto(p)}
+          rotuloUsarExistente="Sim, usar o produto que já existe neste orçamento"
+        />
+      )}
     </div>
   )
 }

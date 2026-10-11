@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { ArrowLeftRight, TrendingUp, TrendingDown, DollarSign, Calendar } from 'lucide-react'
+import { ArrowLeftRight, TrendingUp, TrendingDown, DollarSign, Calendar, Trash2 } from 'lucide-react'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
@@ -44,6 +44,7 @@ export default function FluxoCaixaPage() {
   const [saldoTotal, setSaldoTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState('')
+  const [removendo, setRemovendo] = useState(false)
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -134,6 +135,10 @@ export default function FluxoCaixaPage() {
           saida: !isCredito ? m.valor : 0,
           saldo: m.saldo_posterior,
           realizado: true,
+          // "Pagamento — parcela #..." sem a parcela: a conta foi excluída antes do estorno automático
+          orfao: /^(pagamento|recebimento)\s*—\s*parcela/i.test(m.descricao ?? '') && !m.parcela_pagar_id && !m.parcela_receber_id
+            ? { movId: m.id, contaCorrenteId: m.conta_corrente_id, valor: Number(m.valor), credito: isCredito }
+            : undefined,
         })
       }
 
@@ -177,6 +182,30 @@ export default function FluxoCaixaPage() {
   }, [userId, visao, mesOffset, contaFiltro, customStart, customEnd])
 
   useEffect(() => { fetchFluxo() }, [fetchFluxo])
+
+  // Remove do extrato lançamentos de contas já excluídas e devolve o valor ao saldo da conta corrente
+  async function removerOrfaos(itens: FluxoCaixaItem[]) {
+    const orfaos = itens.filter((i) => i.orfao)
+    if (orfaos.length === 0) return
+    const total = orfaos.reduce((s, i) => s + (i.orfao!.credito ? i.orfao!.valor : -i.orfao!.valor), 0)
+    if (!confirm(`Remover ${orfaos.length} lançamento(s) de contas já excluídas?\n\nO saldo das contas correntes será ajustado em ${formatCurrency(-total)}.`)) return
+    setRemovendo(true)
+    try {
+      const supabase = createClient()
+      for (const { orfao } of orfaos) {
+        const { data: cc } = await supabase.from('contas_correntes').select('saldo_atual').eq('id', orfao!.contaCorrenteId).single()
+        if (cc) {
+          await supabase.from('contas_correntes')
+            .update({ saldo_atual: Number(cc.saldo_atual) + (orfao!.credito ? -orfao!.valor : orfao!.valor) })
+            .eq('id', orfao!.contaCorrenteId)
+        }
+        await supabase.from('movimentacoes_conta').delete().eq('id', orfao!.movId).eq('user_id', userId)
+      }
+      await Promise.all([fetchFluxo(), fetchContas()])
+    } finally {
+      setRemovendo(false)
+    }
+  }
 
   const totalEntradas = fluxo.filter(i => i.realizado).reduce((s, i) => s + i.entrada, 0)
   const totalSaidas = fluxo.filter(i => i.realizado).reduce((s, i) => s + i.saida, 0)
@@ -332,6 +361,17 @@ export default function FluxoCaixaPage() {
       <Card>
         <CardHeader>
           <CardTitle>Extrato Detalhado</CardTitle>
+          {fluxo.some((i) => i.orfao) && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              <span>
+                <strong>{fluxo.filter((i) => i.orfao).length}</strong> lançamento(s) pertencem a contas a pagar/receber que já foram excluídas.
+              </span>
+              <button type="button" disabled={removendo} onClick={() => removerOrfaos(fluxo)}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60">
+                {removendo ? 'Removendo...' : 'Remover todos e ajustar saldo'}
+              </button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -352,6 +392,7 @@ export default function FluxoCaixaPage() {
                     <th className="text-right px-4 py-3">Entradas</th>
                     <th className="text-right px-4 py-3">Saídas</th>
                     <th className="text-center px-4 py-3">Tipo</th>
+                    <th className="px-4 py-3 w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -372,6 +413,15 @@ export default function FluxoCaixaPage() {
                           <span className={`text-xs px-2 py-0.5 rounded-full ${item.realizado ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                             {item.realizado ? 'Realizado' : 'Projetado'}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {item.orfao && (
+                            <button type="button" disabled={removendo} onClick={() => removerOrfaos([item])}
+                              title="Conta já excluída — remover este lançamento e ajustar o saldo"
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors not-italic">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     )

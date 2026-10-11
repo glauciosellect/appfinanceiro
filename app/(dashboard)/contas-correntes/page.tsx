@@ -3,14 +3,16 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Landmark, ArrowLeftRight, RefreshCw } from 'lucide-react'
+import { Plus, Landmark, ArrowLeftRight, RefreshCw, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   getContasCorrentes,
+  getContaById,
   createConta,
   updateConta,
   deleteConta,
   getExtratoConta,
+  excluirMovimentacoes,
   transferirEntreContas,
 } from '@/lib/supabase/contas-correntes'
 import { Button } from '@/components/ui/button'
@@ -21,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
+import { useSelecao } from '@/lib/hooks/use-selecao'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -78,6 +81,10 @@ export default function ContasCorrentesPage() {
   const [editandoConta, setEditandoConta] = useState<ContaCorrente | undefined>()
   const [userId, setUserId] = useState('')
   const { toast: _toast } = useToast()
+  const selecao = useSelecao()
+  const [dialogLimpar, setDialogLimpar] = useState(false)
+  const [ajustarSaldo, setAjustarSaldo] = useState(true)
+  const [limpando, setLimpando] = useState(false)
 
   const formConta = useForm<ContaFormValues>({ resolver: zodResolver(schemaContaForm) })
   const formTransf = useForm<TransferenciaFormValues>({
@@ -107,6 +114,7 @@ export default function ContasCorrentesPage() {
   useEffect(() => { fetchContas() }, [fetchContas])
 
   async function fetchExtrato(conta: ContaCorrente) {
+    if (conta.id !== contaSelecionada?.id) selecao.limpar()
     setContaSelecionada(conta)
     setLoadingExtrato(true)
     try {
@@ -180,6 +188,25 @@ export default function ContasCorrentesPage() {
       chave_pix: c.chave_pix ?? '',
     })
     setDialogConta(true)
+  }
+
+  // Apaga só os lançamentos marcados do extrato; a conta continua existindo
+  async function handleLimparLancamentos() {
+    if (!contaSelecionada) return
+    setLimpando(true)
+    try {
+      await excluirMovimentacoes(userId, contaSelecionada.id, [...selecao.ids], ajustarSaldo)
+      _toast(`${selecao.ids.size} lançamento(s) excluído(s)`, 'success')
+      selecao.limpar()
+      setDialogLimpar(false)
+      await fetchContas()
+      const atualizada = await getContaById(userId, contaSelecionada.id)
+      await fetchExtrato(atualizada ?? contaSelecionada)
+    } catch {
+      _toast('Erro ao excluir lançamentos', 'error')
+    } finally {
+      setLimpando(false)
+    }
   }
 
   async function handleDeleteConta(id: string) {
@@ -289,6 +316,31 @@ export default function ContasCorrentesPage() {
         </div>
       )}
 
+      <Dialog open={dialogLimpar} onOpenChange={(aberto) => { if (!limpando) setDialogLimpar(aberto) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Excluir lançamentos do extrato</DialogTitle></DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p>
+              Você vai apagar <strong>{selecao.ids.size}</strong> lançamento(s) de <strong>{contaSelecionada?.nome_apelido}</strong>.
+              A conta continua existindo. Isso também tira os lançamentos do Fluxo de Caixa e não pode ser desfeito.
+            </p>
+            <label className="flex items-start gap-2 cursor-pointer rounded-lg border border-gray-200 p-3">
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-blue-600" checked={ajustarSaldo} onChange={(e) => setAjustarSaldo(e.target.checked)} />
+              <span>
+                <strong>Ajustar o saldo da conta</strong>
+                <span className="block text-xs text-gray-500">Desfaz o efeito desses lançamentos no saldo. Desmarque para só apagar as linhas e manter o saldo como está.</span>
+              </span>
+            </label>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setDialogLimpar(false)} disabled={limpando}>Cancelar</Button>
+              <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white" onClick={handleLimparLancamentos} disabled={limpando}>
+                {limpando ? 'Excluindo...' : 'Excluir lançamentos'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Extrato */}
       {contaSelecionada && (
         <Card>
@@ -298,7 +350,14 @@ export default function ContasCorrentesPage() {
                 <RefreshCw className="h-4 w-4 text-blue-600" />
                 Extrato — {contaSelecionada.nome_apelido}
               </CardTitle>
-              <p className="text-sm text-gray-500">{extrato.length} movimentações</p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-gray-500">{extrato.length} movimentações</p>
+                {selecao.ids.size > 0 && (
+                  <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => { setAjustarSaldo(true); setDialogLimpar(true) }}>
+                    <Trash2 className="h-4 w-4 mr-1" />Excluir {selecao.ids.size} lançamento(s)
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -313,6 +372,11 @@ export default function ContasCorrentesPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide border-b border-gray-100">
+                      <th className="px-4 py-3 w-10">
+                        <input type="checkbox" className="h-4 w-4 cursor-pointer accent-blue-600" aria-label="Selecionar todos"
+                          checked={extrato.length > 0 && extrato.every((m) => selecao.ids.has(m.id))}
+                          onChange={(e) => selecao.alternarTodos(extrato.map((m) => m.id), e.target.checked)} />
+                      </th>
                       <th className="text-left px-6 py-3">Data</th>
                       <th className="text-left px-4 py-3">Descrição</th>
                       <th className="text-left px-4 py-3">Tipo</th>
@@ -324,7 +388,11 @@ export default function ContasCorrentesPage() {
                     {extrato.map((m) => {
                       const isCredito = m.tipo === 'credito' || m.tipo === 'transferencia_entrada'
                       return (
-                        <tr key={m.id} className="hover:bg-gray-50">
+                        <tr key={m.id} className={`hover:bg-gray-50 ${selecao.ids.has(m.id) ? 'bg-blue-50/60' : ''}`}>
+                          <td className="px-4 py-3">
+                            <input type="checkbox" className="h-4 w-4 cursor-pointer accent-blue-600" aria-label="Selecionar lançamento"
+                              checked={selecao.ids.has(m.id)} onChange={() => selecao.alternar(m.id)} />
+                          </td>
                           <td className="px-6 py-3 text-gray-500">{formatDate(m.data_movimentacao)}</td>
                           <td className="px-4 py-3 text-gray-900">{m.descricao}</td>
                           <td className="px-4 py-3">

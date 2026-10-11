@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Printer, Copy, Loader2, Package, Wrench, Share2, Download } from 'lucide-react'
@@ -28,6 +28,9 @@ export default function OrcamentoPdfPage() {
   const [loading, setLoading] = useState(true)
   const [gerandoPdf, setGerandoPdf] = useState(false)
   const [baixandoPdf, setBaixandoPdf] = useState(false)
+  // PDF gerado em segundo plano assim que a tela abre: compartilhar precisa ser imediato,
+  // porque o navegador só libera o compartilhamento logo após o clique.
+  const pdfPronto = useRef<File | null>(null)
 
   const fetchTudo = useCallback(async () => {
     if (!pedidoId) return
@@ -57,6 +60,25 @@ export default function OrcamentoPdfPage() {
 
   useEffect(() => { fetchTudo() }, [fetchTudo])
 
+  // O título da página vira o nome sugerido do arquivo ao salvar em PDF
+  useEffect(() => {
+    if (!pedido) return
+    const anterior = document.title
+    document.title = `Orçamento ${pedido.numero_sequencial}`
+    return () => { document.title = anterior }
+  }, [pedido])
+
+  useEffect(() => {
+    if (loading || !pedido) return
+    pdfPronto.current = null
+    const t = setTimeout(() => {
+      gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
+        .then((f) => { pdfPronto.current = f })
+        .catch(() => { pdfPronto.current = null })
+    }, 600)
+    return () => clearTimeout(t)
+  }, [loading, pedido, itens, perfil, fiscalConfig])
+
   const linkPublico = pedido && typeof window !== 'undefined'
     ? `${window.location.origin}/orcamento/${pedido.token_publico}`
     : ''
@@ -71,7 +93,7 @@ export default function OrcamentoPdfPage() {
     }
   }
 
-  const podeCompartilhar = typeof navigator !== 'undefined' && !!navigator.share
+  const podeCompartilhar = true
 
   async function compartilharApenasLink() {
     if (!pedido || !linkPublico) return
@@ -79,6 +101,12 @@ export default function OrcamentoPdfPage() {
     // campos vêm preenchidos, o app costuma concatenar tudo num único bloco
     // de texto solto (o link deixa de virar card/clicável automaticamente).
     // Passando só `url`, o próprio app de destino trata como link de verdade.
+    if (!navigator.share) {
+      // Navegador sem compartilhamento nativo (ex.: alguns desktops): copia o link
+      await navigator.clipboard.writeText(linkPublico)
+      toast('Link copiado! Cole no WhatsApp ou e-mail do cliente.', 'success')
+      return
+    }
     await navigator.share({
       title: `Orçamento Nº ${pedido.numero_sequencial}`,
       url: linkPublico,
@@ -89,12 +117,16 @@ export default function OrcamentoPdfPage() {
     if (!pedido || !linkPublico) return
     setGerandoPdf(true)
     try {
-      let arquivoPdf: File | null = null
-      try {
-        arquivoPdf = await gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
-      } catch {
-        // Falha na geração do PDF (html2canvas/jsPDF) — segue para o fallback de link.
-        arquivoPdf = null
+      // Usa o PDF já pronto (compartilhar tem de acontecer logo após o clique);
+      // só gera na hora se ele ainda não ficou pronto.
+      let arquivoPdf: File | null = pdfPronto.current
+      if (!arquivoPdf) {
+        try {
+          arquivoPdf = await gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
+        } catch {
+          // Falha na geração do PDF (html2canvas/jsPDF) — segue para o fallback de link.
+          arquivoPdf = null
+        }
       }
 
       const podeCompartilharArquivo = arquivoPdf
@@ -121,7 +153,13 @@ export default function OrcamentoPdfPage() {
     } catch (err) {
       // AbortError: usuário cancelou o compartilhamento nativo — não é um erro real, não mostra toast.
       if (err instanceof Error && err.name === 'AbortError') return
-      toast('Erro ao compartilhar', 'error')
+      // Último recurso: se nada funcionou, ao menos copia o link
+      try {
+        await navigator.clipboard.writeText(linkPublico)
+        toast('Não foi possível abrir o compartilhamento — o link foi copiado.', 'success')
+      } catch {
+        toast('Erro ao compartilhar', 'error')
+      }
     } finally {
       setGerandoPdf(false)
     }
@@ -131,7 +169,7 @@ export default function OrcamentoPdfPage() {
     if (!pedido) return
     setBaixandoPdf(true)
     try {
-      const arquivoPdf = await gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
+      const arquivoPdf = pdfPronto.current ?? await gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
       const url = URL.createObjectURL(arquivoPdf)
       const link = document.createElement('a')
       link.href = url
@@ -140,7 +178,8 @@ export default function OrcamentoPdfPage() {
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-    } catch {
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err)
       toast('Erro ao gerar PDF', 'error')
     } finally {
       setBaixandoPdf(false)
@@ -193,6 +232,8 @@ export default function OrcamentoPdfPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-3 print:max-w-none print:space-y-0">
+      {/* margem 0 na página remove o cabeçalho e o rodapé que o navegador imprime (título do site, data e endereço) */}
+      <style>{`@media print { @page { size: A4; margin: 0 } body { margin: 0 } #orcamento-doc { margin: 10mm; } }`}</style>
 
       {/* Barra de ações */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 print:hidden">
@@ -257,6 +298,12 @@ export default function OrcamentoPdfPage() {
               <p className="text-[8px] text-gray-500 uppercase font-bold leading-none mb-0.5">Data</p>
               <p className="font-bold text-gray-900 text-sm">{formatDate(pedido.data_pedido)}</p>
             </div>
+            {pedido.vendedor && (
+              <div className="flex-1 px-3 py-2 text-center">
+                <p className="text-[8px] text-gray-500 uppercase font-bold leading-none mb-0.5">Vendedor</p>
+                <p className="font-bold text-gray-900 text-sm break-words">{pedido.vendedor}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -405,18 +452,6 @@ export default function OrcamentoPdfPage() {
             </div>
           </div>
         )}
-
-        {/* Rodapé — link público */}
-        <div className="p-4 space-y-1 text-center">
-          <p className="text-[10px] text-gray-500">Envie este link ao cliente para aceite online.</p>
-          <a href={linkPublico} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-blue-700 underline break-all">
-            {linkPublico}
-          </a>
-          <p className="text-[9px] text-gray-400 italic pt-2">
-            Orçamento gerado por {nomeEmpresa}
-            {fiscalConfig?.cnpj ? ` — CNPJ ${fiscalConfig.cnpj}` : ''}
-          </p>
-        </div>
 
       </div>
     </div>
