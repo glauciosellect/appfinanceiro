@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
+import { useSelecao } from '@/lib/hooks/use-selecao'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -100,6 +101,15 @@ function proximaDataVencimento(diaVencimento: number): string {
   return candidata.toISOString().split('T')[0]
 }
 
+function CaixaSelecionarTodas({ ids, selecao }: { ids: string[]; selecao: ReturnType<typeof useSelecao> }) {
+  const unicos = [...new Set(ids)]
+  const todas = unicos.length > 0 && unicos.every((id) => selecao.ids.has(id))
+  return (
+    <input type="checkbox" className="h-4 w-4 cursor-pointer accent-red-600" aria-label="Selecionar todas"
+      checked={todas} onChange={() => selecao.alternarTodos(unicos, !todas)} />
+  )
+}
+
 export default function ContasPagarPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -118,6 +128,8 @@ export default function ContasPagarPage() {
   const [userId, setUserId] = useState('')
   const [periodo, setPeriodo] = useState<'hoje' | 'semana' | 'mes' | 'total'>('mes')
   const { toast: _toast } = useToast()
+  const selecao = useSelecao()
+  const [excluindoLote, setExcluindoLote] = useState(false)
 
   const formNova = useForm<ContaPagarForm>({
     resolver: zodResolver(schemaContaPagar),
@@ -325,7 +337,7 @@ export default function ContasPagarPage() {
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="flex rounded-xl border border-gray-200 overflow-hidden">
           {(['parcelas', 'contas'] as const).map((tab) => (
-            <button key={tab} onClick={() => setAba(tab)}
+            <button key={tab} onClick={() => { setAba(tab); selecao.limpar() }}
               className={`px-4 py-2 text-sm font-medium transition-colors ${aba === tab ? 'bg-red-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
               {tab === 'parcelas' ? 'Parcelas' : 'Contas'}
             </button>
@@ -351,6 +363,34 @@ export default function ContasPagarPage() {
             {aba === 'parcelas' ? 'Parcelas a Pagar' : 'Contas a Pagar'}
           </CardTitle>
         </CardHeader>
+        {selecao.ids.size > 0 && (
+          <div className="mx-6 mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm">
+            <span className="text-blue-900">
+              <strong>{selecao.ids.size}</strong> conta(s) selecionada(s)
+              {aba === 'parcelas' && <span className="text-blue-700"> — a exclusão remove a nota completa, com todas as parcelas</span>}
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={selecao.limpar} disabled={excluindoLote}>Limpar seleção</Button>
+              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" disabled={excluindoLote}
+                onClick={async () => {
+                  const n = selecao.ids.size
+                  if (!confirm(`EXCLUIR permanentemente ${n} conta(s) e todas as suas parcelas? Esta ação não pode ser desfeita.`)) return
+                  setExcluindoLote(true)
+                  try {
+                    const resultados = await Promise.allSettled([...selecao.ids].map((id) => excluirContaPagar(userId, id)))
+                    const falhas = resultados.filter((r) => r.status === 'rejected').length
+                    _toast(falhas ? `${n - falhas} excluída(s); ${falhas} com erro` : `${n} conta(s) excluída(s)`, falhas ? 'error' : 'success')
+                    selecao.limpar()
+                    fetchTudo()
+                  } finally {
+                    setExcluindoLote(false)
+                  }
+                }}>
+                <Trash2 className="h-4 w-4 mr-1" />Excluir selecionadas
+              </Button>
+            </div>
+          </div>
+        )}
         <CardContent className="p-0">
           {loading ? (
             <div className="p-6 space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}</div>
@@ -361,6 +401,7 @@ export default function ContasPagarPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide border-b border-gray-100">
+                    <th className="px-4 py-3 w-10"><CaixaSelecionarTodas ids={parcelasPeriodo.map((p) => p.conta_pagar_id)} selecao={selecao} /></th>
                     <th className="text-left px-6 py-3">Fornecedor</th>
                     <th className="text-left px-4 py-3 hidden md:table-cell">Descrição</th>
                     <th className="text-center px-4 py-3">Parcela</th>
@@ -371,7 +412,8 @@ export default function ContasPagarPage() {
                   </tr></thead>
                   <tbody className="divide-y divide-gray-50">
                     {parcelasPeriodo.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50">
+                      <tr key={p.id} className={`hover:bg-gray-50 ${selecao.ids.has(p.conta_pagar_id) ? 'bg-blue-50/60' : ''}`}>
+                        <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 cursor-pointer accent-red-600" aria-label="Selecionar" checked={selecao.ids.has(p.conta_pagar_id)} onChange={() => selecao.alternar(p.conta_pagar_id)} /></td>
                         <td className="px-6 py-3 font-medium text-gray-900">{p.fornecedor_nome ?? '—'}</td>
                         <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.conta_descricao ?? '—'}</td>
                         <td className="px-4 py-3 text-center text-gray-500">{p.numero_parcela}/{p.total_parcelas}</td>
@@ -411,6 +453,7 @@ export default function ContasPagarPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide border-b border-gray-100">
+                    <th className="px-4 py-3 w-10"><CaixaSelecionarTodas ids={contas.map((c) => c.id)} selecao={selecao} /></th>
                     <th className="text-left px-6 py-3">Fornecedor</th>
                     <th className="text-left px-4 py-3">Descrição</th>
                     <th className="text-right px-4 py-3">Total</th>
@@ -420,7 +463,8 @@ export default function ContasPagarPage() {
                   </tr></thead>
                   <tbody className="divide-y divide-gray-50">
                     {contas.map((c) => (
-                      <tr key={c.id} className="hover:bg-gray-50">
+                      <tr key={c.id} className={`hover:bg-gray-50 ${selecao.ids.has(c.id) ? 'bg-blue-50/60' : ''}`}>
+                        <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 cursor-pointer accent-red-600" aria-label="Selecionar" checked={selecao.ids.has(c.id)} onChange={() => selecao.alternar(c.id)} /></td>
                         <td className="px-6 py-3 font-medium text-gray-900">{c.fornecedores?.nome ?? '—'}</td>
                         <td className="px-4 py-3 text-gray-700">{c.descricao}</td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(c.valor_total)}</td>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { consultarNFe } from '@/lib/fiscal/contora'
+import { baixarEstoqueNfe } from '@/lib/estoque/movimentos'
 
 // Consulta o status atual de uma NF-e na Contora/SEFAZ — usado quando a
 // emissão original ficou "processando" (a espera de até 20s em
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
   const [{ data: nota }, { data: fiscalConfig }] = await Promise.all([
-    supabase.from('nfe_emitidas').select('contora_document_id').eq('id', id).eq('user_id', user.id).single(),
+    supabase.from('nfe_emitidas').select('contora_document_id, numero, serie, itens, status').eq('id', id).eq('user_id', user.id).single(),
     supabase.from('fiscal_config').select('contora_company_id, ambiente').eq('user_id', user.id).single(),
   ])
 
@@ -63,6 +64,18 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
 
   if (dbError) console.error('[sincronizar-nfe] erro ao atualizar banco:', dbError)
+
+  // A nota acabou de ser autorizada (passou de outro status para emitida): dá baixa no
+  // estoque uma única vez. Nota que já estava emitida foi baixada na própria emissão.
+  if (!dbError && status === 'emitida' && nota.status !== 'emitida') {
+    const numero = retorno.numero ? Number(retorno.numero) : nota.numero
+    const serie = retorno.serie ?? nota.serie
+    const itens = (nota.itens as Array<{ codigo_produto?: string; quantidade_comercial?: number }> | null) ?? []
+    await baixarEstoqueNfe(supabase, user.id, `NF-e ${serie}/${numero} (saída)`, itens.map((it) => ({
+      codigo: it.codigo_produto,
+      quantidade: Number(it.quantidade_comercial ?? 0),
+    })))
+  }
   console.log('[sincronizar-nfe] id:', id, '| retorno:', JSON.stringify(retorno))
 
   return NextResponse.json({ ok: true, status, retorno })

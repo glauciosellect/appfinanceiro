@@ -2,8 +2,9 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Package, AlertTriangle, ArrowUp, ArrowDown, ClipboardEdit } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Package, AlertTriangle, ArrowUp, ArrowDown, ClipboardEdit, Search, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -34,11 +35,33 @@ interface MovimentoEstoqueRow {
   nf_referencia: string | null
 }
 
+type ColunaOrdem = 'codigo' | 'descricao' | 'unidade' | 'estoque' | 'estoque_minimo' | 'preco_venda' | 'total' | 'situacao'
+
+const COLUNAS: { chave: ColunaOrdem; rotulo: string; direita?: boolean }[] = [
+  { chave: 'codigo', rotulo: 'Código' },
+  { chave: 'descricao', rotulo: 'Produto' },
+  { chave: 'unidade', rotulo: 'Un.' },
+  { chave: 'estoque', rotulo: 'Estoque Atual', direita: true },
+  { chave: 'estoque_minimo', rotulo: 'Mínimo', direita: true },
+  { chave: 'preco_venda', rotulo: 'Valor Unit.', direita: true },
+  { chave: 'total', rotulo: 'Total', direita: true },
+  { chave: 'situacao', rotulo: 'Situação' },
+]
+
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
 export default function EstoquePage() {
   const { toast: _toast } = useToast()
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([])
   const [movimentos, setMovimentos] = useState<MovimentoEstoqueRow[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Busca rápida, filtro "abaixo do mínimo" e ordenação clicando no título da coluna
+  const [busca, setBusca] = useState('')
+  // O alerta do Dashboard ("N abaixo do mínimo") abre esta tela já filtrada (?filtro=baixo)
+  const [somenteBaixo, setSomenteBaixo] = useState(useSearchParams().get('filtro') === 'baixo')
+  const [ordem, setOrdem] = useState<{ coluna: ColunaOrdem; dir: 'asc' | 'desc' }>({ coluna: 'descricao', dir: 'asc' })
+
 
   const [dialogAjuste, setDialogAjuste] = useState(false)
   const [produtoIdAjuste, setProdutoIdAjuste] = useState('')
@@ -101,7 +124,41 @@ export default function EstoquePage() {
     }
   }
 
+  function ordenarPor(coluna: ColunaOrdem) {
+    setOrdem((o) => (o.coluna === coluna ? { coluna, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { coluna, dir: 'asc' }))
+  }
+
   const abaixoMinimo = produtos.filter((p) => p.estoque <= p.estoque_minimo)
+
+  const lista = useMemo(() => {
+    const termo = semAcento(busca.trim())
+    const filtrados = produtos.filter((p) => {
+      if (somenteBaixo && !(p.estoque <= p.estoque_minimo)) return false
+      if (!termo) return true
+      return semAcento(p.descricao).includes(termo) || semAcento(p.codigo).includes(termo) || (p.ncm ?? '').includes(termo)
+    })
+    const valor = (p: ProdutoEstoque): string | number => {
+      switch (ordem.coluna) {
+        case 'codigo': return p.codigo
+        case 'descricao': return p.descricao
+        case 'unidade': return p.unidade
+        case 'estoque': return Number(p.estoque)
+        case 'estoque_minimo': return Number(p.estoque_minimo)
+        case 'preco_venda': return Number(p.preco_venda)
+        case 'total': return Number(p.estoque) * Number(p.preco_venda)
+        case 'situacao': return p.estoque <= p.estoque_minimo ? 0 : 1
+      }
+    }
+    const fator = ordem.dir === 'asc' ? 1 : -1
+    return [...filtrados].sort((a, b) => {
+      const va = valor(a)
+      const vb = valor(b)
+      const cmp = typeof va === 'number' && typeof vb === 'number'
+        ? va - vb
+        : String(va).localeCompare(String(vb), 'pt-BR', { numeric: true, sensitivity: 'base' })
+      return cmp * fator || a.descricao.localeCompare(b.descricao, 'pt-BR')
+    })
+  }, [produtos, busca, somenteBaixo, ordem])
   const valorTotal = produtos.reduce((s, p) => s + p.estoque * p.preco_venda, 0)
 
   if (loading) {
@@ -142,7 +199,10 @@ export default function EstoquePage() {
           { label: 'Abaixo do Mínimo',    value: String(abaixoMinimo.length),                                 sub: 'precisam reposição', alert: abaixoMinimo.length > 0 },
           { label: 'Valor em Estoque',    value: formatCurrency(valorTotal),                                   sub: 'pelo preço de venda' },
         ].map(({ label, value, sub, alert }) => (
-          <Card key={label} className={cn(alert && 'border-yellow-300 dark:border-yellow-700')}>
+          <Card key={label}
+            onClick={alert ? () => setSomenteBaixo((v) => !v) : undefined}
+            title={alert ? 'Clique para listar só os produtos abaixo do mínimo' : undefined}
+            className={cn(alert && 'border-yellow-300 dark:border-yellow-700 cursor-pointer hover:shadow-md transition-shadow')}>
             <CardContent className="pt-6">
               <p className={cn('text-sm mb-1', alert ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400')}>{label}</p>
               <p className={cn('text-2xl font-bold', alert ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-900 dark:text-white')}>{value}</p>
@@ -160,24 +220,59 @@ export default function EstoquePage() {
 
       {/* Posição de estoque */}
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <CardTitle className="text-base">Posição de Estoque</CardTitle>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                className="pl-9 pr-9"
+                placeholder="Busca rápida: nome, código ou NCM..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+              {busca && (
+                <button type="button" onClick={() => setBusca('')} title="Limpar busca"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant={somenteBaixo ? 'outline' : 'default'} onClick={() => setSomenteBaixo(false)}>
+                Todos ({produtos.length})
+              </Button>
+              <Button type="button" size="sm" variant={somenteBaixo ? 'default' : 'outline'} onClick={() => setSomenteBaixo(true)}>
+                <AlertTriangle className="h-3.5 w-3.5 mr-1" />Abaixo do mínimo ({abaixoMinimo.length})
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                  {['Código', 'Produto', 'Un.', 'Estoque Atual', 'Mínimo', 'Valor Unit.', 'Total', 'Situação'].map((h) => (
-                    <th key={h} className={cn('px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
-                      ['Estoque Atual','Mínimo','Valor Unit.','Total'].includes(h) ? 'text-right' : 'text-left')}>
-                      {h}
-                    </th>
-                  ))}
+                  {COLUNAS.map(({ chave, rotulo, direita }) => {
+                    const ativa = ordem.coluna === chave
+                    const Seta = !ativa ? ChevronsUpDown : ordem.dir === 'asc' ? ChevronUp : ChevronDown
+                    return (
+                      <th key={chave} aria-sort={ativa ? (ordem.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                        className={cn('px-6 py-3 text-xs font-semibold uppercase tracking-wide', direita ? 'text-right' : 'text-left')}>
+                        <button type="button" onClick={() => ordenarPor(chave)}
+                          title={`Ordenar por ${rotulo} (A-Z / Z-A)`}
+                          className={cn('inline-flex items-center gap-1 uppercase tracking-wide hover:text-gray-900 dark:hover:text-white',
+                            ativa ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400')}>
+                          {rotulo}
+                          <Seta className={cn('h-3.5 w-3.5', !ativa && 'opacity-40')} />
+                        </button>
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {produtos.map((p) => {
+                {lista.map((p) => {
                   const abaixo = p.estoque <= p.estoque_minimo
                   return (
                     <tr key={p.id} className={cn('hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors', abaixo && 'bg-yellow-50/50 dark:bg-yellow-900/10')}>
@@ -211,6 +306,13 @@ export default function EstoquePage() {
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
                       Nenhum produto cadastrado. Cadastre em Fiscal → Produtos.
+                    </td>
+                  </tr>
+                )}
+                {produtos.length > 0 && lista.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
+                      Nenhum produto encontrado com esse filtro.
                     </td>
                   </tr>
                 )}

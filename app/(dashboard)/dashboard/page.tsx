@@ -334,7 +334,7 @@ export default function DashboardPage() {
 
       {/* ── Estoque ── */}
       {estoque !== null && (
-        <Link href="/estoque">
+        <Link href={estoque.abaixoMinimo > 0 ? '/estoque?filtro=baixo' : '/estoque'} title={estoque.abaixoMinimo > 0 ? 'Ver só os produtos abaixo do mínimo' : undefined}>
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-purple-500">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center justify-between">

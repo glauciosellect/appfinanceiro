@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, AlertCircle, Truck } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Search, Send, Save, CheckCircle2, AlertCircle, Truck, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { getTransportadoras } from '@/lib/supabase/transportadoras'
+import { maskCNPJ, maskCPF, maskPhone, maskCEP } from '@/lib/masks'
 import type { NFeRecord } from '@/lib/supabase/nfe'
 import type { Transportadora } from '@/types'
 
@@ -87,6 +88,11 @@ export default function NovaNFePage() {
   const [presencaComprador, setPresencaComprador] = useState('9')
 
   const [clientes, setClientes] = useState<ClienteRow[]>([])
+  // Consulta automática do CNPJ na Receita Federal (igual ao cadastro de clientes)
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false)
+  const [avisoCnpj, setAvisoCnpj] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+  const cnpjDigitado = useRef(false)
+  const ultimoCnpjBuscado = useRef('')
   const [showDropCnpj, setShowDropCnpj] = useState(false)
   const [showDropRazao, setShowDropRazao] = useState(false)
   const refCnpj = useRef<HTMLDivElement>(null)
@@ -198,6 +204,49 @@ export default function NovaNFePage() {
       .then(({ data }) => setClientes((data ?? []) as ClienteRow[]))
   }, [userId])
 
+  // Digitou os 14 dígitos: usa o cliente já cadastrado ou busca na Receita Federal
+  useEffect(() => {
+    if (!cnpjDigitado.current) return
+    const digits = cnpj.replace(/\D/g, '')
+    if (digits.length !== 14) { ultimoCnpjBuscado.current = ''; setAvisoCnpj(null); return }
+    if (digits === ultimoCnpjBuscado.current) return
+    ultimoCnpjBuscado.current = digits
+
+    const cadastrado = clientes.find((c) => (c.cpf_cnpj ?? '').replace(/\D/g, '') === digits)
+    if (cadastrado) {
+      selecionarCliente(cadastrado)
+      setAvisoCnpj({ tipo: 'ok', texto: 'Cliente já cadastrado — dados preenchidos.' })
+      return
+    }
+
+    setBuscandoCnpj(true)
+    setAvisoCnpj(null)
+    fetch(`/api/cnpj/${digits}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error('nao-encontrado')
+        return res.json() as Promise<{
+          razaoSocial: string; logradouro: string; numero: string; bairro: string; municipio: string
+          uf: string; cep: string; telefone: string; email: string; situacao: string
+        }>
+      })
+      .then((d) => {
+        if (d.razaoSocial) setDestinatario(d.razaoSocial)
+        setEmail(d.email ? d.email.toLowerCase() : '')
+        setTelefone(d.telefone ? maskPhone(d.telefone.replace(/\D/g, '')) : '')
+        setEndLogradouro(d.logradouro)
+        setEndNumero(d.numero)
+        setEndBairro(d.bairro)
+        setEndMunicipio(d.municipio)
+        setEndUf(d.uf)
+        setEndCep(d.cep ? maskCEP(d.cep) : '')
+        setConsumidorFinal(false)
+        const situacao = d.situacao && d.situacao.toUpperCase() !== 'ATIVA' ? ` Atenção: situação cadastral ${d.situacao}.` : ''
+        setAvisoCnpj({ tipo: 'ok', texto: `Dados carregados da Receita Federal. O cliente será cadastrado ao emitir a nota.${situacao}` })
+      })
+      .catch(() => setAvisoCnpj({ tipo: 'erro', texto: 'CNPJ não encontrado na Receita Federal — preencha os dados manualmente.' }))
+      .finally(() => setBuscandoCnpj(false))
+  }, [cnpj, clientes])
+
   const fetchTransportadoras = useCallback(async () => {
     if (!userId) return
     try {
@@ -246,6 +295,8 @@ export default function NovaNFePage() {
     setTermoBusca('')
   }
   function selecionarCliente(c: ClienteRow) {
+    cnpjDigitado.current = false
+    ultimoCnpjBuscado.current = (c.cpf_cnpj ?? '').replace(/\D/g, '')
     setDestinatario(c.nome)
     setCnpj(c.cpf_cnpj ?? '')
     setEmail(c.email ?? '')
@@ -351,12 +402,43 @@ export default function NovaNFePage() {
     }
   }
 
+  // Destinatário que ainda não está em Clientes é cadastrado automaticamente na emissão.
+  // Falha aqui nunca impede a emissão da nota.
+  async function cadastrarClienteSeNovo() {
+    const digits = cnpj.replace(/\D/g, '')
+    if (digits.length !== 11 && digits.length !== 14) return
+    if (clientes.some((c) => (c.cpf_cnpj ?? '').replace(/\D/g, '') === digits)) return
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .insert({
+          user_id: userId,
+          tipo: digits.length === 14 ? 'pessoa_juridica' : 'pessoa_fisica',
+          nome: destinatario,
+          cpf_cnpj: digits.length === 14 ? maskCNPJ(digits) : maskCPF(digits),
+          email: email || null,
+          telefone: telefone || null,
+          cep: endCep || null,
+          endereco: endLogradouro || null,
+          numero: endNumero || null,
+          bairro: endBairro || null,
+          cidade: endMunicipio || null,
+          estado: endUf || null,
+          ativo: true,
+        })
+        .select('id,nome,cpf_cnpj,email,telefone,endereco,numero,bairro,cidade,estado,cep')
+        .single()
+      if (!error && data) setClientes((cs) => [...cs, data as ClienteRow])
+    } catch { /* silencioso: o cadastro do cliente é um extra */ }
+  }
+
   async function handleTransmitir() {
     if (!userId) return
     if (!destinatario) { setErroTransmissao('Informe o destinatário.'); return }
     setTransmitindo(true)
     setErroTransmissao('')
     try {
+      await cadastrarClienteSeNovo()
       const res = await fetch('/api/fiscal/emitir-nfe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -377,6 +459,7 @@ export default function NovaNFePage() {
             cep:        endCep       || '00000000',
           },
           itens: itens.map((it) => ({
+            produto_id:     it.produto?.id || null,
             codigo_produto: it.produto?.codigo || 'PROD',
             descricao:      it.produto?.descricao || 'Produto',
             ncm:            it.produto?.ncm || '00000000',
@@ -524,12 +607,24 @@ export default function NovaNFePage() {
           <div className="relative" ref={refCnpj}>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ / CPF</label>
             <Input
-              placeholder="00.000.000/0001-00"
+              placeholder="Digite o CNPJ para buscar na Receita"
+              inputMode="numeric"
               value={cnpj}
-              onChange={(e) => { setCnpj(e.target.value); setShowDropCnpj(true) }}
+              onChange={(e) => {
+                cnpjDigitado.current = true
+                const d = e.target.value.replace(/\D/g, '').slice(0, 14)
+                setCnpj(d.length > 11 ? maskCNPJ(d) : d.length === 11 ? maskCPF(d) : d)
+                setShowDropCnpj(true)
+              }}
               onFocus={() => setShowDropCnpj(true)}
               autoComplete="off"
             />
+            {buscandoCnpj && (
+              <p className="text-xs text-blue-600 mt-1 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Consultando a Receita Federal...</p>
+            )}
+            {avisoCnpj && !buscandoCnpj && (
+              <p className={`text-xs mt-1 ${avisoCnpj.tipo === 'ok' ? 'text-green-600' : 'text-red-500'}`}>{avisoCnpj.texto}</p>
+            )}
             {showDropCnpj && clientesPorCnpj.length > 0 && (
               <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto">
                 {clientesPorCnpj.map((c) => (

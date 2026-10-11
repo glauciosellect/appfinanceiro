@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { emitirNFe, consultarNFe, isTokenConfigured, type ItemNFe } from '@/lib/fiscal/contora'
 import { buscarCodigoMunicipio } from '@/lib/fiscal/ibge'
+import { baixarEstoqueNfe } from '@/lib/estoque/movimentos'
 
 const REGIME_MAP: Record<string, string> = {
   simples:          '1',
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
       cep: string
     }
     itens: Array<{
+      produto_id?: string | null
       codigo_produto: string
       descricao: string
       ncm: string
@@ -105,6 +107,11 @@ export async function POST(req: NextRequest) {
       ...taxCodes(regime),
     } as ItemNFe
   })
+  const itensParaBaixa = body.itens.map((it) => ({
+    produto_id: it.produto_id,
+    codigo: it.codigo_produto,
+    quantidade: it.quantidade,
+  }))
   const valorBrutoItem = (it: ItemNFe) => it.quantidade_comercial * it.valor_unitario_comercial - (it.valor_desconto ?? 0)
 
   const ref = `nfe-${user.id.slice(0, 8)}-${Date.now()}`
@@ -167,6 +174,8 @@ export async function POST(req: NextRequest) {
       numero_proximo_nfe: numero + 1,
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id)
+
+    await baixarEstoqueNfe(supabase, user.id, `NF-e ${serie}/${numero} (saída)`, itensParaBaixa)
 
     return NextResponse.json({
       ok: true,
@@ -305,6 +314,12 @@ export async function POST(req: NextRequest) {
     numero_proximo_nfe: numeroFinal + 1,
     updated_at: new Date().toISOString(),
   }).eq('user_id', user.id)
+
+  // Nota autorizada = mercadoria vendida: dá baixa no estoque. Se ficou "processando",
+  // a baixa acontece quando o status for sincronizado como emitida (sincronizar-nfe).
+  if (statusFinal === 'emitida') {
+    await baixarEstoqueNfe(supabase, user.id, `NF-e ${serieFinal}/${numeroFinal} (saída)`, itensParaBaixa)
+  }
 
   return NextResponse.json({
     ok: autorizado,

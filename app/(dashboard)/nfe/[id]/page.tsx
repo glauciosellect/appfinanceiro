@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Download, Printer, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
+import { abrirArquivoEmNovaAba } from '@/lib/abrir-arquivo'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { getNFe, type NFeRecord } from '@/lib/supabase/nfe'
@@ -147,9 +148,12 @@ export default function NFeVisualizarPage() {
             </Button>
           )}
           {(nota.danfe_url || nota.contora_document_id) && (
-            <a href={nota.danfe_url || `/api/fiscal/artefato?tipo=nfe&id=${nota.id}&formato=pdf`} target="_blank" rel="noreferrer">
-              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar DANFE</Button>
-            </a>
+            <Button variant="outline" size="sm" onClick={() => abrirArquivoEmNovaAba(
+              nota.danfe_url || `/api/fiscal/artefato?tipo=nfe&id=${nota.id}&formato=pdf`,
+              `danfe_${nota.numero || nota.id}.pdf`
+            ).catch((e) => alert(e instanceof Error ? e.message : 'Não foi possível abrir o DANFE.'))}>
+              <Download className="h-4 w-4 mr-1" />Baixar DANFE
+            </Button>
           )}
           {(nota.xml_url || nota.contora_document_id) && (
             <Button variant="outline" size="sm" onClick={async () => {

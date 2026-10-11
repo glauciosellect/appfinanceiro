@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Printer, Download, FileText, Trash2, Pencil } from 'lucide-react'
+import { abrirArquivoEmNovaAba } from '@/lib/abrir-arquivo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -198,10 +199,10 @@ function NFeLine({ nota, onExcluir }: { nota: NFeRecord; onExcluir: (id: string)
           {(nota.danfe_url || nota.contora_document_id) && (
             <button
               title="Baixar DANFE"
-              onClick={() => window.open(
+              onClick={() => abrirArquivoEmNovaAba(
                 nota.danfe_url || `/api/fiscal/artefato?tipo=nfe&id=${nota.id}&formato=pdf`,
-                '_blank'
-              )}
+                `danfe_${nota.numero || nota.id}.pdf`
+              ).catch((e) => alert(e instanceof Error ? e.message : 'Não foi possível abrir o DANFE.'))}
               className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
             >
               <Download className="h-4 w-4" />

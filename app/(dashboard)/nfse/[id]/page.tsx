@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Download, XCircle, Printer, CheckCircle2, Scissors, RefreshCw, Loader2, AlertCircle } from 'lucide-react'
+import { abrirArquivoEmNovaAba } from '@/lib/abrir-arquivo'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -178,9 +179,12 @@ export default function NFSeVisualizarPage() {
             </Button>
           )}
           {(nota.link_pdf || nota.contora_document_id) && (
-            <a href={nota.link_pdf || `/api/fiscal/artefato?tipo=nfse&id=${nota.id}&formato=pdf`} target="_blank" rel="noreferrer">
-              <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-1" />Baixar PDF</Button>
-            </a>
+            <Button variant="outline" size="sm" onClick={() => abrirArquivoEmNovaAba(
+              nota.link_pdf || `/api/fiscal/artefato?tipo=nfse&id=${nota.id}&formato=pdf`,
+              `nfse_${nota.numero || nota.id}.pdf`
+            ).catch((e) => alert(e instanceof Error ? e.message : 'Não foi possível abrir o PDF.'))}>
+              <Download className="h-4 w-4 mr-1" />Baixar PDF
+            </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4 mr-1" />Imprimir

@@ -147,6 +147,26 @@ export async function cancelarContaPagar(userId: string, id: string): Promise<vo
 
 export async function excluirContaPagar(userId: string, id: string): Promise<void> {
   const supabase = createClient()
+  // Pagamento/recebimento já lançado na conta corrente também sai do fluxo de caixa:
+  // estorna o saldo da conta e apaga a movimentação ligada às parcelas excluídas.
+  const { data: parcelas } = await supabase.from('parcelas_pagar').select('id').eq('conta_pagar_id', id)
+  const parcelaIds = (parcelas ?? []).map((p: { id: string }) => p.id)
+  if (parcelaIds.length > 0) {
+    const { data: movs } = await supabase
+      .from('movimentacoes_conta')
+      .select('id, conta_corrente_id, valor')
+      .eq('user_id', userId)
+      .in('parcela_pagar_id', parcelaIds)
+    for (const m of movs ?? []) {
+      const { data: cc } = await supabase.from('contas_correntes').select('saldo_atual').eq('id', m.conta_corrente_id).single()
+      if (cc) {
+        await supabase.from('contas_correntes')
+          .update({ saldo_atual: Number(cc.saldo_atual) + Number(m.valor) })
+          .eq('id', m.conta_corrente_id)
+      }
+      await supabase.from('movimentacoes_conta').delete().eq('id', m.id).eq('user_id', userId)
+    }
+  }
   await supabase.from('parcelas_pagar').delete().eq('conta_pagar_id', id)
   await supabase.from('contas_pagar').delete().eq('id', id).eq('user_id', userId)
 }

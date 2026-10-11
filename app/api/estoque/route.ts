@@ -12,6 +12,7 @@ export async function GET() {
       .select('*')
       .eq('user_id', user.id)
       .eq('ativo', true)
+      .is('deleted_at', null)
       .order('descricao'),
     supabase
       .from('movimentos_estoque')

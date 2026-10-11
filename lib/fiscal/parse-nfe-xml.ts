@@ -34,6 +34,20 @@ function formatCnpj(d: string): string {
   return `${x.slice(0, 2)}.${x.slice(2, 5)}.${x.slice(5, 8)}/${x.slice(8, 12)}-${x.slice(12)}`
 }
 
+export type ParsedNFeItem = {
+  /** Código do produto NO FORNECEDOR (cProd) — não é o código interno do sistema. */
+  codigoFornecedor: string
+  barcode: string | null
+  descricao: string
+  ncm: string
+  cfop: string
+  unidade: string
+  quantidade: number
+  /** Custo unitário exatamente como na nota (vUnCom). */
+  custoUnitario: number
+  valorTotal: number
+}
+
 export type ParsedNFeXml = {
   numero: string
   serie: string
@@ -43,6 +57,40 @@ export type ParsedNFeXml = {
   valorTotal: number
   fornecedorNome: string
   fornecedorCnpj: string
+  itens: ParsedNFeItem[]
+}
+
+function num(el: Element | null): number {
+  const n = parseFloat(text(el).replace(',', '.'))
+  return Number.isFinite(n) ? n : 0
+}
+
+function parseItens(infNFe: Element): ParsedNFeItem[] {
+  const itens: ParsedNFeItem[] = []
+  for (const det of infNFe.children) {
+    if (det.localName !== 'det') continue
+    const prod = childByLocal(det, 'prod')
+    if (!prod) continue
+    const quantidade = num(childByLocal(prod, 'qCom'))
+    const valorTotal = num(childByLocal(prod, 'vProd'))
+    let custoUnitario = num(childByLocal(prod, 'vUnCom'))
+    if (custoUnitario <= 0 && quantidade > 0) custoUnitario = Math.round((valorTotal / quantidade) * 100) / 100
+    const ean = text(childByLocal(prod, 'cEAN'))
+    const eanTrib = text(childByLocal(prod, 'cEANTrib'))
+    const barcode = [ean, eanTrib].find((c) => /^(\d{8}|\d{12,14})$/.test(c)) ?? null
+    itens.push({
+      codigoFornecedor: text(childByLocal(prod, 'cProd')),
+      barcode,
+      descricao: text(childByLocal(prod, 'xProd')) || 'Produto sem descrição',
+      ncm: text(childByLocal(prod, 'NCM')),
+      cfop: text(childByLocal(prod, 'CFOP')),
+      unidade: (text(childByLocal(prod, 'uCom')) || 'UN').toUpperCase(),
+      quantidade,
+      custoUnitario,
+      valorTotal,
+    })
+  }
+  return itens
 }
 
 export function parseNFeXml(xmlString: string): ParsedNFeXml {
@@ -92,5 +140,6 @@ export function parseNFeXml(xmlString: string): ParsedNFeXml {
     valorTotal,
     fornecedorNome: xNome,
     fornecedorCnpj: cnpjRaw ? formatCnpj(cnpjRaw) : '—',
+    itens: parseItens(infNFe),
   }
 }

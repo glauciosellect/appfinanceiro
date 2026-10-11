@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Eye, Download, XCircle, Receipt, CheckCircle2, Loader2, Printer, Trash2 } from 'lucide-react'
+import { abrirArquivoEmNovaAba } from '@/lib/abrir-arquivo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -250,9 +251,12 @@ function NFSeLine({ nota, onCancelar, onExcluir }: { nota: NfseRow; onCancelar: 
           </Link>
           {/* Download PDF */}
           {(nota.link_pdf || nota.contora_document_id) && (
-            <a href={nota.link_pdf || `/api/fiscal/artefato?tipo=nfse&id=${nota.id}&formato=pdf`} target="_blank" rel="noreferrer" title="Baixar PDF" className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg inline-flex">
+            <button type="button" onClick={() => abrirArquivoEmNovaAba(
+              nota.link_pdf || `/api/fiscal/artefato?tipo=nfse&id=${nota.id}&formato=pdf`,
+              `nfse_${nota.numero || nota.id}.pdf`
+            ).catch((e) => alert(e instanceof Error ? e.message : 'Não foi possível abrir o PDF.'))} title="Baixar PDF" className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg inline-flex">
               <Download className="h-4 w-4" />
-            </a>
+            </button>
           )}
           {/* Cancelar (só autorizada) */}
           {nota.status === 'autorizada' && (
