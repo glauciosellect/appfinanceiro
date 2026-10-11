@@ -301,7 +301,7 @@ export default function OrcamentoPdfPage() {
             {pedido.vendedor && (
               <div className="flex-1 px-3 py-2 text-center">
                 <p className="text-[8px] text-gray-500 uppercase font-bold leading-none mb-0.5">Vendedor</p>
-                <p className="font-bold text-gray-900 text-sm break-words">{pedido.vendedor}</p>
+                <p className="font-bold text-gray-900 text-xs break-words leading-tight">{pedido.vendedor}</p>
               </div>
             )}
           </div>
