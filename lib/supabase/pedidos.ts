@@ -285,6 +285,14 @@ export async function getOrcamentoPublico(
   }
 }
 
+// Nome fantasia e logo da empresa dona do orçamento (mesma fonte da pré-visualização do link).
+// Retorna null se a função ainda não existe no banco: a página usa então os dados do fiscal_config.
+export async function getMarcaOrcamentoPublico(token: string): Promise<{ nome?: string; logo_url?: string } | null> {
+  const { data, error } = await createClient().rpc('get_orcamento_marca', { p_token: token })
+  if (error || !data) return null
+  return data as { nome?: string; logo_url?: string }
+}
+
 export async function aceitarOrcamentoPublico(token: string): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase.rpc('aceitar_orcamento_por_token', { p_token: token, p_ip: '' })

@@ -45,7 +45,10 @@ export async function proxy(request: NextRequest) {
 
   // Recibo do fornecedor (SyncroMoney Intro): o fornecedor não tem login. A página
   // e a rota de confirmação só operam sobre um token UUID (RPC SECURITY DEFINER).
-  const PUBLIC_PREFIXES = ['/recibo/', '/api/recibo/']
+  // Orçamento compartilhado (/orcamento/<token>): o cliente final não tem login, e o robô do WhatsApp
+  // que monta a pré-visualização do link também não — sem isso ambos eram mandados para a home.
+  // (/orcamentos, com s, é a tela interna e continua protegida.)
+  const PUBLIC_PREFIXES = ['/recibo/', '/api/recibo/', '/orcamento/']
   const isPublic = PUBLIC_PATHS.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
 
   // Rotas de API retornam JSON em vez de redirecionar para a home

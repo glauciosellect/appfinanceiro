@@ -229,7 +229,10 @@ export default function OrcamentoPdfPage() {
     .filter(Boolean)
     .join(', ')
 
-  const mensagemCompartilhar = `Olá! Segue o orçamento Nº ${pedido.numero_sequencial} de ${nomeEmpresa}:
+  const primeiroNome = (pedido.clientes?.nome ?? '').trim().split(/s+/)[0]
+  const mensagemCompartilhar = `Olá${primeiroNome ? `, ${primeiroNome}` : ''}! Segue o orçamento Nº ${pedido.numero_sequencial} da ${nomeEmpresa}.
+
+Para ver os detalhes e aprovar, é só abrir o link:
 ${linkPublico}`
 
   const descontoAplicado = pedido.desconto_tipo === 'percentual'

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { CheckCircle2, Loader2, Package, Wrench, FileQuestion } from 'lucide-react'
-import { getOrcamentoPublico, aceitarOrcamentoPublico } from '@/lib/supabase/pedidos'
+import { getOrcamentoPublico, aceitarOrcamentoPublico, getMarcaOrcamentoPublico } from '@/lib/supabase/pedidos'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { FiscalConfig, Pedido, PedidoItem } from '@/types'
 
@@ -19,12 +19,14 @@ export default function OrcamentoPublicoPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [aceitando, setAceitando] = useState(false)
+  const [marca, setMarca] = useState<{ nome?: string; logo_url?: string } | null>(null)
 
   const fetchTudo = useCallback(async () => {
     if (!token) return
     setLoading(true)
     try {
-      const resultado = await getOrcamentoPublico(token)
+      const [resultado, marcaEmpresa] = await Promise.all([getOrcamentoPublico(token), getMarcaOrcamentoPublico(token).catch(() => null)])
+      setMarca(marcaEmpresa)
       if (!resultado) {
         setNotFound(true)
       } else {
@@ -73,7 +75,8 @@ export default function OrcamentoPublicoPage() {
   }
 
   const fc = fiscalConfig ?? {}
-  const nomeEmpresa      = (fc as FiscalConfig).nome_fantasia || (fc as FiscalConfig).razao_social || 'Empresa'
+  const nomeEmpresa      = marca?.nome || (fc as FiscalConfig).nome_fantasia || (fc as FiscalConfig).razao_social || 'Empresa'
+  const logoEmpresa      = marca?.logo_url || (fc as FiscalConfig).logo_url
   const mostrarLogo      = (fc as FiscalConfig).mostrar_logo ?? true
   const mostrarCnpj      = (fc as FiscalConfig).mostrar_cnpj ?? true
   const mostrarEndereco  = (fc as FiscalConfig).mostrar_endereco ?? true
@@ -99,10 +102,10 @@ export default function OrcamentoPublicoPage() {
         <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
           {/* Cabeçalho da empresa */}
           <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-            {mostrarLogo && (fc as FiscalConfig).logo_url && (
+            {mostrarLogo && logoEmpresa && (
               <div className="w-14 h-14 shrink-0 border border-gray-200 rounded-xl overflow-hidden flex items-center justify-center bg-gray-50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={(fc as FiscalConfig).logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+                <img src={logoEmpresa} alt="Logo" className="w-full h-full object-contain p-1" />
               </div>
             )}
             <div>
