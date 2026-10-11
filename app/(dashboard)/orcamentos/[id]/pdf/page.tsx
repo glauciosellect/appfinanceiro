@@ -13,7 +13,7 @@ import { getPerfilEmpresa, type PerfilEmpresa } from '@/lib/supabase/perfil-empr
 import { gerarPdfDeElemento } from '@/lib/pdf/gerar-pdf-elemento'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { abrirWhatsApp } from '@/lib/intro/vendas'
+import { abrirWhatsApp, telefoneParaWhatsApp } from '@/lib/intro/vendas'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { FiscalConfig, Pedido, PedidoItem } from '@/types'
@@ -470,11 +470,20 @@ ${linkPublico}`
           <DialogHeader><DialogTitle>Compartilhar orçamento</DialogTitle></DialogHeader>
           <div className="space-y-2">
             <p className="text-xs text-gray-500">O cliente recebe o link, vê o orçamento e pode aceitar online.</p>
-            <Button className="w-full justify-start bg-green-600 hover:bg-green-700 text-white" onClick={() => {
-              abrirWhatsApp(pedido.clientes?.telefone, mensagemCompartilhar)
+            {telefoneParaWhatsApp(pedido.clientes?.telefone) && (
+              <Button className="w-full justify-start bg-green-600 hover:bg-green-700 text-white" onClick={() => {
+                abrirWhatsApp(pedido.clientes?.telefone, mensagemCompartilhar)
+                setCompartilharAberto(false)
+              }}>
+                <MessageCircle className="h-4 w-4 mr-2" />WhatsApp de {pedido.clientes?.nome?.split(' ')[0]} ({pedido.clientes?.telefone})
+              </Button>
+            )}
+            {/* Sem número (ou para outra pessoa): o WhatsApp abre a lista de contatos para escolher */}
+            <Button className={`w-full justify-start ${telefoneParaWhatsApp(pedido.clientes?.telefone) ? 'bg-green-50 text-green-800 hover:bg-green-100 border border-green-200' : 'bg-green-600 hover:bg-green-700 text-white'}`} onClick={() => {
+              abrirWhatsApp(null, mensagemCompartilhar)
               setCompartilharAberto(false)
             }}>
-              <MessageCircle className="h-4 w-4 mr-2" />WhatsApp{pedido.clientes?.telefone ? ' do cliente' : ''}
+              <MessageCircle className="h-4 w-4 mr-2" />WhatsApp — escolher outro contato
             </Button>
             <Button variant="outline" className="w-full justify-start" onClick={() => {
               window.location.href = `mailto:?subject=${encodeURIComponent(`Orçamento Nº ${pedido.numero_sequencial} — ${nomeEmpresa}`)}&body=${encodeURIComponent(mensagemCompartilhar)}`
