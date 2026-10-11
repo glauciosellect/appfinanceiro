@@ -5,13 +5,15 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Printer, Copy, Loader2, Package, Wrench, Share2, Download } from 'lucide-react'
+import { ArrowLeft, Printer, Copy, Loader2, Package, Wrench, Share2, Download, MessageCircle, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getPedidoComItens } from '@/lib/supabase/pedidos'
 import { getFiscalConfig } from '@/lib/supabase/fiscal'
 import { getPerfilEmpresa, type PerfilEmpresa } from '@/lib/supabase/perfil-empresa'
 import { gerarPdfDeElemento } from '@/lib/pdf/gerar-pdf-elemento'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { abrirWhatsApp } from '@/lib/intro/vendas'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { FiscalConfig, Pedido, PedidoItem } from '@/types'
@@ -27,6 +29,7 @@ export default function OrcamentoPdfPage() {
   const [perfil, setPerfil] = useState<PerfilEmpresa | null>(null)
   const [loading, setLoading] = useState(true)
   const [gerandoPdf, setGerandoPdf] = useState(false)
+  const [compartilharAberto, setCompartilharAberto] = useState(false)
   const [baixandoPdf, setBaixandoPdf] = useState(false)
   // PDF gerado em segundo plano assim que a tela abre: compartilhar precisa ser imediato,
   // porque o navegador só libera o compartilhamento logo após o clique.
@@ -226,6 +229,9 @@ export default function OrcamentoPdfPage() {
     .filter(Boolean)
     .join(', ')
 
+  const mensagemCompartilhar = `Olá! Segue o orçamento Nº ${pedido.numero_sequencial} de ${nomeEmpresa}:
+${linkPublico}`
+
   const descontoAplicado = pedido.desconto_tipo === 'percentual'
     ? pedido.subtotal * (pedido.desconto_valor / 100)
     : pedido.desconto_valor
@@ -245,7 +251,7 @@ export default function OrcamentoPdfPage() {
             <Copy className="h-4 w-4 mr-1" />Copiar link
           </Button>
           {podeCompartilhar && (
-            <Button variant="outline" size="sm" onClick={handleCompartilhar} disabled={gerandoPdf} className="flex-1 sm:flex-none min-w-[calc(50%-0.25rem)] sm:min-w-0">
+            <Button variant="outline" size="sm" onClick={() => setCompartilharAberto(true)} disabled={gerandoPdf} className="flex-1 sm:flex-none min-w-[calc(50%-0.25rem)] sm:min-w-0">
               {gerandoPdf
                 ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                 : <Share2 className="h-4 w-4 mr-1" />}
@@ -454,6 +460,34 @@ export default function OrcamentoPdfPage() {
         )}
 
       </div>
+
+      {/* Compartilhar: opções diretas, sem depender da janela de compartilhamento do sistema (que falha em vários computadores) */}
+      <Dialog open={compartilharAberto} onOpenChange={setCompartilharAberto}>
+        <DialogContent className="max-w-sm print:hidden">
+          <DialogHeader><DialogTitle>Compartilhar orçamento</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">O cliente recebe o link, vê o orçamento e pode aceitar online.</p>
+            <Button className="w-full justify-start bg-green-600 hover:bg-green-700 text-white" onClick={() => {
+              abrirWhatsApp(pedido.clientes?.telefone, mensagemCompartilhar)
+              setCompartilharAberto(false)
+            }}>
+              <MessageCircle className="h-4 w-4 mr-2" />WhatsApp{pedido.clientes?.telefone ? ' do cliente' : ''}
+            </Button>
+            <Button variant="outline" className="w-full justify-start" onClick={() => {
+              window.location.href = `mailto:?subject=${encodeURIComponent(`Orçamento Nº ${pedido.numero_sequencial} — ${nomeEmpresa}`)}&body=${encodeURIComponent(mensagemCompartilhar)}`
+              setCompartilharAberto(false)
+            }}>
+              <Mail className="h-4 w-4 mr-2" />E-mail
+            </Button>
+            <Button variant="outline" className="w-full justify-start" onClick={() => { handleCopiarLink(); setCompartilharAberto(false) }}>
+              <Copy className="h-4 w-4 mr-2" />Copiar link
+            </Button>
+            <Button variant="outline" className="w-full justify-start" onClick={() => { setCompartilharAberto(false); handleCompartilhar() }}>
+              <Share2 className="h-4 w-4 mr-2" />Outros aplicativos (com PDF)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
