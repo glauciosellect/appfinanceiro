@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Package, Save } from 'lucide-react'
+import { Plus, Search, Edit2, Package, Save, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -46,6 +46,7 @@ export default function FiscalProdutosPage() {
       .select('*')
       .eq('user_id', user.id)
       .eq('ativo', true)
+      .is('deleted_at', null)
       .order('descricao')
     setProdutos((data ?? []) as Produto[])
     setLoading(false)
@@ -56,6 +57,19 @@ export default function FiscalProdutosPage() {
   const filtrados = produtos.filter(
     (p) => !busca || p.descricao.toLowerCase().includes(busca.toLowerCase()) || p.codigo.includes(busca)
   )
+
+  // Exclusão "suave": o produto some das listas e do PDV, mas o histórico de vendas e
+  // movimentações que o citam continua intacto.
+  async function excluir(p: Produto) {
+    const aviso = p.estoque > 0 ? `\n\nAtenção: ele ainda tem ${p.estoque} ${p.unidade} em estoque.` : ''
+    if (!confirm(`Excluir o produto "${p.descricao}"?${aviso}\n\nO histórico de vendas e movimentações é mantido.`)) return
+    const { error } = await supabase
+      .from('produtos_fiscais')
+      .update({ ativo: false, deleted_at: new Date().toISOString(), barcode: null, plu: null })
+      .eq('id', p.id)
+    if (error) { alert('Não foi possível excluir o produto.'); return }
+    setProdutos((lista) => lista.filter((x) => x.id !== p.id))
+  }
 
   function abrirNovo() {
     setForm({ ativo: true, unidade: 'UN', cfop: '5102', estoque: 0, estoque_minimo: 0, margem_lucro: 30, preco_venda: 0 })
@@ -77,7 +91,11 @@ export default function FiscalProdutosPage() {
       : (form.preco_venda ?? 0)
 
     if (modo === 'novo') {
-      const novoCodigo = String(produtos.length + 1).padStart(4, '0')
+      // Próximo código = maior código numérico já usado + 1, contando também os excluídos
+      // (o código é único por usuário; contar os produtos da lista repetiria códigos após excluir)
+      const { data: usados } = await supabase.from('produtos_fiscais').select('codigo').eq('user_id', user.id)
+      const maior = (usados ?? []).reduce((m, c) => (/^\d+$/.test(String(c.codigo)) ? Math.max(m, Number(c.codigo)) : m), 0)
+      const novoCodigo = String(maior + 1).padStart(4, '0')
       await supabase.from('produtos_fiscais').insert({
         user_id: user.id,
         codigo: novoCodigo,
@@ -144,7 +162,8 @@ export default function FiscalProdutosPage() {
                 <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                   {['Código','Descrição','NCM','CFOP','Un.','Custo Unit.','Margem','Preço Venda','Estoque','Est. Mín.','Ações'].map((h) => (
                     <th key={h} className={cn('px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide',
-                      ['Custo Unit.','Margem','Preço Venda','Estoque','Est. Mín.','Ações'].includes(h) ? 'text-right' : 'text-left')}>{h}</th>
+                      ['Custo Unit.','Margem','Preço Venda','Estoque','Est. Mín.','Ações'].includes(h) ? 'text-right' : 'text-left',
+                      h === 'Ações' && 'sticky right-0 bg-gray-50 dark:bg-gray-700 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]')}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -163,11 +182,17 @@ export default function FiscalProdutosPage() {
                       <span className={cn('font-bold', p.estoque <= p.estoque_minimo ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-800 dark:text-gray-200')}>{p.estoque}</span>
                     </td>
                     <td className="px-6 py-4 text-right text-gray-500 dark:text-gray-400">{p.estoque_minimo}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button onClick={() => { setForm(p); setModo('editar'); setOpen(true) }}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
-                        <Edit2 className="h-4 w-4" />
-                      </button>
+                    <td className="px-4 py-4 text-right sticky right-0 bg-white dark:bg-gray-800 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]">
+                      <div className="flex items-center justify-end gap-1">
+                        <button title="Editar produto" onClick={() => { setForm(p); setModo('editar'); setOpen(true) }}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button title="Excluir produto" onClick={() => excluir(p)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
