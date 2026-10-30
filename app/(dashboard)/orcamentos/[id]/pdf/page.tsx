@@ -18,6 +18,18 @@ import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { FiscalConfig, Pedido, PedidoItem } from '@/types'
 
+// Nome do arquivo para achar o orçamento nas pastas: orcamento-<cliente>-<número>-<ano>.pdf
+// (ex.: orcamento-Mario-Hangar-Aeroporto-024-2026.pdf). O número já vem como "024-2026".
+function nomeArquivoOrcamento(pedido: Pick<Pedido, 'numero_sequencial' | 'clientes'>): string {
+  const cliente = (pedido.clientes?.nome ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // tira acentos
+    .replace(/[^A-Za-z0-9]+/g, '-')                        // espaços e símbolos viram hífen
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50)
+    .replace(/-+$/g, '')
+  return `orcamento-${cliente ? cliente + '-' : ''}${pedido.numero_sequencial}.pdf`
+}
+
 export default function OrcamentoPdfPage() {
   const params = useParams()
   const pedidoId = params.id as string
@@ -67,7 +79,8 @@ export default function OrcamentoPdfPage() {
   useEffect(() => {
     if (!pedido) return
     const anterior = document.title
-    document.title = `Orçamento ${pedido.numero_sequencial}`
+    // Também é o nome sugerido ao usar "Imprimir / Salvar PDF"
+    document.title = nomeArquivoOrcamento(pedido).replace(/\.pdf$/, '')
     return () => { document.title = anterior }
   }, [pedido])
 
@@ -75,7 +88,7 @@ export default function OrcamentoPdfPage() {
     if (loading || !pedido) return
     pdfPronto.current = null
     const t = setTimeout(() => {
-      gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
+      gerarPdfDeElemento('orcamento-doc', nomeArquivoOrcamento(pedido))
         .then((f) => { pdfPronto.current = f })
         .catch(() => { pdfPronto.current = null })
     }, 600)
@@ -125,7 +138,7 @@ export default function OrcamentoPdfPage() {
       let arquivoPdf: File | null = pdfPronto.current
       if (!arquivoPdf) {
         try {
-          arquivoPdf = await gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
+          arquivoPdf = await gerarPdfDeElemento('orcamento-doc', nomeArquivoOrcamento(pedido))
         } catch {
           // Falha na geração do PDF (html2canvas/jsPDF) — segue para o fallback de link.
           arquivoPdf = null
@@ -172,7 +185,7 @@ export default function OrcamentoPdfPage() {
     if (!pedido) return
     setBaixandoPdf(true)
     try {
-      const arquivoPdf = pdfPronto.current ?? await gerarPdfDeElemento('orcamento-doc', `orcamento-${pedido.numero_sequencial}.pdf`)
+      const arquivoPdf = pdfPronto.current ?? await gerarPdfDeElemento('orcamento-doc', nomeArquivoOrcamento(pedido))
       const url = URL.createObjectURL(arquivoPdf)
       const link = document.createElement('a')
       link.href = url
