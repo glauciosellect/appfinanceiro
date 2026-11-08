@@ -1,16 +1,18 @@
 import type { Metadata } from 'next'
+import { extrairTokenOrcamento } from '@/lib/orcamento/link'
 import { createClient } from '@supabase/supabase-js'
 
 // Pré-visualização do link (WhatsApp, e-mail, redes) e título da aba: mostram a marca da EMPRESA
 // que enviou o orçamento, não o SyncroMoney. Vem da RPC get_orcamento_marca; se ela ainda não
 // existir no banco, cai no título genérico "Orçamento" (também sem SyncroMoney).
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
-  const { token } = await params
+  const { token: tokenBruto } = await params
+  const token = extrairTokenOrcamento(tokenBruto)
   const genericoNeutro: Metadata = {
     title: { absolute: 'Orçamento' },
     description: 'Abra para ver os detalhes do orçamento e aprovar.',
     robots: { index: false, follow: false },
-    alternates: { canonical: `/orcamento/${token}` },
+    alternates: { canonical: `/orcamento/${tokenBruto}` },
     openGraph: { title: 'Orçamento', description: 'Abra para ver os detalhes do orçamento e aprovar.', siteName: 'Orçamento', type: 'website' },
   }
 
@@ -36,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
       authors: [{ name: marca.nome }],
       creator: marca.nome,
       robots: { index: false, follow: false },
-      alternates: { canonical: `/orcamento/${token}` },
+      alternates: { canonical: `/orcamento/${tokenBruto}` },
       openGraph: {
         title: titulo,
         description: descricao,

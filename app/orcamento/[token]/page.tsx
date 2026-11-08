@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import { extrairTokenOrcamento } from '@/lib/orcamento/link'
 import { useParams } from 'next/navigation'
 import { CheckCircle2, Loader2, Package, Wrench, FileQuestion } from 'lucide-react'
 import { getOrcamentoPublico, aceitarOrcamentoPublico, getMarcaOrcamentoPublico } from '@/lib/supabase/pedidos'
@@ -11,7 +12,7 @@ import type { FiscalConfig, Pedido, PedidoItem } from '@/types'
 
 export default function OrcamentoPublicoPage() {
   const params = useParams()
-  const token = params.token as string
+  const token = extrairTokenOrcamento(params.token as string)
 
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [itens, setItens] = useState<PedidoItem[]>([])

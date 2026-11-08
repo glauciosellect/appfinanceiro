@@ -13,6 +13,7 @@ import { getPerfilEmpresa, type PerfilEmpresa } from '@/lib/supabase/perfil-empr
 import { gerarPdfDeElemento } from '@/lib/pdf/gerar-pdf-elemento'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { montarLinkOrcamento } from '@/lib/orcamento/link'
 import { abrirWhatsApp, telefoneParaWhatsApp } from '@/lib/intro/vendas'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -95,8 +96,9 @@ export default function OrcamentoPdfPage() {
     return () => clearTimeout(t)
   }, [loading, pedido, itens, perfil, fiscalConfig])
 
+  const nomeEmpresaLink = perfil?.nome_fantasia || fiscalConfig?.razao_social || ''
   const linkPublico = pedido && typeof window !== 'undefined'
-    ? `${window.location.origin}/orcamento/${pedido.token_publico}`
+    ? montarLinkOrcamento(window.location.origin, nomeEmpresaLink, pedido.numero_sequencial, pedido.token_publico)
     : ''
 
   async function handleCopiarLink() {
@@ -242,7 +244,7 @@ export default function OrcamentoPdfPage() {
     .filter(Boolean)
     .join(', ')
 
-  const primeiroNome = (pedido.clientes?.nome ?? '').trim().split(/s+/)[0]
+  const primeiroNome = (pedido.clientes?.nome ?? '').trim().split(/\s+/)[0]
   const mensagemCompartilhar = `Olá${primeiroNome ? `, ${primeiroNome}` : ''}! Segue o orçamento Nº ${pedido.numero_sequencial} da ${nomeEmpresa}.
 
 Para ver os detalhes e aprovar, é só abrir o link:
