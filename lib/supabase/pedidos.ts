@@ -8,7 +8,7 @@ export async function getPedidos(
   const supabase = createClient()
   let query = supabase
     .from('pedidos')
-    .select('*, clientes(id, nome, telefone)')
+    .select('*, clientes(id, nome, telefone, email, cpf_cnpj, endereco, numero, complemento, bairro, cidade, estado, cep)')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -28,7 +28,7 @@ export async function getPedidoById(userId: string, id: string): Promise<Pedido 
   const supabase = createClient()
   const { data, error } = await supabase
     .from('pedidos')
-    .select('*, clientes(id, nome, telefone)')
+    .select('*, clientes(id, nome, telefone, email, cpf_cnpj, endereco, numero, complemento, bairro, cidade, estado, cep)')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
@@ -109,7 +109,7 @@ export async function createPedido(userId: string, formData?: Partial<PedidoForm
       subtotal: 0,
       total: 0,
     })
-    .select('*, clientes(id, nome, telefone)')
+    .select('*, clientes(id, nome, telefone, email, cpf_cnpj, endereco, numero, complemento, bairro, cidade, estado, cep)')
     .single()
   if (error) throw error
   return data as Pedido
@@ -126,7 +126,7 @@ export async function updatePedido(
     .update(formData)
     .eq('id', id)
     .eq('user_id', userId)
-    .select('*, clientes(id, nome, telefone)')
+    .select('*, clientes(id, nome, telefone, email, cpf_cnpj, endereco, numero, complemento, bairro, cidade, estado, cep)')
     .single()
   if (error) throw error
   return data as Pedido
@@ -258,7 +258,7 @@ export async function recalcularTotaisPedido(userId: string, pedidoId: string): 
     .update({ subtotal, total })
     .eq('id', pedidoId)
     .eq('user_id', userId)
-    .select('*, clientes(id, nome, telefone)')
+    .select('*, clientes(id, nome, telefone, email, cpf_cnpj, endereco, numero, complemento, bairro, cidade, estado, cep)')
     .single()
   if (error) throw error
   return data as Pedido

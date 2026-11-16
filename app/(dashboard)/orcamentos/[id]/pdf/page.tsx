@@ -244,6 +244,14 @@ export default function OrcamentoPdfPage() {
     .filter(Boolean)
     .join(', ')
 
+  // Endereço do cliente (só aparece quando preenchido no cadastro)
+  const c = pedido.clientes
+  const ruaNumero = [c?.endereco, c?.numero].filter(Boolean).join(', ')
+  const cidadeUf = [c?.cidade, c?.estado].filter(Boolean).join('/')
+  const enderecoCliente = [ruaNumero, c?.complemento, c?.bairro, cidadeUf, c?.cep ? `CEP ${c.cep}` : '']
+    .filter(Boolean)
+    .join(' - ')
+
   const primeiroNome = (pedido.clientes?.nome ?? '').trim().split(/\s+/)[0]
   const mensagemCompartilhar = `Olá${primeiroNome ? `, ${primeiroNome}` : ''}! Segue o orçamento Nº ${pedido.numero_sequencial} da ${nomeEmpresa}.
 
@@ -343,9 +351,23 @@ ${linkPublico}`
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700 text-center">Cliente</p>
           </div>
           <div className="p-3 space-y-0.5 text-[11px]">
-            <p>Nome: <strong>{pedido.clientes?.nome ?? '—'}</strong></p>
-            {pedido.clientes?.telefone && <p>Telefone: <strong>{pedido.clientes.telefone}</strong></p>}
-            {pedido.referencia && <p>Referência: <strong>{pedido.referencia}</strong></p>}
+            <p>
+              Nome: <strong>{pedido.clientes?.nome ?? '—'}</strong>
+              {pedido.clientes?.cpf_cnpj && (
+                <span className="ml-4">
+                  {pedido.clientes.cpf_cnpj.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF'}: <strong>{pedido.clientes.cpf_cnpj}</strong>
+                </span>
+              )}
+            </p>
+            {(pedido.clientes?.telefone || pedido.clientes?.email) && (
+              <p>
+                {pedido.clientes?.telefone && <>Telefone: <strong>{pedido.clientes.telefone}</strong></>}
+                {pedido.clientes?.email && (
+                  <span className={pedido.clientes?.telefone ? 'ml-4' : ''}>E-mail: <strong>{pedido.clientes.email}</strong></span>
+                )}
+              </p>
+            )}
+            {enderecoCliente && <p>Endereço: <strong>{enderecoCliente}</strong></p>}
           </div>
         </div>
 

@@ -571,7 +571,11 @@ export interface Pedido {
   created_at: string
   updated_at: string
   deleted_at?: string
-  clientes?: { id: string; nome: string; telefone?: string } | null
+  clientes?: {
+    id: string; nome: string; telefone?: string; email?: string; cpf_cnpj?: string
+    endereco?: string; numero?: string; complemento?: string; bairro?: string
+    cidade?: string; estado?: string; cep?: string
+  } | null
   token_publico: string
   aceito_em?: string
   aceito_ip?: string
