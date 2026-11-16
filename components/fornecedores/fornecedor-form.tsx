@@ -82,9 +82,24 @@ interface FornecedorFormProps {
 }
 
 async function buscarCNPJ(cnpj: string) {
-  const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
-  if (!res.ok) return null
-  return res.json()
+  // Rota do servidor (BrasilAPI + fallback CNPJ.ws)
+  const res = await fetch(`/api/cnpj/${cnpj}`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error('Falha ao consultar CNPJ')
+  const d = await res.json()
+  return {
+    razao_social: d.razaoSocial,
+    nome_fantasia: d.nomeFantasia,
+    ddd_telefone_1: d.telefone,
+    email: d.email,
+    cep: d.cep,
+    logradouro: d.logradouro,
+    numero: d.numero,
+    complemento: d.complemento,
+    bairro: d.bairro,
+    municipio: d.municipio,
+    uf: d.uf,
+  } as Record<string, string | undefined>
 }
 
 export function FornecedorForm({ initial, onSubmit, onCancel }: FornecedorFormProps) {
