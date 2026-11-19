@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import Script from 'next/script'
 import { BotaoTesteGratis } from '@/components/marketing/escolha-versao'
 import { Button } from '@/components/ui/button'
 import { MarketingLogo } from '@/components/shared/MarketingLogo'
@@ -98,6 +99,12 @@ export default async function RootPage() {
         <LandingPageContent />
       </main>
       <Footer />
+      {/* Agente de atendimento (SyncroFlow): chat do site, só na página pública. Canal próprio do SyncroMoney. */}
+      <Script
+        src="https://api.syncroflow.io/widget.js"
+        data-channel={process.env.NEXT_PUBLIC_SYNCROFLOW_WIDGET_CHANNEL || 'cmwnvtklc000l14q81e428lpw'}
+        strategy="afterInteractive"
+      />
     </div>
   )
 }
